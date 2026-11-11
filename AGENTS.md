@@ -255,7 +255,7 @@
 | 数据库 | MySQL 8.0（迁移工具 Flyway 9.22.3） | `ADR-005` |
 | ORM/数据访问 | MyBatis-Plus 3.5.7（MyBatis 3.5.16）+ MapStruct 1.5.5 | `ADR-005` |
 | 缓存/消息 | Redis 5.0（Spring Data Redis）；消息队列：不引入 | `ADR-005` |
-| 测试框架 | 后端：JUnit 5 + Mockito + AssertJ（`spring-boot-starter-test`）；后端集成测试走 profile `test`，连**独立库 `*_test`**（测试类含"库名必须含 test"的安全断言），CI 用 MySQL/Redis 服务容器注入连接；前端：Vitest 3 + `@vue/test-utils`（单元/组件）+ Playwright（E2E）；小程序自动化：**未定**（待跨端框架选型） | `ADR-005`、`ADR-006` |
+| 测试框架 | 后端：JUnit 5 + Mockito + AssertJ（`spring-boot-starter-test`）；后端集成测试走 profile `test`，连**独立库 `*_test`**（测试类含"库名必须含 test"的安全断言），CI 用 MySQL/Redis 服务容器注入连接；契约验证：swagger-request-validator 比对 `docs/api/openapi.yaml` 本体（不复制副本）；前端：Vitest 3 + `@vue/test-utils`（单元/组件）+ Playwright（E2E）；小程序自动化：**未定**（待跨端框架选型） | `ADR-005`、`ADR-006` |
 | 包管理器 | pnpm 11.7.0（workspace，锁文件唯一）+ Maven 3.6.3 | `ADR-005`、`ADR-003` |
 | 目录约定 | `server/{common,system,auth,web}`；`apps/{pc,mobile,shared}`；`packages/ui-tokens` | `ADR-003`、`ADR-005` |
 

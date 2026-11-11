@@ -6,9 +6,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import javax.sql.DataSource;
@@ -30,9 +28,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * <p>运行前置：MySQL 与 Redis 可用；profile {@code test} 指向独立库 {@code admin_starter_test}
  * （Flyway 自动建表）。本地默认 127.0.0.1:3307，CI 通过环境变量注入服务容器地址。</p>
  */
-@SpringBootTest
-@ActiveProfiles("test")
-class NotificationPublisherTransactionTest {
+class NotificationPublisherTransactionTest extends AbstractIntegrationTest {
 
     @Autowired
     private NotificationPublisher publisher;

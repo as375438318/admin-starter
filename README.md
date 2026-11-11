@@ -266,6 +266,7 @@ node tools/spec-lint/cli.mjs --root "<项目根目录>"
 
 | 版本 | 日期 | 变更内容 |
 |---|---|---|
+| v1.19 | 2026-11-11 | 后端测试深度补齐（`CR-20261111-004`）：用例 8 → **69**（数据权限 SQL 拼接/角色条件合成/拦截器登记判定、字段脱敏三态与回写保护、参数掩码）；**契约测试落地**（swagger-request-validator 比对 `docs/api/openapi.yaml` 本体，不复制副本），首次运行即发现契约 `allOf` 成员缺 `additionalProperties` 声明并修正（契约升 **1.0.2**，实现未改）；新增 `AbstractIntegrationTest` 共享 Spring 上下文，集成测试从 1.9s 降到 0.134s、整体 verify 约 30s → 21s；断言新增 #69、#70 |
 | v1.18 | 2026-11-11 | 后端测试真正进 CI（`CR-20261111-003`）：数据源地址改为 `${APP_DB_URL:...}` 可覆盖；新增 `application-test.yml`（profile `test` 连独立库 `admin_starter_test`，可 `APP_TEST_DB_*` 覆盖，本地自动叠加被忽略的 `application-local.yml`）；`NotificationPublisherTransactionTest` 改用 test profile 并加"库名必须含 test"的安全断言；新增 `DataPermissionTablesTest`（6 用例）；`system` 模块补 test 依赖；CI 后端 job 改跑 `mvn -B -pl web -am verify`（MySQL 8 + Redis 7 服务容器），失败上传 surefire 报告；§9-B「测试框架」行补集成测试口径，断言新增 #68 |
 | v1.17 | 2026-11-11 | 清理登录页设计阶段产物：删除 `docs/design/login-mockups{,-v3,-v4}/`（50 个文件 / 25.5MB），并用 `git filter-branch` 重写历史把这三个目录从全部提交中剥离、`gc` 回收对象——`.git` 从 34.5MiB 降到 **922KiB**；同步修正 `login/index.vue` 注释与 impl-notes 中指向已删路径的引用 |
 | v1.16 | 2026-11-11 | 前端测试覆盖率补齐（纯新增用例，无生产代码改动）：用例 19 → **95**（3 → 15 个文件）；`src/utils` 行覆盖 14.84% → **100%**、`src/composables` 56.84% → **93.36%**、`directives/permission` 与 `stores/auth` → **100%**，达到 `frontend-spec.md` §15.2 的分层门槛；`views/*` 按规范不设门槛、由 E2E 冒烟覆盖 |

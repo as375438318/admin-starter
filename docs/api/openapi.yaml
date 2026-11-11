@@ -10,7 +10,7 @@
 openapi: 3.0.3
 info:
   title: 项目基础框架 · 后台管理接口契约
-  version: 1.0.1
+  version: 1.0.2
   description: |
     本项目接口契约（手写维护，版本随接口演进递增，见 CT-VER）。
     统一响应信封见 CT-RESP-001（data 必须存在，无值时为 null）；禁止 204/空 body 见 CT-RESP-009；
@@ -2542,7 +2542,10 @@ components:
     PublicConfigResponse:
       allOf:
         - $ref: '#/components/schemas/Envelope'
+        # allOf 成员必须显式声明 additionalProperties：缺失时校验器按「关闭」处理，
+        # 会把信封里的 code/message/traceId 误判为多余字段（2026-11-11 契约测试发现）
         - type: object
+          additionalProperties: true
           properties:
             data:
               type: object
@@ -3634,6 +3637,11 @@ components:
 # TODO(API): 补齐本项目其余接口；每新增接口必须回写错误码与字段约定，并把 x-status 从 DRAFT 推进到 APPROVED
 
 # 变更记录（CT-VER-005：版本号 / 日期 / 影响面 / 迁移方式）
+# 1.0.2 | 2026-11-11 | `PublicConfigResponse` 的 allOf 成员补 `additionalProperties: true`：
+#         契约校验器（swagger-request-validator 2.44.9）对 allOf 成员缺失该声明时按「关闭」处理，
+#         会把信封合法的 code/message/traceId 判为多余字段。属契约精度修正，实现未改。
+#         影响面：仅 GET /api/v1/public/configs 的响应 schema 描述；字段、状态码、错误码均不变。
+#         迁移方式：无（调用方不受影响）。
 # 1.0.1 | 2026-11-11 | 文件预览说明更正：越权由「返回 403」改为「与不存在统一返回 404（同一文案）」，403 仅代表缺功能权限。
 #         实现随之修改（FileAppService.requireVisible 两处抛 404）。属「实现向既有契约回归」而非契约变更——CT-HTTP-008 与
 #         CT-ERR-009 本就要求越权统一 404。影响面：GET /api/v1/files/{id}/preview、/download 的越权响应由 403 变 404；

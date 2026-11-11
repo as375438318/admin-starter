@@ -1078,3 +1078,56 @@
 - `mvn verify` 目前只有 2 个测试类：业务逻辑仍主要靠 E2E 与人工验证，覆盖面远未到"可放心重构"；
 - 契约测试（`docs/api/examples/backend`，`AGENTS.md` §7 的 error 级阻断之一）**仍未落地**，CI 无法校验"实现与 `docs/api/openapi.yaml` 一致"；
 - 集成测试依赖真实 MySQL/Redis，单类启动约 8–11s；测试增多后需要评估按模块拆分或并行。
+
+## 后端测试深度补齐（2026-11-11，用户指示「按照顺序实行」；CR-20261111-004）
+
+**顺序执行的三件事**：① 数据权限 + 字段脱敏单测 → ② 契约测试落地 → ③ 集成测试启动开销优化。
+
+### ① 核心逻辑单测（用例 8 → 66）
+
+| 模块 | 测试类 | 用例 | 锁定的风险 |
+|---|---|---|---|
+| common | `MaskFormatTest` | 6 | 掩码算法；格式不匹配一律返回 null（**不出半掩码**） |
+| common | `MaskResolverTest` | 8 | 三态判定（view/mask/隐藏）；未登录 fail-closed；空值透传 |
+| common | `MaskedValueGuardTest` | 10 | **原样回传掩码不覆盖真值**；提交别的掩码 422；HIDDEN 时禁止清空（防盲改致丢数据） |
+| common | `MaskUtilsTest` | 2 | 参数掩码固定 6 星、空值透传 |
+| system | `DataScopeSqlBuilderTest` | 12 | 全不限制→null；**该限制却无条件→`1 = 0`（fail-closed）**；组织/归属 or、两者 and；只拼数值 ID |
+| system | `RoleDataPermissionHandlerTest` | 10 | 未登记表**抛错**；豁免表放行；通知公共行例外整体加括号（防 `A AND (B) OR (C)` 绕过） |
+| system | `DataScopeProviderTest` | 10 | 多角色并集、最宽档胜出；无角色→仅本人；缓存键含部门版本号、命中不查库 |
+
+自我纠正 2 处（都是我的断言错，不是实现缺陷）：
+1. `MaskFormat.PHONE` 用 `Character.isDigit`，全角数字也通过 → 改为记录"现状 + 若要严格 ASCII 需另行决策"；
+2. `MaskedValueGuard` 清空"空原值"返回 `""` 而非 `null` → 按实现修正断言。
+
+### ② 契约测试落地（用例 +3）
+
+- `ContractValidationTest`：`@SpringBootTest` + MockMvc，用 **swagger-request-validator 2.44.9**（坐标取自 `docs/api/examples/backend/pom-snippet.xml`）把真实响应与 `docs/api/openapi.yaml` 比对。
+- **不复制契约副本**：直接读仓库里的契约文件（`-Dcontract.file` 可覆盖），避免"改了契约测试仍绿"这种最危险的情况；未文档化路径的"路径未定义"降级 WARN（契约按 §4.4 只覆盖部分接口），字段/类型/状态码保持 ERROR。
+- 覆盖：`GET /public/configs` 200 结构、白名单外字段不得出现（不含 token.secret/password）、`GET /files` 未登录 401 结构。
+
+**首次运行就抓到问题**：`publicConfigsMatchesContract` 报 `Object instance has properties which are not allowed by the schema: ["code","message","traceId"]`。
+用 `-Dcontract.file=<探针副本>` 做对照实验（探针只在 allOf 成员加 `additionalProperties: true`）立刻变绿 → **不是实现违约，是契约精度不足**：校验器对 allOf 成员缺失该声明时按"关闭"处理，把信封合法字段判成多余。
+处置：契约 `PublicConfigResponse` 的 allOf 成员显式 `additionalProperties: true` + 注释，契约 1.0.1 → **1.0.2** 并写变更记录（CT-VER-005）。实现代码零改动。
+
+### ③ 集成测试启动开销（实测）
+
+两个集成测试类注解不同（一个带 `@AutoConfigureMockMvc`），Spring Test 按注解组合缓存上下文 → **各起一次上下文**。新增 `AbstractIntegrationTest` 统一三个注解，两个类改为继承：
+
+| 指标 | 优化前 | 优化后 |
+|---|---|---|
+| `NotificationPublisherTransactionTest` 耗时 | 1.90s（自起上下文） | **0.134s**（复用上下文） |
+| `mvn -B -pl web -am verify` 总计 | 约 30s | **约 21s** |
+
+### 验证
+
+| 项 | 结果 |
+|---|---|
+| 后端全量 | **69 用例通过**（common 26 / system 38 / web 5），BUILD SUCCESS |
+| 契约对照实验 | 探针（allOf + additionalProperties）→ 绿；原契约 → 红，证明判断成立 |
+| 契约 YAML | PyYAML 加载 OK，version=1.0.2，paths=53 |
+| spec-lint | error 0 / warning 49 |
+
+### 仍未解决
+
+- 契约测试只覆盖 3 个断言点：契约共 53 条路径，多数需要登录态；覆盖受保护接口需引入 `spring-security-test` 造会话，属后续工作。
+- `views/*` 前端与后端业务逻辑（导入导出、通知投递、文件回收）仍主要靠 E2E 与人工验证。

@@ -57,6 +57,13 @@
             <artifactId>spring-boot-starter-test</artifactId>
             <scope>test</scope>
         </dependency>
+        <!-- 契约测试：拿真实响应与 docs/api/openapi.yaml 比对（坐标与用法见 docs/api/examples/backend） -->
+        <dependency>
+            <groupId>com.atlassian.oai</groupId>
+            <artifactId>swagger-request-validator-mockmvc</artifactId>
+            <version>2.44.9</version>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
     <build>
