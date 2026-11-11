@@ -1297,3 +1297,18 @@ Excel 导入/导出是**唯一能把大批脏数据写进库**、也是**唯一�
 - `MERGED` 后再传分片 → 状态冲突；匿名合并 → 被拒
 
 验证：后端全量 **170 用例通过**（common 26 / system 135 / web 9）。
+## 业务链路 E2E 扩展与工程化小件（2026-11-12，CR-20261112-013）
+
+**E2E（4 → 7 条）**：新增 `apps/pc/e2e/flows.spec.ts`：
+- 发布通知：UI 填表 → 抽屉关闭 + 列表可搜到 → 接口 total 增加且通知有应读人
+- 上传文件：`setInputFiles` → 列表出现 → **下载回读字节与上传内容完全一致**（证明不是只写了记录）
+- 导出：捕获 `download` 事件且 `*.xlsx`；异步通道则断言提示；两种都要求无错误提示
+- 实测 7/7 通过（12.7s）；`pnpm build` 通过、前端单测 95/95 通过
+
+**过程中发现两条事实（已入断言）**：
+1. **前端路由由后端菜单下发**（`/auth/routes`）：我第一版按视图目录猜 `/system/notice`、`/system/file`，两条用例都落到「页面不存在」；真实路径是 `/system/notices`、`/system/files`、`/demo/tasks`。
+2. **父 pom 上跑 `spring-boot:run` 会失败**（找不到 main class）：本地起后端要么 `mvn -pl web spring-boot:run`（先 install 兄弟模块），要么直接 `java -jar server/web/target/admin-starter.jar --spring.config.additional-location=optional:file:./server/web/src/main/resources/`。
+
+**工程化小件（7 个文件）**：`.editorconfig`（Java 4 / 前端 2；Markdown 不裁行尾空格）、`.nvmrc`（22）、`Dockerfile`（多阶段、非 root、连接信息全走环境变量、上传目录提示挂卷）、`.dockerignore`、`.github/dependabot.yml`（maven/npm/actions 三类 + minor/patch 分组）、`.github/pull_request_template.md`（直接对应 §7 门禁与 §6.2 回填）。
+
+**未完成（需人工决定）**：`LICENSE`（法律授权条款，需所有者选 MIT/Apache-2.0/专有）、分支保护规则（GitHub 仓库设置，文件无法表达）。

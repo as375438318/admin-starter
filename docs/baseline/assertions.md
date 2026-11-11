@@ -1,4 +1,4 @@
-# 系统基线 · 设计断言（as-built v1.27）
+# 系统基线 · 设计断言（as-built v1.28）
 
 | 项目 | 内容 |
 |---|---|
@@ -101,3 +101,5 @@
 | 75 | 导出列集合由「schema 的 exportFields + 掩码三态」共同决定：无 `view`/`mask` 权限的掩码字段**整列不输出**（不是输出空串）；模板表头必须带 `*` 必填标记且只包含参与导入的字段 | `ExcelExportWriter.visibleColumns`／`value`；`ExcelTemplateWriter.write`；`ExcelExportWriterTest`、`ExcelTemplateWriterTest` | 列可见性写错 = 导出文件把无权限字段整列外流；模板漏 `*` 用户不知道必填；模板数据页名与导入期望不一致会让整份文件被判「缺少数据页」 | 2026-11-11 |
 | 76 | 秒传命中条件必须是「记录存在 **且字节仍存在**」，只有记录不算（否则返回打不开的文件）；分片大小必须 256KB–5MB、序号必须在 `0..totalChunks-1`、会话只能由上传者本人续传 | `FileAppService.upload`／`instant`／`initChunkSession`／`uploadChunk`；`FileUploadTest` | 只看记录不看字节会产生"秒传成功但下载 404"；分片范围不校验会被塞任意大小请求；会话不校验上传者 = 任何人可污染他人文件 | 2026-11-11 |
 | 77 | 分片合并收尾必须校验**两件事**：合并后总字节数 == 会话声明 size、整体 sha256 == 会话声明 sha256；成功后**必须清理分片目录**并把会话置 `MERGED`；放弃已完成会话只清分片、不得覆盖终态 | `FileAppService.completeChunkSession`／`abortChunkSession`；`FileChunkCompleteTest` | 少一道校验用户拿到损坏文件且无从发现；不清理分片目录会让磁盘被临时片慢慢吃满；覆盖终态会把成功记录标成放弃 | 2026-11-12 |
+| 78 | 前端路由由后端菜单下发（`GET /auth/routes`），**代码里没有静态路由表**：E2E/文档中引用页面路径必须取真实值（`/system/notices`、`/system/files`、`/demo/tasks`），不能按视图目录名猜（猜错的表现是「页面不存在」状态页） | `apps/pc/src/router/index.ts` 动态注册；`apps/pc/e2e/flows.spec.ts` | 猜路径的用例会静默测到状态页而不是目标页面，看起来"跑通了"其实什么都没验证 | 2026-11-12 |
+| 79 | 本地启动后端**不能**在父 pom 上跑 `spring-boot:run`（报 `Unable to find a suitable main class`）：要么 `mvn -pl web spring-boot:run`（先在根 install 兄弟模块），要么用已构建的 `server/web/target/admin-starter.jar` 并加 `--spring.config.additional-location=optional:file:./server/web/src/main/resources/`（否则读不到被 gitignore 的 `application-local.yml`） | `server/pom.xml`（父 pom 无主类）；`README.md` 启动说明 | 直接 `mvn spring-boot:run` 会浪费一轮排查，容易被误判成"编译坏了" | 2026-11-12 |

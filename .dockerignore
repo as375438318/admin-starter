@@ -1,0 +1,23 @@
+# 构建上下文瘦身：镜像只需要 server/ 与 pom.xml
+.git
+.gitignore
+.gitattributes
+.github
+node_modules
+**/node_modules
+**/target
+**/dist
+docs
+apps
+packages
+scripts
+tools
+data
+server/data
+**/data
+*.md
+!server/**/pom.xml
+.nvmrc
+.editorconfig
+**/.env
+**/application-local.yml

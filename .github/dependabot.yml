@@ -1,0 +1,40 @@
+version: 2
+
+updates:
+  # 后端依赖（Maven 多模块）
+  - package-ecosystem: maven
+    directory: /server
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "chore(deps)"
+    groups:
+      # 小版本/补丁合并成一个 PR，避免每周开十几个 PR 互相冲突
+      maven-minor-patch:
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
+
+  # 前端依赖（pnpm workspace，根目录 package.json 为入口）
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "chore(deps)"
+    groups:
+      npm-minor-patch:
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
+
+  # GitHub Actions 自身版本（避免 actions/checkout 等长期停留在过期版本）
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    open-pull-requests-limit: 3
+    commit-message:
+      prefix: "chore(ci)"
