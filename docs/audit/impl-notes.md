@@ -1286,3 +1286,14 @@ Excel 导入/导出是**唯一能把大批脏数据写进库**、也是**唯一�
 **验证**：后端全量 **160 用例通过**（common 26 / system 125 / web 9），BUILD SUCCESS；spec-lint error 0 / warning 49。
 
 **遗留**：`completeChunkSession`（合并分片、校验整体 sha256、清理临时片）与 `chunkStatus` 未覆盖。
+## 分片合并收尾测试（2026-11-12，CR-20261112-012）
+
+`completeChunkSession` / `abortChunkSession` 此前未覆盖。新增 `FileChunkCompleteTest`（10 用例，真实存储 + `@TempDir`）：
+- 非 `UPLOADING` 状态拒绝；分片不完整报「缺少第 N 片」
+- **合并后大小不符 / 整体 sha256 不符都要拒绝**（不建记录、不改会话状态）——这是"拼起来的东西就是用户声明的文件"的唯一保障
+- 合并成功：字节落盘、记录带原名/大小/sha/上传人、**分片目录被清理**、会话置 `MERGED`
+- 已有相同内容：复用路径 + 标秒传，仍建新记录
+- 放弃会话：清分片 + `UPLOADING`→`ABORTED`；**已完成会话只清分片，不覆盖 `MERGED`**
+- `MERGED` 后再传分片 → 状态冲突；匿名合并 → 被拒
+
+验证：后端全量 **170 用例通过**（common 26 / system 135 / web 9）。
