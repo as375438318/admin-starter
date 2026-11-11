@@ -266,6 +266,7 @@ node tools/spec-lint/cli.mjs --root "<项目根目录>"
 
 | 版本 | 日期 | 变更内容 |
 |---|---|---|
+| v1.20 | 2026-11-11 | `AGENTS.md` §4.1 新增 **D 档（工程化/治理）**（`CR-20261111-005`）：档位表由 A/B/C 扩为 A/B/C/D，补判定顺序（命中 `PRC-APR-001`→C；单模块纯新增→B；不改运行时行为的工程化/治理→D；其余单模块微改→A）与 D 档护栏（不得掩盖行为变更）；§4.2 补 D 档文档产出（impl-notes + CR 必需，ADR 按需）。闭合 CR-001～004 连续 4 次标注的 `RULE-GAP`；不放宽 `PRC-APR-001` 审批与 `PRC-CR-001` 的 CR 义务 |
 | v1.19 | 2026-11-11 | 后端测试深度补齐（`CR-20261111-004`）：用例 8 → **69**（数据权限 SQL 拼接/角色条件合成/拦截器登记判定、字段脱敏三态与回写保护、参数掩码）；**契约测试落地**（swagger-request-validator 比对 `docs/api/openapi.yaml` 本体，不复制副本），首次运行即发现契约 `allOf` 成员缺 `additionalProperties` 声明并修正（契约升 **1.0.2**，实现未改）；新增 `AbstractIntegrationTest` 共享 Spring 上下文，集成测试从 1.9s 降到 0.134s、整体 verify 约 30s → 21s；断言新增 #69、#70 |
 | v1.18 | 2026-11-11 | 后端测试真正进 CI（`CR-20261111-003`）：数据源地址改为 `${APP_DB_URL:...}` 可覆盖；新增 `application-test.yml`（profile `test` 连独立库 `admin_starter_test`，可 `APP_TEST_DB_*` 覆盖，本地自动叠加被忽略的 `application-local.yml`）；`NotificationPublisherTransactionTest` 改用 test profile 并加"库名必须含 test"的安全断言；新增 `DataPermissionTablesTest`（6 用例）；`system` 模块补 test 依赖；CI 后端 job 改跑 `mvn -B -pl web -am verify`（MySQL 8 + Redis 7 服务容器），失败上传 surefire 报告；§9-B「测试框架」行补集成测试口径，断言新增 #68 |
 | v1.17 | 2026-11-11 | 清理登录页设计阶段产物：删除 `docs/design/login-mockups{,-v3,-v4}/`（50 个文件 / 25.5MB），并用 `git filter-branch` 重写历史把这三个目录从全部提交中剥离、`gc` 回收对象——`.git` 从 34.5MiB 降到 **922KiB**；同步修正 `login/index.vue` 注释与 impl-notes 中指向已删路径的引用 |

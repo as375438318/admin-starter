@@ -80,7 +80,7 @@
 - **影响面必须走反向索引**：禁止凭记忆列举；必须查 `docs/specs/INDEX-facts.md` 逐条定位引用点。索引未覆盖时写“索引未覆盖该事实”，并建议补入。
 - **通用层上升**：同一问题**两个以上项目**都遇到，才允许从项目层上升到通用规范；单项目特例只留项目层。越级上升必须在变更记录写明缘由与反对意见。
 
-### 4.1 变更档位（A／B／C，唯一定义处）
+### 4.1 变更档位（A／B／C／D，唯一定义处）
 
 档位只由**结构影响**判定，用于决定文档产出量；审批与 CR 另按 `PRC-APR-001`、`PRC-CR-001` 判定，档位不得豁免也不得扩大它们。
 
@@ -89,10 +89,13 @@
 | **A · 微改** | ① 只动 1 个模块；② 不新增/删除/改名接口路径或请求字段；③ 不动表结构与数据迁移；④ 不新增权限码；⑤ 不新增错误码；⑥ 未命中 `PRC-APR-001` | 改文案、调样式、加可选展示字段、修不涉契约的 bug |
 | **B · 模块级** | ① 只涉及 1 个模块（含其前端页面与后端包）；② 只做**纯新增且向后兼容**：接口、表/列、权限码、错误码、配置项；③ 未命中 `PRC-APR-001` | 新增一个 CRUD 模块、新增一张表、新增一组权限码 |
 | **C · 结构性** | 命中 `PRC-APR-001` 任一类别（逐类比对；本节不复述其类别与数量） | 契约版本演进、删列/改类型、权限放宽、安全降级、状态机变更、模块启停 |
+| **D · 工程化/治理** | ① 不改运行时行为：接口路径与请求/响应字段、表结构与迁移、权限码、错误码均不变；② 改动落在构建、测试、CI、文档治理，或 `AGENTS.md`／规范类只读文件的单点更新；③ 未命中 `PRC-APR-001` | 补测试与覆盖率、接或改 CI 门禁、修基线与 ADR/CR、给档位表或路由表补归口 |
 
 - **跨模块联动本身不升档**：是否落 C 只看是否命中 `PRC-APR-001`；未命中的跨模块纯新增落 B，禁止自行升为 C 另开审批。
 - **档位不豁免 CR**：任何档位只要命中 `PRC-CR-001` 的范围，先开 CR 再动手；A 档的 CR 同样按 `PRC-CR-002` 六要素齐全，只是不写需求条目与计划。
 - C 档在取到 `PRC-APR-001` 签核前**禁止**改代码或改文档（`PRC-CR-004`）。
+- **判定顺序（MUST）**：先判是否命中 `PRC-APR-001`（命中即 C）→ 再看是否"单模块 + 纯新增且向后兼容"（是则 B）→ 再看是否属"不改运行时行为的工程化/治理改动"（是则 D）→ 其余单模块微改落 A。
+- **D 档护栏（MUST）**：D 档**不得**用于掩盖行为变更。一旦改动影响运行时行为（接口、校验、权限、数据、部署配置语义），必须回到 A/B/C 判定；跨模块本身仍不升档。
 
 ### 4.2 文档产出对照表（按档位）
 
@@ -104,6 +107,7 @@
 | **A** | 无 | **MUST**：`docs/audit/impl-notes.md`；涉接口 → `docs/api/openapi.yaml` ＋重新导出 `docs/api/openapi.generated.yaml`；涉配置项 → `docs/design/config-registry.yaml`。**按需**：`docs/baseline/assertions.md`（出现“改错就出事”的新事实） | 需求条目、计划、ADR |
 | **B** | **MUST（缺失时先建）**：`docs/requirements/requirement-spec.md` 的能力条目、`docs/plan/` 计划、`docs/design/data-model.md`（涉表）、`docs/design/permission-matrix.md`（涉权限码）、`docs/api/openapi.yaml` 的接口定义 | **MUST**：上列文件对应条目；重新导出 `docs/api/openapi.generated.yaml`；`docs/baseline/modules.md`（模块/主表/接口前缀/权限码前缀）；`docs/audit/impl-notes.md`。**按需**：`docs/baseline/assertions.md`、`docs/design/config-registry.yaml`（新配置项） | ADR、契约版本号升级 |
 | **C** | B 档全部 ＋ **MUST**：`docs/decisions/ADR-*.md`（决策与备选方案）、影响面分析成文（`docs/audit/` 下变更记录，六要素按 `PRC-CR-002`） | B 档全部 ＋ **MUST**：`docs/api/openapi.yaml` 版本号与变更记录、`docs/design/state-machine.md`（涉状态）、`docs/baseline/assertions.md`（结构性结论） | — |
+| **D** | 无（不写需求条目与计划；含选型决策时写 `docs/decisions/ADR-*.md`） | **MUST**：`docs/audit/impl-notes.md`；**MUST**：`docs/audit/CR-*.md`（六要素齐全，改 `AGENTS.md`／规范类文件时本条即流程要求）。**按需**：`docs/baseline/assertions.md`（出现"改错就出事"的新事实）、`docs/decisions/ADR-*.md`（涉选型） | 需求条目、计划 |
 
 ### 4.3 只读不改与文档缺失
 
