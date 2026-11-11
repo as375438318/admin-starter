@@ -1,4 +1,4 @@
-# 系统基线 · 设计断言（as-built v1.24）
+# 系统基线 · 设计断言（as-built v1.25）
 
 | 项目 | 内容 |
 |---|---|
@@ -98,3 +98,4 @@
 | 72 | 通知接收范围语义：**多个范围取并集**（去重键 `scopeType:targetId`，ALL 不吞掉其它范围）；但**每个范围的目标都要先校验**（角色/部门不存在、用户停用即拒绝，带 ALL 也不例外）；解析结果为空必须报错，禁止落一条没人收得到的通知 | `NotificationAppService.normalizeScopes`／`resolveRecipients`；`NotificationPublishTest` | 误解成「ALL 覆盖一切」会漏掉指定人员；反过来若跳过校验，脏目标会被静默放过；范围空时若继续落库，会产生永远无人收到也无人发现的死通知 | 2026-11-11 |
 | 73 | 导入错误清单有**两个不同口径**：`errorRows` 按行去重、`errorCount` 按字段累计，清单最多 200 条且 `remainingErrors` 必须给出未显示条数；导出通道由三个阈值决定——≤2000 同步返回字节、>2000 建异步任务返回 taskId、>100000 直接拒绝 | `ImportErrorCollector.toData`；`ExcelExportPlanner.SYNC_MAX_ROWS`/`MAX_EXPORT_ROWS`；`ImportErrorCollectorTest`、`ExcelExportPlannerTest` | 把两个口径混成一个数字，用户会以为"改完 3 处就好了"其实有 5 行有问题；阈值写错表现为同步响应过大、或用户等一个不存在的任务、或导出打爆内存 | 2026-11-11 |
 | 74 | 彻底删除文件必须**先删行 → 再按 `storage_path` 计数 → 计数为 0 才删物理字节**（文件按 SHA-256 去重，计数不为 0 时删字节会把其它记录的文件变成空壳）；删除/恢复对"不存在或不可见"一律静默成功（幂等且不暴露存在性）。xlsx 解析保留 Excel 真实行号、跳过空行、表头去必填星号 | `FileAppService.purge`／`delete`／`restore`；`ExcelStreamParser.finishRow`／`buildHeader`；`FileRecycleTest`、`ExcelStreamParserTest` | 顺序反了会删掉仍被共享的字节（不可逆）；行号算错用户按提示找不到问题行；空行不跳过会刷屏"第 N 行为空" | 2026-11-11 |
+| 75 | 导出列集合由「schema 的 exportFields + 掩码三态」共同决定：无 `view`/`mask` 权限的掩码字段**整列不输出**（不是输出空串）；模板表头必须带 `*` 必填标记且只包含参与导入的字段 | `ExcelExportWriter.visibleColumns`／`value`；`ExcelTemplateWriter.write`；`ExcelExportWriterTest`、`ExcelTemplateWriterTest` | 列可见性写错 = 导出文件把无权限字段整列外流；模板漏 `*` 用户不知道必填；模板数据页名与导入期望不一致会让整份文件被判「缺少数据页」 | 2026-11-11 |
