@@ -1347,3 +1347,10 @@ Excel 导入/导出是**唯一能把大批脏数据写进库**、也是**唯一�
 **诚实结论**：这只改善缓存命中与并行下载，**总下载量基本不变**——Element Plus 全量引入的 967 kB 仍在。真正瘦身需要按需引入（`unplugin-vue-components` + `unplugin-auto-import`），会改变组件注册方式并新增依赖，属需要单独 ADR 评估的变更。
 
 顺带：`chunkSizeWarningLimit` 由 500 调到 1000，因为 vendor 块必然超 500，警告会淹没真实信号；闸门改放 CI 的业务 chunk 检查（硬失败 > 看警告）。
+## Dependabot 只收 minor/patch（2026-11-12，CR-20261112-018）
+
+`dependabot.yml` 上线当天开出 11 个 PR，其中 5 个是主版本跳跃（Spring Boot 3.2→4.1、swagger-validator 2.44→3.0、Vite 5→8、Pinia 2→4、vue-router 4→5）。
+
+**最危险的不是红的，是绿的**：#7/#8/#9/#10/#11 检查全绿——但单元测试覆盖不到主版本升级的破坏面（类型、插件生态、运行时行为）。而且 `AGENTS.md` §9-B 规定版本以该节为唯一定义处，`ADR-005`/`ADR-006` 已锁版本线。
+
+处置：`dependabot.yml` 给 maven 与 npm 两个生态加 `ignore: version-update:semver-major`，主版本升级改为人工发起（先 CR/ADR 评估，再改 §9-B 与版本号）。存量 11 个 PR 的处置建议写在 CR 里，等用户决定。
