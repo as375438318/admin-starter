@@ -266,6 +266,7 @@ node tools/spec-lint/cli.mjs --root "<项目根目录>"
 
 | 版本 | 日期 | 变更内容 |
 |---|---|---|
+| v1.30 | 2026-11-12 | `main` 启用规则集保护（`CR-20261112-015`）：禁删、禁强推、必须 PR（批准 0）、三检查全绿且分支须最新、无 bypass；新增「贡献流程」小节，明确禁止直推 main；断言新增 #80 |
 | v1.29 | 2026-11-12 | 采用 **Apache-2.0** 许可证（`CR-20261112-014`）：`LICENSE` 取自官方原文并逐行比对通过（169/169 行，仅版权行按模板填写）；分支保护方案与 API 调用已写入 CR，待 admin token 执行 |
 | v1.28 | 2026-11-12 | E2E 扩到 **7 条**（`CR-20261112-013`）：新增通知发布、文件上传（含**下载回读字节一致**）、示例任务导出三条业务链路；新增工程化文件 `.editorconfig`、`.nvmrc`、`Dockerfile`、`.dockerignore`、`.github/dependabot.yml`、`.github/pull_request_template.md`；断言新增 #78（前端路由由后端菜单下发）、#79（本地起后端的两种正确方式） |
 | v1.27 | 2026-11-12 | 新增 **分片合并收尾** 测试（`CR-20261112-012`，10 用例）：合并后大小与整体 sha256 双重校验、成功后清理分片目录并置 `MERGED`、放弃会话只清分片不覆盖终态、`MERGED` 后不可续传。后端测试 160 → **170**；断言新增 #77 |
@@ -299,3 +300,20 @@ node tools/spec-lint/cli.mjs --root "<项目根目录>"
 ## 许可证
 
 本项目采用 [Apache License 2.0](LICENSE)。
+## 贡献流程
+
+`main` 受**规则集保护**（禁删、禁强推、必须 PR、三个 CI 检查全绿且分支须基于最新 main、无 bypass），**禁止直推**：
+
+```
+git checkout -b feat/简短主题
+# 改代码 / 改文档，跑门禁
+node tools/spec-lint/cli.mjs
+cd server && mvn -B -pl web -am verify
+pnpm --filter @admin-starter/pc test:unit && pnpm --filter @admin-starter/pc build
+# 推分支并开 PR
+git push origin feat/简短主题
+```
+
+然后在 GitHub 上开 PR → 等 `文档门禁（spec-lint）`、`后端编译与集成测试（JDK 17）`、`前端测试与构建` 全绿 → Merge。
+
+直推 main 会报 `protected branch hook declined`，这是规则生效的正常表现，不是凭据坏了。
