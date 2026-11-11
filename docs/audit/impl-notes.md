@@ -1312,3 +1312,8 @@ Excel 导入/导出是**唯一能把大批脏数据写进库**、也是**唯一�
 **工程化小件（7 个文件）**：`.editorconfig`（Java 4 / 前端 2；Markdown 不裁行尾空格）、`.nvmrc`（22）、`Dockerfile`（多阶段、非 root、连接信息全走环境变量、上传目录提示挂卷）、`.dockerignore`、`.github/dependabot.yml`（maven/npm/actions 三类 + minor/patch 分组）、`.github/pull_request_template.md`（直接对应 §7 门禁与 §6.2 回填）。
 
 **未完成（需人工决定）**：`LICENSE`（法律授权条款，需所有者选 MIT/Apache-2.0/专有）、分支保护规则（GitHub 仓库设置，文件无法表达）。
+## LICENSE 采用 Apache-2.0（2026-11-12，CR-20261112-014）
+
+用户选定 **Apache-2.0**。文本取自 `https://www.apache.org/licenses/LICENSE-2.0.txt` 官方原文，**逐行比对通过**（本地 169 行 vs 官方 169 行，唯一差异是版权行按模板填 `Copyright 2026 as375438318`）——许可证正文不凭记忆手写。
+
+分支保护规则已写好方案与 API 调用（含单人仓库 `required_approving_review_count` 应为 0 否则自己无法批准自己 PR 的坑），但**需要 admin token 才能执行**，等用户提供。
