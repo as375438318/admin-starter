@@ -1,4 +1,4 @@
-# 系统基线 · 设计断言（as-built v1.32）
+# 系统基线 · 设计断言（as-built v1.33）
 
 | 项目 | 内容 |
 |---|---|
@@ -107,3 +107,4 @@
 | 81 | 合规口径：等保**未定级、未备案、未测评**，因此任何"已合规"表述都无依据；已拆解的可验收清单在 `docs/compliance/dengbao-breakdown.md`（P0 四项：密码策略缺失、审计留存与防篡改、生产强制 TLS、备份与恢复演练）。另：**密码复杂度/过期/首登强制改密目前完全没有实现**（仅启动日志提示），这是最容易被误以为"已经有"的一项 | `docs/compliance/dengbao-breakdown.md`；`application.yml`（auth 段）；`AuthAppService` 失败锁定实现 | 误以为"有登录锁定=口令安全"，测评时会在"身份鉴别·复杂度与定期更换"直接判不符合 | 2026-11-12 |
 | 82 | 前端构建产物按「变更频率」分包：`vendor-element-plus` / `vendor-vue` / `vendor` / 业务 `index`。**业务入口 chunk 必须 ≤ 400KB**（CI 步骤「业务 chunk 体积门禁」硬失败）——它变大意味着又把大依赖静态引进主包 | `apps/pc/vite.config.ts`（manualChunks）；`.github/workflows/ci.yml` 前端 job；`CR-20261112-017` | 回到单包时 `index.js` 1.29MB，业务改一个字符就让用户重下整个框架；没有门禁时拆分很容易被下一次「顺手 import」悄悄破坏 | 2026-11-12 |
 | 83 | Dependabot 只自动开 minor/patch PR（`ignore: version-update:semver-major`）；**主版本升级必须人工发起**并先开 CR/ADR 更新 `AGENTS.md` §9-B 与 `ADR-005`/`ADR-006`。另：**依赖升级 PR 的 CI 全绿不等于可合并**——单测覆盖不到主版本的破坏面（类型定义/插件生态/运行时行为） | `.github/dependabot.yml`；`AGENTS.md` §9-B；`CR-20261112-018` | 见到全绿就合主版本，会出现"合进去能编译、上线才炸"；反之全关闭又会丢掉安全补丁（patch 仍会自动来） | 2026-11-12 |
+| 84 | Maven 侧"框架核心"依赖**只收 patch**：`spring-boot-starter-parent`、`mybatis-plus-*`、`springdoc-*`、`mapstruct*` 的 minor 也视为框架升级（SB minor 连带 Spring Framework/Security 版本线；**MyBatis-Plus 3.5.9 起 JSqlParser 独立成件 `mybatis-plus-jsqlparser`**，直接升会让 `net.sf.jsqlparser.*` 编译失败） | `.github/dependabot.yml`；`CR-20261112-019`；`RoleDataPermissionHandler`（用到 jsqlparser） | 把 maven minor 当安全升级自动合 → 后端编译直接红；或升完 MP 后忘记补 `mybatis-plus-jsqlparser`，运行期数据权限拦截器失效（更危险） | 2026-11-12 |
