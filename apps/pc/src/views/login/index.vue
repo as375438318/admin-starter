@@ -36,7 +36,7 @@ function onForgot(): void {
 
 <template>
   <div class="login-page">
-    <!-- 建筑线稿：纯内联 SVG，坐标与 docs/design/login-mockups-v4/mock-2.html 一致 -->
+    <!-- 建筑线稿：纯内联 SVG，坐标按登录页 v4 设计稿还原（设计稿已从仓库移除，见 docs/audit/impl-notes.md） -->
     <svg class="login-skyline" viewBox="0 0 1440 300" preserveAspectRatio="none" aria-hidden="true">
       <!-- 远景剪影 fill 取自 --color-primary-light-8（#dbe7fd），叠加 opacity 还原雾感 -->
       <g fill="#dbe7fd" opacity=".85">
