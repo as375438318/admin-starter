@@ -970,3 +970,48 @@
 2. **`20105` 不是终止码**：写单测时误以为 20105（登录状态已失效）属终止类，用例运行失败；按 `docs/design/auth-and-datascope.md` 的 401 分码矩阵更正为「非终止，仍先尝试刷新」。测试反过来纠正了我的假设。
 
 **未覆盖**：`use-chunk-upload`、`use-crud-drawer`、`v-permission` 指令等尚未补用例；§15.2 的分层覆盖率目标（纯函数 ≥80%、composable 60–70%）目前未达标，属后续增量。E2E 工作流尚未在 GitHub Actions 上实测（推送后需手动触发一次）。
+
+## 覆盖率补齐（2026-11-11，纯新增测试，无生产代码改动）
+
+**目标**：`frontend-spec.md` §15.2 的分层门槛——纯函数/工具 ≥80%、composable 60–70%、页面不设门槛只做 E2E 冒烟。
+
+**结果（真实运行 `pnpm --filter @admin-starter/pc test:unit:coverage`）**
+
+| 目录/文件 | 改前 | 改后 | §15.2 门槛 |
+|---|---|---|---|
+| `src/utils`（datetime / form / option-load / sha256 / skeleton） | 14.84% | **100%** 行 / 97.5% 分支 | ≥80% ✅ |
+| `src/composables`（field-errors / paged-list / crud-drawer / chunk-upload / login-form / blob-preview / pagination） | 56.84% | **93.36%** 行 / 88.97% 分支 | 60–70% ✅ |
+| `src/directives/permission.ts` | 0 | **100%** | — |
+| `src/stores/auth.ts` | 0 | **100%** 行 / 85.71% 分支 | — |
+| `src/api/http.ts` | 20.12% | **36.03%** 行 / 74.13% 分支 | — |
+| 用例总数 | 19（3 文件） | **95（15 文件）** | — |
+
+**新增 12 个用例文件**（按价值排序）
+
+| 文件 | 用例 | 锁住的行为 |
+|---|---|---|
+| `src/stores/auth.spec.ts` | 7 | bootstrap 一次拉齐 me/routes/permissions；`hasPermission` 未传码即放行；`logout` 接口失败也必须清本地登录态；`displayName` 昵称→账号回落 |
+| `src/composables/use-login-form.spec.ts` | 11 | 空表单校验与聚焦顺序、记住我只存账号（trim）、`redirect` 优先、401 字段错误就地回填而非整页报错、提交中重复点击被忽略 |
+| `src/composables/use-chunk-upload.spec.ts` | 9 | 续传键含 userId（换账号不串会话）、会话失效清本地键、已上传分片跳过、413 回灌上限且只提示一次、秒传不发请求 |
+| `src/composables/use-crud-drawer.spec.ts` | 9 | 提交期间 `submitting` 置位、422 回填并保持抽屉打开、再次打开清空上次错误、校验失败不调 handler |
+| `src/api/http-interceptor.spec.ts` | 9 | 信封解包、非信封（Blob）原样返回、422 字段错误与导入载荷、413 带 `maxSize` 且不弹全局提示、5xx 文案带 traceId |
+| `src/composables/use-blob-preview.spec.ts` | 6 | 图片不回源、Blob 取回生成本地 URL、HTTP 失败提示并关闭、打开新文件与卸载时回收 objectURL（防内存泄漏） |
+| `src/utils/option-load.spec.ts` | 7 | 选项加载失败按页面去重提示、`loadStatusOptions` 异常回落到内置两项 |
+| `src/utils/skeleton.spec.ts` | 5 | 骨架屏延迟显示（快请求不闪烁）、结束立即隐藏、卸载清定时器 |
+| `src/utils/sha256.spec.ts` | 3 | 算法与编码没变（比对 "abc"/空串的标准摘要） |
+| `src/utils/datetime.spec.ts` | 3 | 空值占位符、无法解析时原样返回、`YYYY-MM-DD HH:mm` 补零 |
+| `src/utils/form.spec.ts` | 4 | 滚动到首个错误项、240ms 后聚焦、禁用输入框不聚焦 |
+| `src/directives/permission.spec.ts` | 3 | 无权限移除 DOM（非置灰）、数组写法任意命中、从注册函数取真实实现（不抄一份逻辑） |
+
+**实测踩到的三个坑（都记下来，避免后人重复）**
+
+1. **`wrapper.find` 会命中组件根节点**：权限指令把元素移出 DOM 后，若该元素就是组件根，`find('.probe')` 仍返回 true。改为在元素外包一层 host div 才断言得出「已移除」。
+2. **Vitest 3.2 的幽灵未处理拒绝**：`beforeEach` 里调用 `mockReset()/mockClear()`，再用例内让 mock 抛错，会被记为「未处理拒绝」——即使被测函数的 catch 已正确回落（实测打印出的返回值就是回落值）。去掉该 beforeEach 后通过；已在用例里加注释说明。
+3. **`vue-tsc -b` 会连测试文件一起类型检查**：spec 里的 `as never` 展开、未使用的 import、mock 实现签名不符都会让 `pnpm build` 失败——CI 里单测与构建是两步，构建这一步同样能挡住测试文件的类型问题。
+
+**未覆盖（有意的）**
+
+- `src/views/**`（17 个页面）：§15.2 明确「页面不设门槛，靠 E2E 冒烟」，已由 `e2e/smoke.spec.ts` 覆盖 4 条主链路。
+- `src/api/*.ts` 的 11 个接口包装：本质是 URL+方法+类型的声明式映射，单测只能断言字符串本身；其正确性由 E2E 与后端契约（`docs/api/openapi.yaml`）约束，投入产出比低。
+- `src/api/http.ts` 剩余 64%（`downloadFile`/`saveBlob`/`upload` 等）：需要 DOM Blob 下载桩，价值低于已覆盖的拦截器分支，留待需要时补。
+- `src/router/index.ts`（守卫）：与权限路由注册强耦合，E2E 的「未登录重定向」「无权限不可见」两条已覆盖其对外行为。

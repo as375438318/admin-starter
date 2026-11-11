@@ -260,6 +260,7 @@ node tools/spec-lint/cli.mjs --root "<项目根目录>"
 
 | 版本 | 日期 | 变更内容 |
 |---|---|---|
+| v1.16 | 2026-11-11 | 前端测试覆盖率补齐（纯新增用例，无生产代码改动）：用例 19 → **95**（3 → 15 个文件）；`src/utils` 行覆盖 14.84% → **100%**、`src/composables` 56.84% → **93.36%**、`directives/permission` 与 `stores/auth` → **100%**，达到 `frontend-spec.md` §15.2 的分层门槛；`views/*` 按规范不设门槛、由 E2E 冒烟覆盖 |
 | v1.15 | 2026-11-11 | 前端测试框架落地（`ADR-006`／`CR-20261111-002`）：`apps/pc` 引入 Vitest 3 + `@vue/test-utils`（单元/组件，19 用例）与 Playwright（E2E 冒烟 4 条）；`http.ts` 的 401 处置抽成纯函数 `planOn401`（行为不变）；CI 前端 job 增加单测步骤、新增 `workflow_dispatch` 的 E2E 工作流；`AGENTS.md` §9-B「测试框架」行由「未定」改为已定（小程序自动化仍随后续跨端选型）；`.gitignore` 忽略测试产物 |
 | v1.14 | 2026-11-11 | 填实 `AGENTS.md` §9：§9-A 项目约束（平台/团队/部署/合规/里程碑）与 §9-B 技术选型九行由用户逐项确认后落笔，技术栈从「无定义方」转为 `AGENTS.md` §9-B 唯一定义（版本取自 pom/package.json/产物 jar，非猜测）；新增 `ADR-005` 记录选型理由与否决方案、`CR-20261111-001` 作为通用层变更记录；事实索引新增 `F-TECH-STACK`（43 条）；跨端框架与前端测试框架保持「未定」。同时按 §1「README 只引用 §9-B、不写版本号」删除本文件 §0.1 与环境说明中的版本号，并修正该表「Redis 6+」的错误描述（实为 5.0） |
 | v1.13 | 2026-11-11 | 建立版本库：`git init`（分支 `main`）+ `.gitattributes`（统一 LF）+ `.gitignore` 补齐（`server/web/data/`、根 `data/`、`.trae-html-share-packages/`、`.screenshots/`）；README 新增「版本管理」小节，说明凭据与运行期数据的忽略口径及克隆后的补齐动作 |
