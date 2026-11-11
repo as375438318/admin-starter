@@ -1317,3 +1317,14 @@ Excel 导入/导出是**唯一能把大批脏数据写进库**、也是**唯一�
 用户选定 **Apache-2.0**。文本取自 `https://www.apache.org/licenses/LICENSE-2.0.txt` 官方原文，**逐行比对通过**（本地 169 行 vs 官方 169 行，唯一差异是版权行按模板填 `Copyright 2026 as375438318`）——许可证正文不凭记忆手写。
 
 分支保护规则已写好方案与 API 调用（含单人仓库 `required_approving_review_count` 应为 0 否则自己无法批准自己 PR 的坑），但**需要 admin token 才能执行**，等用户提供。
+## main 分支保护启用（2026-11-12，CR-20261112-015）
+
+用户建立规则集并选择「A · 严格」，AI 用 API 复核确认真正生效（`GET /rules/branches/main` 返回 4 条：`deletion` / `non_fast_forward` / `pull_request`(批准 0) / `required_status_checks`(strict)）。
+
+配置过程中踩到两种"看起来配好了其实没生效"的状态，值得记下来：
+- 规则集列表显示 `targeting 0 branches`（没加目标分支）；
+- 规则集 `enforcement = disabled`（加进去但没启用）。
+
+两条都是界面能保存成功、但规则实际不拦任何东西。**判断生效只能看 API 的 `/rules/branches/main` 或实际推一次**，不能看列表页文案。
+
+自本 CR 起，所有改动走「推分支 → PR → 三检查绿 → 合并」；禁止直推 main（会报 `protected branch hook declined`）。
