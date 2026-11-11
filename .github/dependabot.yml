@@ -11,10 +11,25 @@ updates:
     commit-message:
       prefix: "chore(deps)"
     # 主版本升级会破坏兼容（Spring Boot 4 / 校验器 3.x 等），且 `AGENTS.md` §9-B 规定技术栈版本
-    # 以该节为唯一定义处、升级需走评估。因此这里只收 minor/patch，主版本由人手动发起并开 CR/ADR。
+    # 以该节为唯一定义处、升级需走评估。因此主版本由人手动发起并开 CR/ADR。
+    #
+    # 另外：Java 生态里"框架核心"的 minor 实质就是框架升级，不能按普通 minor 自动合：
+    # - spring-boot-starter-parent：minor 会连带 Spring Framework / Security 版本线
+    # - mybatis-plus-*：3.5.9 起把 JSqlParser 拆成独立依赖（mybatis-plus-jsqlparser），
+    #   直接升会让 `net.sf.jsqlparser.expression.Expression` 编译不过（2026-11-12 实测，见 CR-20261112-019）
+    # - springdoc-*、mapstruct*：与 Spring 版本强绑定
+    # 这些依赖只收 patch。
     ignore:
       - dependency-name: "*"
         update-types: ["version-update:semver-major"]
+      - dependency-name: "org.springframework.boot:spring-boot-starter-parent"
+        update-types: ["version-update:semver-minor"]
+      - dependency-name: "com.baomidou:mybatis-plus-*"
+        update-types: ["version-update:semver-minor"]
+      - dependency-name: "org.springdoc:*"
+        update-types: ["version-update:semver-minor"]
+      - dependency-name: "org.mapstruct:*"
+        update-types: ["version-update:semver-minor"]
     groups:
       # 小版本/补丁合并成一个 PR，避免每周开十几个 PR 互相冲突
       maven-minor-patch:

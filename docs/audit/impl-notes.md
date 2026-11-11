@@ -1354,3 +1354,16 @@ Excel 导入/导出是**唯一能把大批脏数据写进库**、也是**唯一�
 **最危险的不是红的，是绿的**：#7/#8/#9/#10/#11 检查全绿——但单元测试覆盖不到主版本升级的破坏面（类型、插件生态、运行时行为）。而且 `AGENTS.md` §9-B 规定版本以该节为唯一定义处，`ADR-005`/`ADR-006` 已锁版本线。
 
 处置：`dependabot.yml` 给 maven 与 npm 两个生态加 `ignore: version-update:semver-major`，主版本升级改为人工发起（先 CR/ADR 评估，再改 §9-B 与版本号）。存量 11 个 PR 的处置建议写在 CR 里，等用户决定。
+## 框架核心依赖只收 patch（2026-11-12，CR-20261112-019）
+
+Dependabot 的 maven minor 组（PR #16，11 个更新）把后端编译搞红。从 Actions 日志拿到真实根因——不是我猜的：
+
+```
+RoleDataPermissionHandler.java:[27,50] cannot find symbol: class Expression
+```
+
+**MyBatis-Plus 3.5.9 起把 JSqlParser 拆成独立依赖**（`mybatis-plus-jsqlparser`），所以 3.5.7 → 3.5.18.1 后 `net.sf.jsqlparser` 不在类路径。
+
+结论：Java 生态的"minor"不是"小改动"——Spring Boot minor 会连带 Spring Framework/Security 版本线；springdoc/mapstruct 与 Spring 强绑定。因此对 `spring-boot-starter-parent`、`mybatis-plus-*`、`springdoc-*`、`mapstruct*` 再加"忽略 minor，只收 patch"。
+
+另：Dependabot 在我们加 `ignore-major` 后**自动关闭了 7 个主版本 PR**（#5–#11），无需人工处理；#16 我关闭并写清根因。前端 minor/patch 仍按"CI 绿即合"，因为其语义相对温和。
