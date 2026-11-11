@@ -1,4 +1,4 @@
-# 系统基线 · 设计断言（as-built v1.29）
+# 系统基线 · 设计断言（as-built v1.30）
 
 | 项目 | 内容 |
 |---|---|
@@ -104,3 +104,4 @@
 | 78 | 前端路由由后端菜单下发（`GET /auth/routes`），**代码里没有静态路由表**：E2E/文档中引用页面路径必须取真实值（`/system/notices`、`/system/files`、`/demo/tasks`），不能按视图目录名猜（猜错的表现是「页面不存在」状态页） | `apps/pc/src/router/index.ts` 动态注册；`apps/pc/e2e/flows.spec.ts` | 猜路径的用例会静默测到状态页而不是目标页面，看起来"跑通了"其实什么都没验证 | 2026-11-12 |
 | 79 | 本地启动后端**不能**在父 pom 上跑 `spring-boot:run`（报 `Unable to find a suitable main class`）：要么 `mvn -pl web spring-boot:run`（先在根 install 兄弟模块），要么用已构建的 `server/web/target/admin-starter.jar` 并加 `--spring.config.additional-location=optional:file:./server/web/src/main/resources/`（否则读不到被 gitignore 的 `application-local.yml`） | `server/pom.xml`（父 pom 无主类）；`README.md` 启动说明 | 直接 `mvn spring-boot:run` 会浪费一轮排查，容易被误判成"编译坏了" | 2026-11-12 |
 | 80 | `main` 受规则集保护（`deletion` + `non_fast_forward` + `pull_request`(批准 0) + `required_status_checks`(strict)，bypass 名单为空）：**禁止直推 main**，所有改动必须走「推分支 → PR → 三检查绿 → 合并」。判断规则是否生效只看 `GET /repos/.../rules/branches/main` 或实际推送，**不能看规则集列表页文案**（`targeting 0 branches` 与 `enforcement=disabled` 都能保存成功但完全不拦） | GitHub 规则集 `校验规则`（id 27032663）；`docs/audit/CR-20261112-015-main-branch-protection.md`；`README.md` 贡献流程 | 直推 main 会报 `protected branch hook declined`，误以为是权限/凭据问题而反复重试；以为规则生效但实际 disabled 时，任何保护都形同虚设 | 2026-11-12 |
+| 81 | 合规口径：等保**未定级、未备案、未测评**，因此任何"已合规"表述都无依据；已拆解的可验收清单在 `docs/compliance/dengbao-breakdown.md`（P0 四项：密码策略缺失、审计留存与防篡改、生产强制 TLS、备份与恢复演练）。另：**密码复杂度/过期/首登强制改密目前完全没有实现**（仅启动日志提示），这是最容易被误以为"已经有"的一项 | `docs/compliance/dengbao-breakdown.md`；`application.yml`（auth 段）；`AuthAppService` 失败锁定实现 | 误以为"有登录锁定=口令安全"，测评时会在"身份鉴别·复杂度与定期更换"直接判不符合 | 2026-11-12 |
