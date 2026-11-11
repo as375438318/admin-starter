@@ -1150,3 +1150,33 @@
 **闭合历史遗留**：CR-001～CR-004 中标注的 `RULE-GAP`（“档位表无法容纳跨模块工程化改动”）自本规则起**关闭**；上述四次处置保持不变（拆单元 + 通用层留痕），事后看仍符合 D 档判据。
 
 **保留的反对意见**：档位从三档变四档会增加认知成本；若将来 D 档被用来夹带行为变更，应回退此规则。已在 §4.1 加护栏并在 CR-005 §11 登记。
+
+## 受保护接口契约测试 + 契约两处精度修正（2026-11-11，用户「按顺序进行」；CR-20261111-006）
+
+**做了什么**：`ContractValidationTest` 从 3 个未登录断言点扩到 **7 个**，新增 4 个受保护接口校验——真实 `POST /api/v1/auth/login`（admin/admin123，测试库种子）换 `ACCESS_TOKEN` Cookie 后再校验，不用 mock 身份（避免"测的是假登录"）。
+
+| 新增用例 | 覆盖 |
+|---|---|
+| `fileListMatchesContract` | `GET /files` 200 + 分页四字段 + 文件项必填字段 |
+| `noticeListMatchesContract` | `GET /notices` 200 |
+| `fileRecycleListMatchesContract` | `GET /files/recycle` 200 |
+| `previewMissingFileMatchesContract` | `GET /files/{id}/preview` 不存在 → 契约声明的 404 |
+
+**首次运行抓到两处问题，都在契约侧（实现零改动）**：
+
+1. **`FilePageResponse` 漏声明分页字段**：`data` 只写 `required: [list, total]`，而其它 8 个分页 schema 都是四字段，实现也确实返回四个 → validator 报 `["page","pageSize"] not allowed`。结论：契约漏写。已补齐。
+2. **`allOf` 成员缺 `additionalProperties` 是系统性问题**：CR-004 当时只在 `PublicConfigResponse` 补过，本次三个接口再次同样报错 → 证明是普遍问题。
+   - **失败尝试（记录以免重走）**：先把 `validation.response.body.schema.additionalProperties` 降级为 WARN，**无效**——父级 `allOf` 仍以 ERROR 报 `Instance failed to match all required schemas`。
+   - **最终做法**：脚本化给契约里全部 **26 处** `allOf` 成员补 `additionalProperties: true`，并**保持** `additionalProperties` 为 ERROR 级别（不降低门禁强度）。
+
+**契约**：1.0.2 → **1.0.3**，写 CT-VER-005 变更记录，两处均为精度修正，状态码/错误码集合不变。
+
+**验证**
+
+| 项 | 结果 |
+|---|---|
+| 后端全量 | **73 用例通过**（common 26 / system 38 / web 9），BUILD SUCCESS |
+| 契约 YAML | version=1.0.3、paths=53、schemas=54 |
+| spec-lint | error 0 / warning 49 |
+
+**遗留**：契约里仍有 ~30 个需登录的接口未做契约校验（写接口需请求体夹具，成本更高）；登录夹具只用 `admin`，不同角色看到不同数据的差异属行为测试范畴，契约层不覆盖。

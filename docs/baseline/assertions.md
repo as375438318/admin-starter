@@ -1,4 +1,4 @@
-# 系统基线 · 设计断言（as-built v1.20）
+# 系统基线 · 设计断言（as-built v1.21）
 
 | 项目 | 内容 |
 |---|---|
@@ -93,4 +93,5 @@
 - [x] 未收录规范已有规则或接口清单（MUST, STATIC）
 - [x] 断言变化已回填并更新核对日期（MUST, CONTEXT）
 | 69 | 契约测试**直接读仓库里的 `docs/api/openapi.yaml`**（可用 `-Dcontract.file` 覆盖），禁止复制副本到 `src/test/resources`；未文档化路径的"路径未定义"降级为 WARN，其余（字段/类型/状态码）保持 ERROR | `server/web/src/test/java/com/adminstarter/ContractValidationTest.java`（locateContract/buildValidator）；`docs/api/openapi.yaml` 1.0.2 | 复制副本必然漂移，会出现"改了契约但测试仍绿"——这正是契约测试要防的情况 | 2026-11-11 |
-| 70 | 契约里 `allOf` 的成员必须显式声明 `additionalProperties`（本项目取 `true`）：swagger-request-validator 2.44.9 对缺失该声明的 allOf 成员按"关闭"处理，会把信封合法的 `code/message/traceId` 判为多余字段 | `docs/api/openapi.yaml` 的 `PublicConfigResponse`；`ContractValidationTest` | 报错信息形似"实现多返回了字段"，容易被误判成实现缺陷并去改代码；实际是契约精度不足 | 2026-11-11 |
+| 70 | 契约里**每一处** `allOf` 的成员都必须显式声明 `additionalProperties: true`（当前 26 处已全部补齐）：swagger-request-validator 2.44.9 对缺失该声明的 allOf 成员按"关闭"处理，会把信封合法的 `code/message/traceId` 判为多余字段。**只降级 `validation.response.body.schema.additionalProperties` 无效**——父级 `allOf` 仍报 ERROR | `docs/api/openapi.yaml`（26 处 allOf 成员）；`ContractValidationTest` | 报错信息形似"实现多返回了字段"，容易被误判成实现缺陷去改代码；新增 schema 时若忘声明，契约测试会以同样的假阳性红掉 | 2026-11-11 |
+| 71 | 所有列表接口的分页 `data` 必须是**四字段** `list/total/page/pageSize`，契约里每个 `*PageResponse` 都要写全：曾出现 `FilePageResponse` 只声明 `list/total`，而实现与其它接口一致返回四字段 | `docs/api/openapi.yaml` 的 9 个 `*PageResponse`；`ContractValidationTest.fileRecycleListMatchesContract`、`fileListMatchesContract` | 契约与实现不一致会让契约测试红掉，且新人照抄那个残缺 schema 会把错误扩散到新接口 | 2026-11-11 |

@@ -7,7 +7,10 @@ import com.atlassian.oai.validator.report.ValidationReport;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import jakarta.servlet.http.Cookie;
+import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
 
 
 import java.nio.file.Files;
@@ -15,6 +18,7 @@ import java.nio.file.Path;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -62,6 +66,7 @@ class ContractValidationTest extends AbstractIntegrationTest {
                         // 契约按 §4.4 只写"被前端消费/需交付"的接口，未文档化的路径不在本测试范围内，
                         // 因此把"路径未定义"降级为 WARN，避免把"契约未覆盖"误报成"实现违约"。
                         .withLevel("validation.request.path.missing", ValidationReport.Level.WARN)
+
                         .build())
                 .build();
     }
@@ -93,5 +98,59 @@ class ContractValidationTest extends AbstractIntegrationTest {
                 .andExpect(status().isUnauthorized())
                 .andExpect(OpenApiValidationMatchers.openApi().isValid(VALIDATOR))
                 .andExpect(jsonPath("$.code").isNumber());
+    }
+
+    // ------------------------------------------------------------------
+    // 受保护接口：先真实登录换 Cookie（登录接口本身不在契约交付范围内），再校验业务响应
+    // ------------------------------------------------------------------
+
+    private Cookie loginAsAdmin() throws Exception {
+        MvcResult result = mockMvc.perform(post("/api/v1/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"username\":\"admin\",\"password\":\"admin123\"}"))
+                .andExpect(status().isOk())
+                .andReturn();
+        for (Cookie cookie : result.getResponse().getCookies()) {
+            if ("ACCESS_TOKEN".equals(cookie.getName())) {
+                return cookie;
+            }
+        }
+        throw new IllegalStateException("登录未返回 ACCESS_TOKEN Cookie，无法进行受保护接口的契约校验");
+    }
+
+    @Test
+    @DisplayName("GET /files（已登录）：列表响应符合契约（分页四字段 + 文件项必填字段）")
+    void fileListMatchesContract() throws Exception {
+        mockMvc.perform(get("/api/v1/files").param("page", "1").param("pageSize", "10").cookie(loginAsAdmin()))
+                .andExpect(status().isOk())
+                .andExpect(OpenApiValidationMatchers.openApi().isValid(VALIDATOR))
+                .andExpect(jsonPath("$.data.list").isArray())
+                .andExpect(jsonPath("$.data.total").isNumber());
+    }
+
+    @Test
+    @DisplayName("GET /notices（已登录）：通知列表响应符合契约")
+    void noticeListMatchesContract() throws Exception {
+        mockMvc.perform(get("/api/v1/notices").param("page", "1").param("pageSize", "10").cookie(loginAsAdmin()))
+                .andExpect(status().isOk())
+                .andExpect(OpenApiValidationMatchers.openApi().isValid(VALIDATOR))
+                .andExpect(jsonPath("$.data.list").isArray());
+    }
+
+    @Test
+    @DisplayName("GET /files/recycle（已登录）：回收站列表响应符合契约")
+    void fileRecycleListMatchesContract() throws Exception {
+        mockMvc.perform(get("/api/v1/files/recycle").param("page", "1").param("pageSize", "10")
+                        .cookie(loginAsAdmin()))
+                .andExpect(status().isOk())
+                .andExpect(OpenApiValidationMatchers.openApi().isValid(VALIDATOR));
+    }
+
+    @Test
+    @DisplayName("GET /files/{id}/preview 不存在：契约声明的 404（与越权统一，不泄露存在性）")
+    void previewMissingFileMatchesContract() throws Exception {
+        mockMvc.perform(get("/api/v1/files/{id}/preview", 999999L).cookie(loginAsAdmin()))
+                .andExpect(status().isNotFound())
+                .andExpect(OpenApiValidationMatchers.openApi().isValid(VALIDATOR));
     }
 }
