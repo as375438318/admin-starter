@@ -4,8 +4,8 @@
 # 校验口径：owner/refs 的逐行一致性由 spec-lint 的 SL-FACT-001 校验；本文件内的规则编号由 SL-REF-001 校验存在性。
 # 只做事实映射，不写规则正文。
 
-version: 0.5.0
-updated: 2026-11-08
+version: 0.6.0
+updated: 2026-11-11
 
 schema:
   id: 事实编号，F-* 形式，只追加不复用
@@ -309,3 +309,10 @@ facts:
     fields: [baseline, specs]
     refs: []
     keywords: [基线, baseline, as-is, to-be, 系统现状, 竣工基线]
+
+  - id: F-TECH-STACK
+    name: 技术栈版本与选型
+    owner: AGENTS.md#9
+    fields: [语言与运行时版本, 后端框架, 前端框架/跨端, 数据库, ORM/数据访问, 缓存/消息, 测试框架, 包管理器, 目录约定]
+    refs: [FE-STACK-001, FE-STACK-004]
+    keywords: [技术栈, tech stack, 版本, JDK, Spring Boot, MySQL, MyBatis-Plus, Redis, Vue, Vite, pnpm, 选型, 未定, 跨端]

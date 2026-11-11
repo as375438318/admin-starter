@@ -6,16 +6,18 @@
 
 ## 0. 运行本仓库（可执行工程）
 
-本仓库已包含可运行的 JDK 17 + Spring Boot 3.2 后端与 Vue 3 + Vite 前端，功能覆盖登录、用户、角色、菜单、部门、岗位、字典、参数、操作日志、文件上传、个人中心，以及数据权限参考实现（示例业务任务）。
+本仓库已包含可运行的后端与 PC 前端（语言、框架与版本见 `AGENTS.md` §9-B，本文件不重复版本号），功能覆盖登录、用户、角色、菜单、部门、岗位、字典、参数、操作日志、文件上传、个人中心，以及数据权限参考实现（示例业务任务）。
 
 ### 0.1 环境依赖
 
+> 版本要求以 `AGENTS.md` §9-B 为唯一来源；本表只写**本机联调时的实际落点**与易错点，不写版本号。
+
 | 依赖 | 要求 | 说明 |
 |---|---|---|
-| JDK | 17 | 构建与运行必须使用 JDK 17；Maven 若默认指向 JDK 8 会报“无效的标记: --release” |
-| Node / pnpm | 22 / 11 | 前端为 pnpm workspace（逐包显式声明，见 `pnpm-workspace.yaml`），只保留 `pnpm-lock.yaml` 一份锁文件 |
-| MySQL | 8.x，`127.0.0.1:3307` | 库名 `admin_starter`，应用账号 `admin_app` |
-| Redis | 6+，`127.0.0.1:6379` | 缓存会话、数据权限；需设置口令 |
+| JDK | 见 `AGENTS.md` §9-B | 构建与运行必须使用该 JDK；本机 Maven 默认可能指向更低版本，会报「无效的标记: --release」，需显式设置 `JAVA_HOME` |
+| Node / pnpm | 见 `AGENTS.md` §9-B | 前端为 pnpm workspace（逐包显式声明，见 `pnpm-workspace.yaml`），只保留 `pnpm-lock.yaml` 一份锁文件 |
+| MySQL | 见 `AGENTS.md` §9-B；本地实例 `127.0.0.1:3307` | 库名 `admin_starter`，应用账号 `admin_app`；本机同时有 3306 的旧实例，**不要连错**（见 `docs/env/local-dev.md`） |
+| Redis | 见 `AGENTS.md` §9-B；本地实例 `127.0.0.1:6379` | 缓存会话、数据权限；需设置口令 |
 | 端口 | 后端 `8080`，前端 `5173` | Vite 将 `/api` 代理到 8080 |
 
 ### 0.2 首次启动准备
@@ -27,8 +29,8 @@
 ### 0.3 启动后端
 
 ```powershell
-# Maven 默认可能仍是 JDK 8，先显式指向 JDK 17（目录按本机实际情况替换）
-$env:JAVA_HOME = "<你的 JDK 17 安装目录>"
+# Maven 默认可能指向更低版本的 JDK，先显式指向 AGENTS.md §9-B 指定的 JDK（目录按本机实际情况替换）
+$env:JAVA_HOME = "<该 JDK 的安装目录>"
 
 # 方式一：直接从源码启动（开发期推荐）
 cd server
@@ -85,7 +87,7 @@ pnpm build
 ├─ README.md                 本文件
 ├─ server/                   后端 Maven 多模块（common / system / auth / web）
 ├─ apps/
-│  ├─ pc/                    前端 PC 端（Vue 3 + Vite，原 web/ 整体迁入；含 src/router/api/views/composables）
+│  ├─ pc/                    前端 PC 端（框架与版本见 `AGENTS.md` §9-B；含 src/router/api/views/composables）
 │  ├─ mobile/                跨端应用占位（仅 README，按 AGENTS.md §9-B 选型后再落代码）
 │  └─ shared/                跨端共享纯类型（与可运行应用平级；禁止出现 window/document/localStorage）
 ├─ packages/
@@ -257,6 +259,7 @@ node tools/spec-lint/cli.mjs --root "<项目根目录>"
 
 | 版本 | 日期 | 变更内容 |
 |---|---|---|
+| v1.14 | 2026-11-11 | 填实 `AGENTS.md` §9：§9-A 项目约束（平台/团队/部署/合规/里程碑）与 §9-B 技术选型九行由用户逐项确认后落笔，技术栈从「无定义方」转为 `AGENTS.md` §9-B 唯一定义（版本取自 pom/package.json/产物 jar，非猜测）；新增 `ADR-005` 记录选型理由与否决方案、`CR-20261111-001` 作为通用层变更记录；事实索引新增 `F-TECH-STACK`（43 条）；跨端框架与前端测试框架保持「未定」。同时按 §1「README 只引用 §9-B、不写版本号」删除本文件 §0.1 与环境说明中的版本号，并修正该表「Redis 6+」的错误描述（实为 5.0） |
 | v1.13 | 2026-11-11 | 建立版本库：`git init`（分支 `main`）+ `.gitattributes`（统一 LF）+ `.gitignore` 补齐（`server/web/data/`、根 `data/`、`.trae-html-share-packages/`、`.screenshots/`）；README 新增「版本管理」小节，说明凭据与运行期数据的忽略口径及克隆后的补齐动作 |
 | v1.12 | 2026-11-11 | 评审 P2 #4–#11 批量修复：CSRF 无来源但有凭据一律 403（含 Referer 回落与统一信封）、登录停用改 401/20103、`page<1` 统一 400、任务 cron 时区改配置项 `app.job.zone`、任务线程池改为 `@Bean` 装配（新增 `JobSchedulingConfig`）、分片续传键加用户维度、异步导出校验导出人状态、下载/预览补 CSP 头；回填断言 #65–#67 与定时任务设计说明 |
 | v1.11 | 2026-11-11 | 新增 CI 门禁 `.github/workflows/ci.yml`（三条 job：spec-lint / 后端 `mvn -pl web -am -DskipTests package` / 前端 `pnpm build`）；修复前端「所有 `/auth/*` 都跳过 401 静默刷新」导致 access 过期后刷新页面被误登出的缺陷；文件下载/预览的越权响应由 `403` 改为与不存在统一 `404`（回归 `CT-HTTP-008`/`CT-ERR-009`，契约升至 1.0.1）；同步回填断言 #36、文件能力设计与评审报告处理记录 |

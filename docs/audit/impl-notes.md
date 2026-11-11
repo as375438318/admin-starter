@@ -929,3 +929,12 @@
 - 故意不入库的两份文件：`docs/env/local-dev.md`（含本机明文口令）与 `server/web/src/main/resources/application-local.yml`（DB/Redis 口令）。克隆后需按 `application-local.example.yml` 自行创建；这会带来少量 `SL-PATH-001` warning，属预期，不为“文档完整”提交口令。
 - 入库规模：556 个文件；构成 server 352 / docs 118 / apps 76 / scripts 4 / packages 2 / 根配置 6。
 - CI 说明：`.github/workflows/ci.yml` 只有在推送远端后才真正执行；本地等价命令见 README「版本管理」小节。
+## AGENTS.md §9 填实（2026-11-11，通用层变更，无代码改动）
+
+- 变更记录：`docs/audit/CR-20261111-001-agents-tech-stack-baseline.md`；决策记录：`docs/decisions/ADR-005-tech-stack-baseline.md`。
+- §9-A 六项按用户 2026-11-11 逐项确认填写：项目名称「admin-starter 后台管理底座」；平台 PC Web（已可运行）+ H5／小程序／App（规划中，跨端框架未选型）；团队 Java + Vue 全栈；部署单机内网 Windows（现状），预算限制未确认；合规需过等保二级／三级（条款待拆解）；里程碑为长期迭代无固定节点。
+- §9-B 九行按仓库事实填写（版本取自 `pom.xml`、`package.json` 与产物 `admin-starter.jar` 的 `BOOT-INF/lib`，不是「常见版本」）：Java 17 / Spring Boot 3.2.12 / MyBatis-Plus 3.5.7（MyBatis 3.5.16）+ MapStruct 1.5.5 / MySQL 8.0 + Flyway 9.22.3 / Redis（Spring Data Redis 3.2.12，无 MQ）/ JUnit 5 + Mockito + AssertJ（仅后端）/ pnpm 11.7.0 + Maven 3.6.3 / Node ≥ 22；前端 PC 为 Vue 3.5 + Vite 5 + TS 5.6 + Element Plus 2.8 + Pinia 2.2，**跨端与前端测试框架保持「未定」**。
+- 关闭两笔历史遗留：`FE-STACK-001` 的 `RISK-ACCEPTED` 与 `FE-STACK-004` 的 `RULE-GAP`（此前 §9-B 为空，两条规则无法满足）。对应记录保留在上文，状态改为「已由 CR-20261111-001 关闭」。
+- 事实索引：`docs/specs/INDEX-facts.md` 与 `docs/specs/facts.yaml` 新增 `F-TECH-STACK`（owner `AGENTS.md#9`，refs `FE-STACK-001`、`FE-STACK-004`），43/43 条一致；顺带修正表尾长期停留在「39 条」的陈旧文案。
+- 未决策项（保留待办）：① 跨端框架选型（阻塞 H5／小程序／App，未选型前禁止在 `apps/mobile` 落业务代码）；② 等保二级／三级条款拆解为可验收条目（当前操作日志无留存期与归档策略、无留存配置项）；③ 前端测试框架选型。
+- 验证：`node tools/spec-lint/cli.mjs` → error 0 / warning 49（与改前持平；新增文档引入的 12 条 `SL-REFMT-001` 已通过补齐文件名清零）。

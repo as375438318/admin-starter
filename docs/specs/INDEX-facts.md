@@ -1,6 +1,6 @@
 # 事实索引（INDEX-facts）
 
-> 版本：v1.6（2026-11-08）
+> 版本：v1.7（2026-11-11，新增「技术栈版本与选型」事实，定义方 `AGENTS.md` §9；同步修正表尾陈旧条目数）
 > 作用：变更影响面查询的唯一入口。**只做事实映射，不写规则正文**（`PRC-REL-003`）。
 > 格式与维护规则见 `startup-change-process.md` `PRC-IDX-001`–`PRC-IDX-005`；每条事实只有一个定义方，出现两个即缺陷。
 > 编号写法：定义方写**单个规则编号**；引用位置写**规则编号列表**。仅两类例外：① 由 `AGENTS.md` 的状态、目录与模板映射定义管辖的事实，定义方写该文件的单一节号；② 由 `PRC-LAY-007` 登记的项目层资产，定义方写该资产路径。不使用通配符、区间、缩写。
@@ -60,8 +60,9 @@
 | 配置项消费点与生效方式（`consumedBy`／`effect`／`afterChange`） | `backend-spec.md` `BE-CFG-007` | `backend-spec.md` `BE-CFG-008`；`startup-change-process.md` `PRC-DOD-001` | 2026-11-08 |
 | 启动期配置不得伪装成可热改 | `backend-spec.md` `BE-CFG-008` | `backend-spec.md` `BE-CFG-007`；`startup-change-process.md` `PRC-DOD-001` | 2026-11-08 |
 | 系统基线（as-is）与规范（to-be）的定位 | `AGENTS.md` §1 | — | 2026-11-08 |
+| 技术栈版本与选型（语言/框架/数据库/ORM/缓存/测试/包管理器/目录约定） | `AGENTS.md` §9 | `frontend-spec.md` `FE-STACK-001`；`frontend-spec.md` `FE-STACK-004` | 2026-11-11 |
 
-**条目数**：39 条（md 本表与 `facts.yaml` 逐条对应）。
+**条目数**：43 条（md 本表与 `facts.yaml` 逐条对应）。
 
 ## 3. 本表自检清单
 
