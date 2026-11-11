@@ -37,6 +37,11 @@ server/web/src/main/resources/application-local.yaml
 server/data/uploads/
 server/web/data/
 
+# 测试产物
+apps/pc/test-results/
+apps/pc/playwright-report/
+apps/pc/coverage/
+
 # 设计过程产物（登录页 mockup 打包，非源码，体积 20MB+）
 .trae-html-share-packages/
 .screenshots/

@@ -255,14 +255,14 @@
 | 数据库 | MySQL 8.0（迁移工具 Flyway 9.22.3） | `ADR-005` |
 | ORM/数据访问 | MyBatis-Plus 3.5.7（MyBatis 3.5.16）+ MapStruct 1.5.5 | `ADR-005` |
 | 缓存/消息 | Redis 5.0（Spring Data Redis）；消息队列：不引入 | `ADR-005` |
-| 测试框架 | 后端：JUnit 5 + Mockito + AssertJ（`spring-boot-starter-test`）；前端：未定 | `ADR-005` |
+| 测试框架 | 后端：JUnit 5 + Mockito + AssertJ（`spring-boot-starter-test`）；前端：Vitest 3 + `@vue/test-utils`（单元/组件）+ Playwright（E2E）；小程序自动化：**未定**（待跨端框架选型） | `ADR-005`、`ADR-006` |
 | 包管理器 | pnpm 11.7.0（workspace，锁文件唯一）+ Maven 3.6.3 | `ADR-005`、`ADR-003` |
 | 目录约定 | `server/{common,system,auth,web}`；`apps/{pc,mobile,shared}`；`packages/ui-tokens` | `ADR-003`、`ADR-005` |
 
 - **本节是技术栈唯一定义方**；其他文档引用本节，不得写死版本号。
 - **项目初始化时由用户确认后填写；未经确认保持“未定”，不得默认填入常见版本。**
-- **未选型项**（跨端框架、前端测试框架）保持“未定”：跨端框架选型完成前，禁止在 `apps/mobile` 落业务代码（选型需另开 ADR，评估包体积、小程序能力边界与 Element Plus 兼容性）。
-- 本节 2026-11-11 由用户逐项确认后填写，过程见 `docs/audit/CR-20261111-001-agents-tech-stack-baseline.md`，选型理由与备选方案见 `ADR-005`。
+- **未选型项**（跨端框架、小程序自动化）保持“未定”：跨端框架选型完成前，禁止在 `apps/mobile` 落业务代码（选型需另开 ADR，评估包体积、小程序能力边界与 Element Plus 兼容性）；小程序自动化跟随跨端框架，不得先于业务需求引入。
+- 本节 2026-11-11 由用户逐项确认后填写，过程见 `docs/audit/CR-20261111-001-agents-tech-stack-baseline.md`（§9-A/§9-B 首版）与 `docs/audit/CR-20261111-002-frontend-test-framework.md`（测试框架行），选型理由与备选方案见 `ADR-005`、`ADR-006`。
 
 ## 10. 项目约定（仅本项目）
 

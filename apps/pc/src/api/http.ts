@@ -47,8 +47,41 @@ const TERMINAL_AUTH_CODES = new Set([20103, 20104, 20106, 20107, 20108]);
  * 其余 `/auth/*`（me / routes / permissions / sessions）与其它业务接口一样先尝试刷新，
  * 否则 access 过期后刷新页面会被误判成未登录（refresh 仍有 7 天有效期）。
  */
-function isAuthEntry(url: string): boolean {
+export function isAuthEntry(url: string): boolean {
   return url.startsWith('/auth/login') || url.startsWith('/auth/refresh');
+}
+
+/** 401 分码是否属于"刷新也无用、必须回登录页"的终止类。 */
+export function isTerminalAuthCode(code?: number): boolean {
+  return code !== undefined && TERMINAL_AUTH_CODES.has(code);
+}
+
+export type UnauthorizedAction = 'ignore' | 'terminal' | 'refresh' | 'reject';
+
+/**
+ * 401 的处置决策（纯函数，便于单测；`http` 拦截器只是它的执行者）。
+ * - `ignore`：不是 401，或已经重试过 → 交给后续分支
+ * - `terminal`：401 且是终止分码（停用/删除/重置/改密/被踢）→ 刷新无意义，回登录页并展示原因
+ * - `refresh`：普通 401 → 先静默刷新再重放
+ * - `reject`：登录/刷新接口自身 401 → 不刷新，就地提示（避免登录页被整页重定向吞掉、避免递归）
+ */
+export function planOn401(input: {
+  status?: number;
+  retried?: boolean;
+  url?: string;
+  code?: number;
+}): UnauthorizedAction {
+  const { status, retried, url = '', code } = input;
+  if (status !== 401 || retried) {
+    return 'ignore';
+  }
+  if (isTerminalAuthCode(code)) {
+    return 'terminal';
+  }
+  if (isAuthEntry(url)) {
+    return 'reject';
+  }
+  return 'refresh';
 }
 
 export const AUTH_NOTICE_KEY = 'auth:notice';
@@ -110,12 +143,16 @@ http.interceptors.response.use(
     const config = error.config as RetryConfig | undefined;
     const url = config?.url ?? '';
 
-    if (status === 401 && config && !config._retry && !isAuthEntry(url)) {
-      if (envelope?.code !== undefined && TERMINAL_AUTH_CODES.has(envelope.code)) {
-        // 账号被停用/删除、密码被重置或修改：刷新也无效，直接回登录页并展示具体原因
-        redirectToLogin(envelope.message);
-        throw new ApiError(envelope.code, envelope.message, 401, envelope.traceId ?? null);
-      }
+    const plan = planOn401({ status, retried: config?._retry, url, code: envelope?.code });
+
+    if (plan === 'terminal') {
+      // 账号被停用/删除、密码被重置或修改：刷新也无效，直接回登录页并展示具体原因
+      redirectToLogin(envelope?.message);
+      throw new ApiError(envelope?.code ?? 20101, envelope?.message ?? '登录状态已失效', 401,
+        envelope?.traceId ?? null);
+    }
+
+    if (plan === 'refresh' && config) {
       config._retry = true;
       try {
         await refreshAccessToken();

@@ -938,3 +938,35 @@
 - 事实索引：`docs/specs/INDEX-facts.md` 与 `docs/specs/facts.yaml` 新增 `F-TECH-STACK`（owner `AGENTS.md#9`，refs `FE-STACK-001`、`FE-STACK-004`），43/43 条一致；顺带修正表尾长期停留在「39 条」的陈旧文案。
 - 未决策项（保留待办）：① 跨端框架选型（阻塞 H5／小程序／App，未选型前禁止在 `apps/mobile` 落业务代码）；② 等保二级／三级条款拆解为可验收条目（当前操作日志无留存期与归档策略、无留存配置项）；③ 前端测试框架选型。
 - 验证：`node tools/spec-lint/cli.mjs` → error 0 / warning 49（与改前持平；新增文档引入的 12 条 `SL-REFMT-001` 已通过补齐文件名清零）。
+## 前端测试框架落地（2026-11-11，Vitest + Playwright；ADR-006 / CR-20261111-002）
+
+**为什么做**：`frontend-spec.md` 决策项 D15 要求「单测 + E2E + 小程序自动化」，但 `AGENTS.md` §9-B 一直是「未定」、`apps/pc` 无任何测试框架；CI 只做 `vue-tsc -b` + `vite build`，运行期逻辑零验证（此前 `/auth/*` 刷新 bug 就是这样漏掉的）。
+
+**做了什么**
+
+| 层 | 内容 |
+|---|---|
+| 单元/组件 | `vitest@3.2` + `@vue/test-utils` + `happy-dom`；配置 `apps/pc/vitest.config.ts`；用例 `src/**/*.spec.ts`（3 文件 19 用例） |
+| E2E | `@playwright/test@1.65`；配置 `apps/pc/playwright.config.ts`（默认 `channel: 'chrome'`，用本机 Chrome，不下载浏览器）；用例 `e2e/smoke.spec.ts`（4 条主链路） |
+| 可测性重构 | `http.ts` 把 401 处置抽成纯函数 `planOn401` + `isAuthEntry` + `isTerminalAuthCode`，**行为不变**，三类分支由 7 个用例锁定 |
+| CI | `ci.yml` 前端 job 增加 `pnpm --filter @admin-starter/pc test:unit`；新增 `.github/workflows/e2e.yml`（`workflow_dispatch`，MySQL/Redis 服务容器） |
+| 忽略项 | `test-results/`、`playwright-report/`、`coverage/` 进 `.gitignore` |
+
+**版本约束（重要）**：vitest **锁 3.x**——vitest 5 的 peer 要求 `vite ^6||^7||^8`，会倒逼升级 Vite 5.4。已在 ADR-006 写明，后来者不要「顺手升级」。
+
+**验证（真实运行）**
+
+| 项 | 结果 |
+|---|---|
+| 单元测试 | 3 文件 **19 用例全通过**（2.1s） |
+| 覆盖率 | `http.ts` 分支 100% / 行 20%（只覆盖纯函数）；整体行 1.35%（`views/*` 未覆盖，按 §15.2「页面不设门槛、靠 E2E 冒烟」属预期） |
+| E2E | **4 用例全通过**（7.8s，本机 Chrome 157）：未登录重定向、登录+刷新续期、无权限账号不可见列表、数据范围（普通员工可见任务数 < 管理员） |
+| 生产构建 | `pnpm build` 通过（测试文件未污染产物） |
+| 门禁 | spec-lint error 0 |
+
+**两条实测观察（未擅自改行为，留决策）**
+
+1. **未授权页面表现为 404 而不是 403**：动态路由按登录下发的菜单注册，未授权路由压根没注册，落到通配 404 状态页；`views/error/403.vue` 只在「路由已注册但 meta 校验失败」时可达，实际几乎不会出现。`ui-spec.md` 只规定「三种空状态（含无权限）」，未规定未授权路由该显示 403 还是 404，故不判违规。E2E 断言改为可验证的对外行为（无表格 + 状态页可见）。若要改成「注册全量路由 + meta 校验」，属路由策略变更，需单独决策。
+2. **`20105` 不是终止码**：写单测时误以为 20105（登录状态已失效）属终止类，用例运行失败；按 `docs/design/auth-and-datascope.md` 的 401 分码矩阵更正为「非终止，仍先尝试刷新」。测试反过来纠正了我的假设。
+
+**未覆盖**：`use-chunk-upload`、`use-crud-drawer`、`v-permission` 指令等尚未补用例；§15.2 的分层覆盖率目标（纯函数 ≥80%、composable 60–70%）目前未达标，属后续增量。E2E 工作流尚未在 GitHub Actions 上实测（推送后需手动触发一次）。

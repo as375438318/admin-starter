@@ -70,6 +70,9 @@ jobs:
           cache: pnpm
       - name: Install
         run: pnpm install --frozen-lockfile
+      # 单元/组件测试（Vitest，无服务依赖，秒级）：ADR-006
+      - name: Unit tests
+        run: pnpm --filter @admin-starter/pc test:unit
       # apps/pc 的 build = vue-tsc -b && vite build
       - name: Build
         run: pnpm build

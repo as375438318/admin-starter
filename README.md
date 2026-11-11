@@ -253,12 +253,14 @@ node tools/spec-lint/cli.mjs --root "<项目根目录>"
 - `.gitattributes` 统一 **LF**（`* text=auto eol=lf`，`.bat`/`.cmd` 例外为 CRLF），避免 Windows 上 `core.autocrlf=true` 造成整文件假改动；本仓库已显式设置 `core.autocrlf=false`。
 - `.gitignore` 排除三类内容：**凭据**（`docs/env/local-dev.md`、`application-local.yml`）、**运行期数据**（`.local/` 含 MySQL 数据目录、`logs/`、`data/uploads`、`server/web/data/`）、**构建产物**（`node_modules`、`target`、`dist`、`.trae-html-share-packages`）。
 - 克隆后需自行创建 `server/web/src/main/resources/application-local.yml`（照 `application-local.example.yml`）与 `docs/env/local-dev.md`，否则 `spec-lint` 的路径检查会多出对应 warning（这两份被忽略是有意的，不要为“文档完整”把口令提交进去）。
-- CI（`.github/workflows/ci.yml`）在**推送后**才生效；本地等价命令：`node tools/spec-lint/cli.mjs`、`cd server && mvn -B -pl web -am -DskipTests package`、`pnpm build`。
+- CI（`.github/workflows/ci.yml`）在**推送后**才生效；本地等价命令：`node tools/spec-lint/cli.mjs`、`cd server && mvn -B -pl web -am -DskipTests package`、`pnpm install --frozen-lockfile && pnpm --filter @admin-starter/pc test:unit && pnpm build`。
+- 测试（`ADR-006`）：单元/组件 `pnpm --filter @admin-starter/pc test:unit`；覆盖率 `… test:unit:coverage`（报告在 `apps/pc/coverage/index.html`）；E2E `… test:e2e`，**需先启动后端**（8080）并本机已装 Chrome，可用 `E2E_CHANNEL=none` 改用 Playwright 自带 chromium。E2E 的 CI 工作流（`.github/workflows/e2e.yml`）为手动触发。
 
 ## 9. 变更记录
 
 | 版本 | 日期 | 变更内容 |
 |---|---|---|
+| v1.15 | 2026-11-11 | 前端测试框架落地（`ADR-006`／`CR-20261111-002`）：`apps/pc` 引入 Vitest 3 + `@vue/test-utils`（单元/组件，19 用例）与 Playwright（E2E 冒烟 4 条）；`http.ts` 的 401 处置抽成纯函数 `planOn401`（行为不变）；CI 前端 job 增加单测步骤、新增 `workflow_dispatch` 的 E2E 工作流；`AGENTS.md` §9-B「测试框架」行由「未定」改为已定（小程序自动化仍随后续跨端选型）；`.gitignore` 忽略测试产物 |
 | v1.14 | 2026-11-11 | 填实 `AGENTS.md` §9：§9-A 项目约束（平台/团队/部署/合规/里程碑）与 §9-B 技术选型九行由用户逐项确认后落笔，技术栈从「无定义方」转为 `AGENTS.md` §9-B 唯一定义（版本取自 pom/package.json/产物 jar，非猜测）；新增 `ADR-005` 记录选型理由与否决方案、`CR-20261111-001` 作为通用层变更记录；事实索引新增 `F-TECH-STACK`（43 条）；跨端框架与前端测试框架保持「未定」。同时按 §1「README 只引用 §9-B、不写版本号」删除本文件 §0.1 与环境说明中的版本号，并修正该表「Redis 6+」的错误描述（实为 5.0） |
 | v1.13 | 2026-11-11 | 建立版本库：`git init`（分支 `main`）+ `.gitattributes`（统一 LF）+ `.gitignore` 补齐（`server/web/data/`、根 `data/`、`.trae-html-share-packages/`、`.screenshots/`）；README 新增「版本管理」小节，说明凭据与运行期数据的忽略口径及克隆后的补齐动作 |
 | v1.12 | 2026-11-11 | 评审 P2 #4–#11 批量修复：CSRF 无来源但有凭据一律 403（含 Referer 回落与统一信封）、登录停用改 401/20103、`page<1` 统一 400、任务 cron 时区改配置项 `app.job.zone`、任务线程池改为 `@Bean` 装配（新增 `JobSchedulingConfig`）、分片续传键加用户维度、异步导出校验导出人状态、下载/预览补 CSP 头；回填断言 #65–#67 与定时任务设计说明 |
