@@ -255,11 +255,18 @@ node tools/spec-lint/cli.mjs --root "<项目根目录>"
 - 克隆后需自行创建 `server/web/src/main/resources/application-local.yml`（照 `application-local.example.yml`）与 `docs/env/local-dev.md`，否则 `spec-lint` 的路径检查会多出对应 warning（这两份被忽略是有意的，不要为“文档完整”把口令提交进去）。
 - CI（`.github/workflows/ci.yml`）在**推送后**才生效；本地等价命令：`node tools/spec-lint/cli.mjs`、`cd server && mvn -B -pl web -am -DskipTests package`、`pnpm install --frozen-lockfile && pnpm --filter @admin-starter/pc test:unit && pnpm build`。
 - 测试（`ADR-006`）：单元/组件 `pnpm --filter @admin-starter/pc test:unit`；覆盖率 `… test:unit:coverage`（报告在 `apps/pc/coverage/index.html`）；E2E `… test:e2e`，**需先启动后端**（8080）并本机已装 Chrome，可用 `E2E_CHANNEL=none` 改用 Playwright 自带 chromium。E2E 的 CI 工作流（`.github/workflows/e2e.yml`）为手动触发。
+- 后端测试：`cd server && mvn -B -pl web -am verify`（与 CI 同一命令）。**本地需先准备测试库**（一次性）：
+  ```sql
+  create database if not exists admin_starter_test default character set utf8mb4;
+  grant all privileges on admin_starter_test.* to 'admin_app'@'127.0.0.1';
+  ```
+  测试用 profile `test`，Flyway 会自动建表灌种子；测试类里有「库名必须含 test」的断言，连错库会直接失败而不是写脏数据。
 
 ## 9. 变更记录
 
 | 版本 | 日期 | 变更内容 |
 |---|---|---|
+| v1.18 | 2026-11-11 | 后端测试真正进 CI（`CR-20261111-003`）：数据源地址改为 `${APP_DB_URL:...}` 可覆盖；新增 `application-test.yml`（profile `test` 连独立库 `admin_starter_test`，可 `APP_TEST_DB_*` 覆盖，本地自动叠加被忽略的 `application-local.yml`）；`NotificationPublisherTransactionTest` 改用 test profile 并加"库名必须含 test"的安全断言；新增 `DataPermissionTablesTest`（6 用例）；`system` 模块补 test 依赖；CI 后端 job 改跑 `mvn -B -pl web -am verify`（MySQL 8 + Redis 7 服务容器），失败上传 surefire 报告；§9-B「测试框架」行补集成测试口径，断言新增 #68 |
 | v1.17 | 2026-11-11 | 清理登录页设计阶段产物：删除 `docs/design/login-mockups{,-v3,-v4}/`（50 个文件 / 25.5MB），并用 `git filter-branch` 重写历史把这三个目录从全部提交中剥离、`gc` 回收对象——`.git` 从 34.5MiB 降到 **922KiB**；同步修正 `login/index.vue` 注释与 impl-notes 中指向已删路径的引用 |
 | v1.16 | 2026-11-11 | 前端测试覆盖率补齐（纯新增用例，无生产代码改动）：用例 19 → **95**（3 → 15 个文件）；`src/utils` 行覆盖 14.84% → **100%**、`src/composables` 56.84% → **93.36%**、`directives/permission` 与 `stores/auth` → **100%**，达到 `frontend-spec.md` §15.2 的分层门槛；`views/*` 按规范不设门槛、由 E2E 冒烟覆盖 |
 | v1.15 | 2026-11-11 | 前端测试框架落地（`ADR-006`／`CR-20261111-002`）：`apps/pc` 引入 Vitest 3 + `@vue/test-utils`（单元/组件，19 用例）与 Playwright（E2E 冒烟 4 条）；`http.ts` 的 401 处置抽成纯函数 `planOn401`（行为不变）；CI 前端 job 增加单测步骤、新增 `workflow_dispatch` 的 E2E 工作流；`AGENTS.md` §9-B「测试框架」行由「未定」改为已定（小程序自动化仍随后续跨端选型）；`.gitignore` 忽略测试产物 |

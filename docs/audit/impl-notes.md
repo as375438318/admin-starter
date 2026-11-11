@@ -1046,3 +1046,35 @@
 - 两处指向已删路径的引用同步修正：`apps/pc/src/views/login/index.vue` 的注释、`docs/audit/impl-notes.md` 的 UI-PC-FORM-002-DEV 条目（改为"按 v4 设计稿实现"并指回本节），避免 `SL-PATH-001` 对不存在路径报 warning。
 
 **顺带发现（未处理，等确认）**：仓库根的 `.trae-html-share-packages/` 是同批设计稿的 HTML 打包（4 个 zip，**26MB**），已被 `.gitignore` 排除、从未入库，只占本地磁盘。要清磁盘可直接删该目录，不影响 git。
+
+## 后端测试接入 CI（2026-11-11，用户指示「做1」；CR-20261111-003）
+
+**问题**：CI 后端 job 一直是 `mvn -DskipTests package`，全仓唯一测试需要真实 MySQL/Redis 且 `@ActiveProfiles("local")`（读本机被 gitignore 的凭据），在 CI 上必然失败 → 长期被跳过。**"CI 全绿"对后端行为没有证明力。**
+
+**技术选择（按本机条件调整）**：原本打算用 Testcontainers，但本机**没有 Docker**，那样会变成"只能靠 CI 验证、本地无法复现"。改为 **环境变量注入 + CI 服务容器**：本地能真跑、CI 也能跑，不引入 Docker-in-Docker。
+
+| 改动 | 内容 |
+|---|---|
+| `application.yml` | 数据源 url 由硬编码改为 `${APP_DB_URL:<原值>}`——原值逐字保留，只是套了可覆盖外壳 |
+| `src/test/resources/application-test.yml`（新增） | profile `test` 默认连 `admin_starter_test`；`APP_TEST_DB_*` / `APP_REDIS_*` 全可覆盖；`spring.config.import: optional:classpath:application-local.yml` 让本地无需 export 口令（CI 无此文件自动跳过） |
+| `NotificationPublisherTransactionTest` | `@ActiveProfiles("local")` → `test`；新增 `@BeforeEach` 安全阀：JDBC URL 不含 `test` 直接失败 |
+| `DataPermissionTablesTest`（新增，6 用例） | 受控 4 表 / 豁免表 / 未登记返回 UNKNOWN（fail-closed）/ 表名归一化（大小写+schema 前缀）/ 受控与豁免不重叠 / 通知公共行例外的别名前缀 |
+| `server/system/pom.xml` | 补 `spring-boot-starter-test`（test 作用域），否则 system 模块测试无法编译 |
+| `.github/workflows/ci.yml` | backend job 加 MySQL 8 + Redis 7 服务容器与健康检查；命令改 `mvn -B -pl web -am verify`；失败上传 surefire 报告；job 更名为「后端编译与集成测试」 |
+
+**验证（真实运行）**
+
+| 项 | 命令 | 结果 |
+|---|---|---|
+| 后端全量 | `mvn -o -B -pl web -am verify` | **8 用例通过**（DataPermissionTables 6 + NotificationPublisher 事务 2），jar 正常产出，`BUILD SUCCESS` |
+| 安全阀负向 | `APP_TEST_DB_URL=.../admin_starter mvn test` | **两个用例均失败**并提示「拒绝在非测试库上运行集成测试，当前连接：jdbc:mysql://…/admin_starter…」 |
+| 测试库自举 | 手工核对 | `admin_starter_test` 24 张表、Flyway 到 V16、种子用户 9 个 |
+| 开发库未被污染 | 手工核对 | `admin_starter.sys_notice` 中 `TX-%` 残留 **0 行** |
+
+**本地前置（已写进 README）**：一次性 `create database admin_starter_test` + `grant ... to 'admin_app'@'127.0.0.1'`；之后 `mvn verify` 即可，Flyway 自动建表。
+
+**仍未解决（如实登记）**
+
+- `mvn verify` 目前只有 2 个测试类：业务逻辑仍主要靠 E2E 与人工验证，覆盖面远未到"可放心重构"；
+- 契约测试（`docs/api/examples/backend`，`AGENTS.md` §7 的 error 级阻断之一）**仍未落地**，CI 无法校验"实现与 `docs/api/openapi.yaml` 一致"；
+- 集成测试依赖真实 MySQL/Redis，单类启动约 8–11s；测试增多后需要评估按模块拆分或并行。

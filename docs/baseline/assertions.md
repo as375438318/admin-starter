@@ -1,8 +1,8 @@
-# 系统基线 · 设计断言（as-built v1.18）
+# 系统基线 · 设计断言（as-built v1.19）
 
 | 项目 | 内容 |
 |---|---|
-| 版本 | v1.18（2026-11-11，新增 #65 CSRF 来源校验口径、#66 任务时区与线程池装配、#67 `page<1` 统一拒绝）；v1.17（2026-11-11，改写 #36：文件越权与不存在统一 `404`，原「不可见→403」按接口契约作废）；v1.16（2026-11-11，修正 #40：缓存命名空间 7→8，补登记 `import-dedup` 及其不可清理标记）；v1.15（2026-11-10，改写 #63：持久化已改多行批量 INSERT；新增 #64：并发导入未限流的实测风险）；v1.14（2026-11-10，新增 #63：导入持久化是逐行 insert）；v1.13（2026-11-10，新增 #62：「部门严、负责人松」是有意设计）；v1.12（2026-11-10，新增 #59–#61：部门完整路径与分隔符限制、负责人显示文本与匹配顺序、模板下拉与表头核对口径）；v1.11（2026-11-10，新增 #57–#58）；v1.10 新增 #53–#56；v1.9 新增 #49–#51 |
+| 版本 | v1.19（2026-11-11，新增 #68 后端集成测试的库名门槛与 CI 执行口径）；v1.18（2026-11-11，新增 #65 CSRF 来源校验口径、#66 任务时区与线程池装配、#67 `page<1` 统一拒绝）；v1.17（2026-11-11，改写 #36：文件越权与不存在统一 `404`，原「不可见→403」按接口契约作废）；v1.16（2026-11-11，修正 #40：缓存命名空间 7→8，补登记 `import-dedup` 及其不可清理标记）；v1.15（2026-11-10，改写 #63：持久化已改多行批量 INSERT；新增 #64：并发导入未限流的实测风险）；v1.14（2026-11-10，新增 #63：导入持久化是逐行 insert）；v1.13（2026-11-10，新增 #62：「部门严、负责人松」是有意设计）；v1.12（2026-11-10，新增 #59–#61：部门完整路径与分隔符限制、负责人显示文本与匹配顺序、模板下拉与表头核对口径）；v1.11（2026-11-10，新增 #57–#58）；v1.10 新增 #53–#56；v1.9 新增 #49–#51 |
 | 状态 | 已按本轮实测与代码逐条核对 |
 | 读者 | AI 编码助手、后端、前端 |
 | 定位 | **as-is**：只记“看代码要半天才发现、改错就出事”的既成事实 |
@@ -79,6 +79,7 @@
 | 65 | CSRF 防护只在请求**携带认证 Cookie**时才强制：写操作先看 `Origin`，缺失时回落 `Referer` 同源部分；仍无来源且**带** `ACCESS_TOKEN`/`REFRESH_TOKEN` → `403` 拒绝；**不带** Cookie（如登录、无凭据的服务间调用）→ 放行。允许清单取 `app.cors.allowed-origins` | `OriginCheckFilter.doFilterInternal/carriesAuthCookie`；`application.yml` `app.cors.allowed-origins`；契约 `CT-AUTH-004` | 改成「无 Origin 一律放行」会留下 CSRF 缺口；改成「无 Origin 一律拒绝」会挡掉登录接口与无凭据内部调用 | 2026-11-11 |
 | 66 | 定时任务的 cron 计算时区由 **`app.job.zone`**（默认 `Asia/Shanghai`）决定，**禁止**依赖 JVM 默认时区；库内 `sys_job.next_run_at` 与日志时间仍是 UTC。调度器与执行器的两个线程池由 `JobSchedulingConfig` 以 `@Bean` 装配，参数为 `app.job.*`，**不得**在构造器里 `new` + 手工 `initialize()` | `JobScheduler`（`zone`、`toUtc`）；`JobExecutor`（`zone`、`runnerPool`/`taskPool` 注入）；`JobSchedulingConfig`；`application.yml` `app.job` | 用 JVM 默认时区时，UTC 容器里 cron 整体偏移 8 小时且下次执行时间展示与触发不一致；退回构造器建池则停机顺序不可控、参数写死 | 2026-11-11 |
 | 67 | `page < 1` 在 `PageQuery.resolvePage()` 统一按非法参数拒绝（`400`），**不得**依赖各仓储兜底：MyBatis-Plus 会把非正页码归零返回首页，自定义 `offset` 会算出负偏移 | `common/api/PageQuery.resolvePage`；`CacheAdminAppService.keys`（已删重复校验） | 各接口对同一 `page=0` 表现不一致，会被误报为分页失效；负偏移在部分 SQL 下直接报错 | 2026-11-11 |
+| 68 | 后端集成测试**只能连 `*_test` 库**：`@ActiveProfiles("test")` + `application-test.yml` 默认 `admin_starter_test`，且测试类里有"JDBC URL 不含 test 就失败"的断言；CI 用 MySQL/Redis 服务容器并通过 `APP_TEST_DB_*` / `APP_REDIS_*` 注入，命令为 `mvn -B -pl web -am verify`（**不得**再回退到 `-DskipTests`） | `server/web/src/test/resources/application-test.yml`；`NotificationPublisherTransactionTest.requireTestDatabase`；`.github/workflows/ci.yml` backend job；`application.yml` 的 `${APP_DB_URL:...}` | 去掉这条断言后，profile/env 配错会把测试数据写进开发库甚至生产库（测试会真的 insert/delete `sys_notice`）；回退 `-DskipTests` 则"CI 绿"只证明能编译，后端行为零验证 | 2026-11-11 |
 
 ## 2. 完成标准
 

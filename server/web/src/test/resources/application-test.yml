@@ -1,0 +1,34 @@
+# 集成测试专用配置（profile: test）
+#
+# 设计要点：
+# 1. 默认连**独立测试库** admin_starter_test，不碰本地开发库 admin_starter；
+#    测试类里有安全断言：库名不含 test 就直接失败，避免误连开发库/生产库。
+# 2. 全部连接参数都可用环境变量覆盖，CI 用服务容器（3306 + redis）时通过 APP_TEST_DB_URL 等注入。
+# 3. Flyway 沿用主配置（enabled + baseline-on-migrate），测试库首次运行会自动建表 + 灌种子数据，
+#    因此不需要手工准备 schema，也不会因为手工建表与迁移脚本不一致而失真。
+spring:
+  config:
+    # 本地开发把口令放在 application-local.yml（已 gitignore）；测试时以可选方式叠加上来，
+    # 这样 `mvn test` 无需手工 export。CI 上该文件不存在，optional 会自动跳过，改用环境变量注入。
+    import: optional:classpath:application-local.yml
+  datasource:
+    url: ${APP_TEST_DB_URL:jdbc:mysql://127.0.0.1:3307/admin_starter_test?useSSL=false&allowPublicKeyRetrieval=true&connectionTimeZone=Asia/Shanghai&characterEncoding=utf8&useUnicode=true&rewriteBatchedStatements=true}
+    username: ${APP_TEST_DB_USERNAME:${APP_DB_USERNAME:admin_app}}
+    password: ${APP_TEST_DB_PASSWORD:${APP_DB_PASSWORD:}}
+    hikari:
+      # 测试并发很低，小池子够用，也避免 CI 上把连接数打满
+      maximum-pool-size: 4
+      minimum-idle: 1
+  data:
+    redis:
+      host: ${APP_REDIS_HOST:127.0.0.1}
+      port: ${APP_REDIS_PORT:6379}
+      password: ${APP_REDIS_PASSWORD:}
+
+logging:
+  level:
+    root: warn
+    com.adminstarter: info
+    # 迁移与 SQL 细节在测试里噪音太大，按需再开
+    org.flywaydb: warn
+    com.zaxxer.hikari: warn

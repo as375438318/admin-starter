@@ -2,15 +2,16 @@ name: CI
 
 # 三条门禁，对应 AGENTS.md §7 的 error 级阻断：
 #   1. spec-lint  —— 文档/编号/路径/配置台账/TODO 一致性（零依赖，最快，先跑）
-#   2. backend    —— Maven 多模块编译打包（JDK 17）
-#   3. frontend   —— vue-tsc 类型检查 + Vite 生产构建
+#   2. backend    —— Maven 多模块编译 + **集成测试**（JDK 17 + MySQL/Redis 服务容器）
+#   3. frontend   —— Vitest 单元测试 + vue-tsc 类型检查 + Vite 生产构建
 #
-# 说明（2026-11-11 引入）：
-# - 后端暂时用 -DskipTests：现有唯一测试 NotificationPublisherTransactionTest 需要真实 MySQL/Redis，
-#   在不接服务容器的 CI 上必然失败；等它改成 Testcontainers 或按 profile 跳过后再开启 mvn test。
-# - 契约测试（docs/api/examples/backend）尚未落地，接入后应在 backend job 里追加一步；
-#   在此之前本工作流只保证"能编译、能构建、文档门禁通过"，不等于契约与实现一致。
-# - 仓库当前尚未初始化 Git，本文件在 git init + 首次推送后才会真正生效。
+# 后端测试说明（2026-11-11 起）：
+# - 集成测试用 profile `test`，默认连 `admin_starter_test`，连接参数全部可用环境变量覆盖；
+#   测试类里有一条安全断言：库名不含 test 就失败，避免误连开发库/生产库。
+# - CI 用 GitHub Actions 的 services 起 MySQL 8 + Redis 7，通过 APP_TEST_DB_* / APP_REDIS_* 注入，
+#   不需要 Testcontainers、也不需要本机 Docker。
+# - 仍未落地：契约测试（docs/api/examples/backend）。在此之前本工作流保证的是
+#   "能编译、集成测试通过、能构建、文档门禁通过"，不等于契约与实现完全一致。
 
 on:
   push:
@@ -40,9 +41,39 @@ jobs:
         run: node tools/spec-lint/cli.mjs
 
   backend:
-    name: 后端编译（JDK 17）
+    name: 后端编译与集成测试（JDK 17）
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root-ci-password
+          MYSQL_DATABASE: admin_starter_test
+          MYSQL_USER: admin_app
+          MYSQL_PASSWORD: ci-app-password
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -proot-ci-password"
+          --health-interval=10s --health-timeout=5s --health-retries=10
+      redis:
+        image: redis:7
+        env:
+          REDIS_PASSWORD: ci-redis-password
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd="redis-cli -a ci-redis-password ping"
+          --health-interval=10s --health-timeout=5s --health-retries=10
+    env:
+      # 测试库由 Flyway 自动建表（V1..V16）+ 灌种子数据，因此容器里只建空库即可
+      APP_TEST_DB_URL: jdbc:mysql://127.0.0.1:3306/admin_starter_test?useSSL=false&allowPublicKeyRetrieval=true&connectionTimeZone=Asia/Shanghai&characterEncoding=utf8&useUnicode=true&rewriteBatchedStatements=true
+      APP_TEST_DB_USERNAME: admin_app
+      APP_TEST_DB_PASSWORD: ci-app-password
+      APP_REDIS_HOST: 127.0.0.1
+      APP_REDIS_PORT: '6379'
+      APP_REDIS_PASSWORD: ci-redis-password
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
@@ -50,13 +81,21 @@ jobs:
           distribution: temurin
           java-version: '17'
           cache: maven
-      # -pl web -am：只构建 web 及其依赖模块（common / system / auth），与本地验证口径一致
-      - name: Build
+      # -pl web -am：只构建 web 及其依赖模块（common / system / auth），与本地验证口径一致。
+      # 这里刻意不再加 -DskipTests：后端唯一的集成测试必须真的跑，否则"绿"只证明能编译。
+      - name: Build and test
         working-directory: server
-        run: mvn -B -pl web -am -DskipTests package
+        run: mvn -B -pl web -am verify
+      - name: Upload surefire reports on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: surefire-reports
+          path: server/**/target/surefire-reports
+          retention-days: 7
 
   frontend:
-    name: 前端类型检查与构建
+    name: 前端测试与构建
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:

@@ -11,7 +11,8 @@ spring:
       dev: local
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://127.0.0.1:3307/admin_starter?useSSL=false&allowPublicKeyRetrieval=true&connectionTimeZone=Asia/Shanghai&characterEncoding=utf8&useUnicode=true&rewriteBatchedStatements=true
+    # 可用 APP_DB_URL 覆盖：CI 用服务容器（3306/admin_starter_test）时必须覆盖，否则会连到 localhost:3307
+    url: ${APP_DB_URL:jdbc:mysql://127.0.0.1:3307/admin_starter?useSSL=false&allowPublicKeyRetrieval=true&connectionTimeZone=Asia/Shanghai&characterEncoding=utf8&useUnicode=true&rewriteBatchedStatements=true}
     username: ${APP_DB_USERNAME:admin_app}
     password: ${APP_DB_PASSWORD:}
     hikari:
