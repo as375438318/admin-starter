@@ -1,4 +1,4 @@
-# 系统基线 · 设计断言（as-built v1.31）
+# 系统基线 · 设计断言（as-built v1.32）
 
 | 项目 | 内容 |
 |---|---|
@@ -106,3 +106,4 @@
 | 80 | `main` 受规则集保护（`deletion` + `non_fast_forward` + `pull_request`(批准 0) + `required_status_checks`(strict)，bypass 名单为空）：**禁止直推 main**，所有改动必须走「推分支 → PR → 三检查绿 → 合并」。判断规则是否生效只看 `GET /repos/.../rules/branches/main` 或实际推送，**不能看规则集列表页文案**（`targeting 0 branches` 与 `enforcement=disabled` 都能保存成功但完全不拦） | GitHub 规则集 `校验规则`（id 27032663）；`docs/audit/CR-20261112-015-main-branch-protection.md`；`README.md` 贡献流程 | 直推 main 会报 `protected branch hook declined`，误以为是权限/凭据问题而反复重试；以为规则生效但实际 disabled 时，任何保护都形同虚设 | 2026-11-12 |
 | 81 | 合规口径：等保**未定级、未备案、未测评**，因此任何"已合规"表述都无依据；已拆解的可验收清单在 `docs/compliance/dengbao-breakdown.md`（P0 四项：密码策略缺失、审计留存与防篡改、生产强制 TLS、备份与恢复演练）。另：**密码复杂度/过期/首登强制改密目前完全没有实现**（仅启动日志提示），这是最容易被误以为"已经有"的一项 | `docs/compliance/dengbao-breakdown.md`；`application.yml`（auth 段）；`AuthAppService` 失败锁定实现 | 误以为"有登录锁定=口令安全"，测评时会在"身份鉴别·复杂度与定期更换"直接判不符合 | 2026-11-12 |
 | 82 | 前端构建产物按「变更频率」分包：`vendor-element-plus` / `vendor-vue` / `vendor` / 业务 `index`。**业务入口 chunk 必须 ≤ 400KB**（CI 步骤「业务 chunk 体积门禁」硬失败）——它变大意味着又把大依赖静态引进主包 | `apps/pc/vite.config.ts`（manualChunks）；`.github/workflows/ci.yml` 前端 job；`CR-20261112-017` | 回到单包时 `index.js` 1.29MB，业务改一个字符就让用户重下整个框架；没有门禁时拆分很容易被下一次「顺手 import」悄悄破坏 | 2026-11-12 |
+| 83 | Dependabot 只自动开 minor/patch PR（`ignore: version-update:semver-major`）；**主版本升级必须人工发起**并先开 CR/ADR 更新 `AGENTS.md` §9-B 与 `ADR-005`/`ADR-006`。另：**依赖升级 PR 的 CI 全绿不等于可合并**——单测覆盖不到主版本的破坏面（类型定义/插件生态/运行时行为） | `.github/dependabot.yml`；`AGENTS.md` §9-B；`CR-20261112-018` | 见到全绿就合主版本，会出现"合进去能编译、上线才炸"；反之全关闭又会丢掉安全补丁（patch 仍会自动来） | 2026-11-12 |
