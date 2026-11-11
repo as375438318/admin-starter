@@ -1340,3 +1340,10 @@ Excel 导入/导出是**唯一能把大批脏数据写进库**、也是**唯一�
 **刻意不写具体条款号**：GB/T 22239-2019 的条款编号凭记忆写极易出错，文档里明确写"须对照原文补齐"，而不是编一个看起来专业的编号。
 
 **RULE-GAP**：`AGENTS.md` §11.1 模板→路径映射没有"合规/审计证据"类目录，本 CR 暂用 `docs/compliance/`，正式归口需另开通用层变更。
+## 前端包体拆分（2026-11-12，CR-20261112-017）
+
+`index-*.js` 从 **1,318.7 kB（gzip 428 kB）→ 39.1 kB（gzip 14.8 kB）**：按"变更频率"分包（`vendor-element-plus` 967 kB / `vendor` 193 kB / `vendor-vue` 117 kB / 业务 39 kB），并新增 CI 门禁「业务 chunk ≤ 400KB」防反弹（本地实测 40,315 字节）。
+
+**诚实结论**：这只改善缓存命中与并行下载，**总下载量基本不变**——Element Plus 全量引入的 967 kB 仍在。真正瘦身需要按需引入（`unplugin-vue-components` + `unplugin-auto-import`），会改变组件注册方式并新增依赖，属需要单独 ADR 评估的变更。
+
+顺带：`chunkSizeWarningLimit` 由 500 调到 1000，因为 vendor 块必然超 500，警告会淹没真实信号；闸门改放 CI 的业务 chunk 检查（硬失败 > 看警告）。
