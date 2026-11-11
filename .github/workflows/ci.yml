@@ -10,8 +10,10 @@ name: CI
 #   测试类里有一条安全断言：库名不含 test 就失败，避免误连开发库/生产库。
 # - CI 用 GitHub Actions 的 services 起 MySQL 8 + Redis 7，通过 APP_TEST_DB_* / APP_REDIS_* 注入，
 #   不需要 Testcontainers、也不需要本机 Docker。
-# - 仍未落地：契约测试（docs/api/examples/backend）。在此之前本工作流保证的是
-#   "能编译、集成测试通过、能构建、文档门禁通过"，不等于契约与实现完全一致。
+# - 契约测试已落地（2026-11-11，CR-20261111-004/006）：`web` 模块的 ContractValidationTest 用
+#   swagger-request-validator 比对 docs/api/openapi.yaml 本体，覆盖公开配置、401 结构与 4 个受保护接口；
+#   随 `mvn verify` 一起跑，不单独设 job（避免重复下载依赖）。
+# - 仍未覆盖：契约里其余需登录的写接口（需请求体夹具），以及业务行为断言（那属单元/集成测试范畴）。
 
 on:
   push:
