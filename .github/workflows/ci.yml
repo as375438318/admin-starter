@@ -117,3 +117,16 @@ jobs:
       # apps/pc 的 build = vue-tsc -b && vite build
       - name: Build
         run: pnpm build
+      # 业务 chunk 体积门禁：第三方依赖按 vendor-* 分包后（见 apps/pc/vite.config.ts），
+      # 业务入口应保持很小；它反弹意味着又把大依赖静态引入了主包，构建期发现比线上慢一截更好。
+      - name: 业务 chunk 体积门禁（≤ 400KB）
+        run: |
+          node -e "
+          const fs = require('fs');
+          const dir = 'apps/pc/dist/assets';
+          const files = fs.readdirSync(dir).filter((n) => /^index-.*\.js$/.test(n));
+          if (!files.length) { console.error('未找到业务入口 chunk'); process.exit(1); }
+          const max = Math.max(...files.map((n) => fs.statSync(dir + '/' + n).size));
+          console.log('业务入口 chunk 最大体积：' + max + ' 字节（上限 ' + 400 * 1024 + '）');
+          if (max > 400 * 1024) { console.error('业务 chunk 超过 400KB：请检查是否把大依赖静态引入主包'); process.exit(1); }
+          "
