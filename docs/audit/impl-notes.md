@@ -1203,3 +1203,18 @@
 **验证**：后端全量 **89 用例通过**（common 26 / system 54 / web 9），BUILD SUCCESS；spec-lint error 0 / warning 49。
 
 **遗留**：Excel 导入（脏数据校验、错误行清单）、导出（分批与并发）、文件回收/彻底删除（存储与记录一致性）仍无单测，需 Excel/文件夹具或存储桩，成本高于本轮。
+## Excel 导入校验与导出编排测试（2026-11-11，用户「按顺序执行」第 1 项；CR-20261111-008）
+
+Excel 导入/导出是**唯一能把大批脏数据写进库**、也是**唯一会因条数判断错误打爆内存**的入口，此前零测试。新增 28 用例：
+
+| 测试类 | 用例 | 锁定 |
+|---|---|---|
+| `ExcelRowValidatorTest` | 16 | 必填/选填、最大长度、空格裁剪、枚举接受「存储值或中文含义」、类型转换失败用 formatHint 文案、部门按完整路径反查（不存在/同名多义/超数据权限分别报错）、负责人依次按「姓名（部门）」→账号→姓名匹配、重名拒绝、无用户目录时给可操作提示 |
+| `ImportErrorCollectorTest` | 5 | 「第 N 行 · 表头」格式；**出错行数（按行去重）与错误条数（按字段累计）是两个口径**，不得混用；超 200 条截断但剩余条数单独返回；toData 返回快照 |
+| `ExcelExportPlannerTest` | 7 | 未登录拒绝；超 10 万行拒绝并提示缩小范围；**恰好 2000 行走同步**、**2001 行转异步并返回任务 ID**；异步任务带当前用户/模块/查询参数；文件名 `前缀_yyyyMMdd_HHmmss.xlsx`；操作日志记 mode/totalRows/fileName；同步通道取数只取一次 |
+
+**踩坑**：`ExcelExportWriter.writeSync` 声明了 `IOException`，`verify(...).writeSync(...)` 也要 `throws Exception`，否则测试编译不过。
+
+**验证**：后端全量 **117 用例通过**（common 26 / system 82 / web 9），BUILD SUCCESS；spec-lint error 0 / warning 49。
+
+**遗留**：`ExcelStreamParser`（POI 解析 221 行，空行/合并单元格/超宽列的处理是导入体验关键）与两个 Writer（表头与 schema 一致性）需读回 xlsx 夹具，下一轮补；文件回收/彻底删除仍未测。
