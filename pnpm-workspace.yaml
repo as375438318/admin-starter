@@ -1,0 +1,13 @@
+packages:
+  # 可运行应用：显式列出，不使用 apps/* 通配，避免 apps/ 下新增目录被自动当成应用
+  - apps/pc
+  - apps/mobile
+  # 前端共享库：与 apps 平级集中管理，但不是可运行应用（无 dev/build 脚本）
+  - apps/shared
+  # 其余共享包（ui-tokens 等）
+  - packages/*
+
+# pnpm 11 默认阻止依赖执行构建脚本；这两个包需要 postinstall 才能正常构建
+allowBuilds:
+  esbuild: true
+  vue-demi: true

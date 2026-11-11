@@ -1,0 +1,3647 @@
+# 契约源（手写维护）：本文件是接口契约的唯一事实源，人工评审后修改。
+# 实现基线（自动生成）：docs/api/openapi.generated.yaml，由 scripts/export-openapi.ps1 从运行中的后端导出，禁止手工编辑。
+# 覆盖范围：按 `AGENTS.md` §4.4 的显式豁免，本文件只写「被前端消费、需评审或对外交付」的接口并标 `x-status`；
+#           未在本文件出现的接口以实现基线 docs/api/openapi.generated.yaml 为准，不得据本文件推断“接口不存在”。
+# 约束：响应信封、错误码、分页、时间与金额格式的唯一事实源是 docs/specs/api-contract.md；本文件只做实例，不重复定义。
+#       逐接口状态用 x-status 表达：DRAFT / APPROVED / IMPLEMENTED / DEPRECATED（`AGENTS.md` §3）。
+#       TODO 只允许写在 YAML 注释里（`AGENTS.md` §3 的合法 TODO 载体）。
+# 维护：新增或修改接口时同批更新本文件并重新导出实现基线（`AGENTS.md` §6.2 第 8 步）。
+
+openapi: 3.0.3
+info:
+  title: 项目基础框架 · 后台管理接口契约
+  version: 1.0.1
+  description: |
+    本项目接口契约（手写维护，版本随接口演进递增，见 CT-VER）。
+    统一响应信封见 CT-RESP-001（data 必须存在，无值时为 null）；禁止 204/空 body 见 CT-RESP-009；
+    基础错误码见 CT-ERR-011；分页字段见 CT-PAGE-001，默认值与上限见 CT-PAGE-002；
+    时间格式见 CT-FMT-001，金额用字符串见 CT-FMT-003；令牌协议载体见 CT-AUTH-001。
+    未在本文件列出的接口以 docs/api/openapi.generated.yaml 为实现基线。
+servers:
+  - url: http://127.0.0.1:8080
+    description: 本地开发
+  # TODO(OPS): 预发/生产域名与反向代理前缀待部署环境确定后补充；补齐前本契约不得作为对外交付件。
+
+tags:
+  - name: public
+    description: 无需鉴权的公开接口
+  - name: files
+    description: 文件管理（上传、下载、删除）
+  - name: notices
+    description: 通知公告（管理端 + 用户端收件箱）
+  - name: jobs
+    description: 定时任务（任务定义、启停、手动执行、执行日志）
+  - name: sessions
+    description: 会话管理（登录设备、强制下线、失效清理）
+  - name: demo
+    description: 示例业务（导入、导出、模板下载）
+
+paths:
+  /api/v1/public/configs:
+    get:
+      x-status: IMPLEMENTED
+      tags: [public]
+      summary: 获取公开外观配置（无需鉴权）
+      description: |
+        返回白名单内的系统参数，供前端启动时注入浏览器标题、登录页品牌与页脚。
+        只包含 sys.name / sys.name.slogan / sys.copyright / sys.icp / sys.upload.max-size（uploadMaxSize）；
+        敏感参数（如 sys.security.token.secret）不在白名单内，禁止返回。
+        未登录访问必须返回 200，不得返回 401。
+      operationId: getPublicConfigs
+      security: []
+      responses:
+        '200':
+          description: 成功；未配置的字段为 null，由前端回落默认文案
+          headers:
+            X-Trace-Id:
+              $ref: '#/components/headers/XTraceId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublicConfigResponse'
+        '500':
+          $ref: '#/components/responses/SystemError'
+
+  /api/v1/files:
+    get:
+      x-status: IMPLEMENTED
+      tags: [files]
+      summary: 文件列表
+      description: |
+        受数据权限约束（`dept_id` 组织范围 + `create_by` 归属过滤）。
+        只返回未删除（`deleted=0`）文件；回收站列表见 `/api/v1/files/recycle`。
+      operationId: pageFiles
+      parameters:
+        - name: keyword
+          in: query
+          required: false
+          schema:
+            type: string
+          description: 原始文件名模糊匹配
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: pageSize
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        '200':
+          description: 成功
+          headers:
+            X-Trace-Id:
+              $ref: '#/components/headers/XTraceId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FilePageResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/SystemError'
+    post:
+      x-status: IMPLEMENTED
+      tags: [files]
+      summary: 上传文件（单个）
+      description: |
+        multipart/form-data 单文件上传，需权限 system:file:upload。多文件由前端并发调用本接口。
+        业务上限取自参数 sys.upload.max-size（1MB–200MB，热生效）；超过当前上限返回 413，
+        message 写明真实上限，data.maxSize 给出上限字节数，供前端就地提示。
+        容器天花板 200MB 由 spring.servlet.multipart 启动期固定，超过时由容器直接拒绝（message 为“请求体过大”，data 为 null）。
+        服务端计算 SHA-256；若同一上传者已有相同内容，复用物理字节并返回 instant=true。
+      operationId: uploadFile
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: 待上传文件
+      responses:
+        '200':
+          description: 上传成功，返回文件记录
+          headers:
+            X-Trace-Id:
+              $ref: '#/components/headers/XTraceId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FileResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '413':
+          $ref: '#/components/responses/PayloadTooLarge'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '500':
+          $ref: '#/components/responses/SystemError'
+
+  /api/v1/files/{id}:
+    delete:
+      x-status: IMPLEMENTED
+      tags: [files]
+      summary: 删除文件（移入回收站）
+      description: |
+        逻辑删除：置 deleted=1、deleted_at、deleted_by，物理字节保留。记录不存在时仍返回成功，保证重复删除幂等（CT-HTTP-002）。
+        彻底删除见 DELETE /api/v1/files/recycle/{id}；恢复见 POST /api/v1/files/{id}/restore。
+      operationId: deleteFile
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: 已移入回收站；重复删除同 id 仍返回 200，data 为 null
+          headers:
+            X-Trace-Id:
+              $ref: '#/components/headers/XTraceId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/SystemError'
+
+  /api/v1/files/instant:
+    post:
+      x-status: IMPLEMENTED
+      tags: [files]
+      summary: 秒传探测
+      description: |
+        需权限 system:file:upload。仅当**当前上传者**存在相同 sha256+size 且物理文件存在时，
+        创建一条新文件记录并返回 instant=true（不重复存字节）；否则 instant=false，客户端继续真实上传。
+        不跨用户秒传，避免知道 hash 即复制他人文件。
+      operationId: instantUpload
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InstantUploadRequest'
+      responses:
+        '200':
+          description: instant=true 时 data 为新建文件记录；false 时 data 为空对象
+          headers:
+            X-Trace-Id:
+              $ref: '#/components/headers/XTraceId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InstantUploadResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '500':
+          $ref: '#/components/responses/SystemError'
+
+  /api/v1/files/{id}/preview:
+    get:
+      x-status: IMPLEMENTED
+      tags: [files]
+      summary: 在线预览（仅图片与 PDF）
+      description: |
+        需权限 system:file:download。仅 jpg/jpeg/png/gif/webp/pdf 可预览，返回 inline 与 nosniff；
+        其他类型 422，只能走下载接口。越权与不存在统一返回 404（同一文案，不暴露资源是否存在，见 CT-HTTP-008）；
+        缺功能权限（无 system:file:download）返回 403。
+      operationId: previewFile
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: '文件流（Content-Disposition: inline）'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /api/v1/files/recycle:
+    get:
+      x-status: IMPLEMENTED
+      tags: [files]
+      summary: 回收站列表
+      description: |
+        需权限 system:file:list。只返回 deleted=1 的文件，受数据权限约束；按删除时间倒序。
+      operationId: pageRecycledFiles
+      parameters:
+        - name: keyword
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: pageSize
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        '200':
+          description: 成功
+          headers:
+            X-Trace-Id:
+              $ref: '#/components/headers/XTraceId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FilePageResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/SystemError'
+
+  /api/v1/files/{id}/restore:
+    post:
+      x-status: IMPLEMENTED
+      tags: [files]
+      summary: 从回收站恢复
+      description: |
+        需权限 system:file:restore。deleted=1 → 0，清空删除标记；不在回收站时仍返回成功（幂等）。
+      operationId: restoreFile
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: 恢复成功；data 为 null
+          headers:
+            X-Trace-Id:
+              $ref: '#/components/headers/XTraceId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/SystemError'
+
+  /api/v1/files/recycle/{id}:
+    delete:
+      x-status: IMPLEMENTED
+      tags: [files]
+      summary: 彻底删除（回收站）
+      description: |
+        需权限 system:file:purge。物理删除记录；仅当没有其他记录（含回收站行）引用同一 storage_path 时才删物理字节。
+        仅允许删除回收站记录（deleted=1）；正常记录返回 422，需先删除进回收站。不存在时返回 200 幂等。
+      operationId: purgeFile
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: 彻底删除成功；data 为 null
+          headers:
+            X-Trace-Id:
+              $ref: '#/components/headers/XTraceId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '500':
+          $ref: '#/components/responses/SystemError'
+
+  /api/v1/files/chunk-sessions:
+    post:
+      x-status: IMPLEMENTED
+      tags: [files]
+      summary: 初始化分片上传
+      description: |
+        需权限 system:file:upload。校验文件名、扩展名、总大小与分片数；
+        若同一上传者命中秒传，返回 instant=true 与文件记录，不再上传分片。
+        chunkSize 允许 256KB–5MB，totalChunks ≤ 1000；会话 24 小时无更新由孤儿清理任务置 EXPIRED。
+      operationId: initChunkSession
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChunkInitRequest'
+      responses:
+        '200':
+          description: 成功
+          headers:
+            X-Trace-Id:
+              $ref: '#/components/headers/XTraceId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChunkSessionResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '413':
+          $ref: '#/components/responses/PayloadTooLarge'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '500':
+          $ref: '#/components/responses/SystemError'
+
+  /api/v1/files/chunk-sessions/{uploadId}:
+    get:
+      x-status: IMPLEMENTED
+      tags: [files]
+      summary: 查询分片进度（断点续传）
+      description: 需权限 system:file:upload；会话必须属于当前上传者，否则 403。返回已上传分片序号。
+      operationId: getChunkSession
+      parameters:
+        - name: uploadId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 成功
+          headers:
+            X-Trace-Id:
+              $ref: '#/components/headers/XTraceId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChunkSessionResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/SystemError'
+    delete:
+      x-status: IMPLEMENTED
+      tags: [files]
+      summary: 放弃分片上传
+      description: 需权限 system:file:upload；标记 ABORTED 并立即删除临时分片目录。重复放弃幂等。
+      operationId: abortChunkSession
+      parameters:
+        - name: uploadId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 成功；data 为 null
+          headers:
+            X-Trace-Id:
+              $ref: '#/components/headers/XTraceId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/SystemError'
+
+  /api/v1/files/chunk-sessions/{uploadId}/chunks/{index}:
+    put:
+      x-status: IMPLEMENTED
+      tags: [files]
+      summary: 上传单个分片
+      description: |
+        需权限 system:file:upload。multipart 字段 `chunk`；index 从 0 开始且小于 totalChunks；
+        重复上传同一分片覆盖旧片。单分片不得超过初始化声明的 chunkSize。
+      operationId: uploadChunk
+      parameters:
+        - name: uploadId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: index
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 0
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [chunk]
+              properties:
+                chunk:
+                  type: string
+                  format: binary
+      responses:
+        '200':
+          description: 成功；data 为当前已上传分片序号
+          headers:
+            X-Trace-Id:
+              $ref: '#/components/headers/XTraceId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '500':
+          $ref: '#/components/responses/SystemError'
+
+  /api/v1/files/chunk-sessions/{uploadId}/complete:
+    post:
+      x-status: IMPLEMENTED
+      tags: [files]
+      summary: 完成分片上传
+      description: |
+        需权限 system:file:upload。校验所有分片齐全、合并后字节数与 SHA-256 与初始化一致，
+        写入最终逻辑键并创建文件记录，删除临时目录。校验失败返回 422 且保留会话供重试。
+      operationId: completeChunkSession
+      parameters:
+        - name: uploadId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 上传成功，返回文件记录
+          headers:
+            X-Trace-Id:
+              $ref: '#/components/headers/XTraceId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FileResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '500':
+          $ref: '#/components/responses/SystemError'
+
+  /api/v1/notices:
+    get:
+      x-status: IMPLEMENTED
+      tags: [notices]
+      summary: 通知列表（管理端）
+      description: |
+        受数据权限约束：按发布人部门（dept_id）与发布人（create_by）收敛。
+        支持关键词、级别、类型、状态筛选；默认按发布时间倒序。
+      operationId: pageNotices
+      parameters:
+        - name: keyword
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: level
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [NORMAL, IMPORTANT, URGENT]
+        - name: type
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [SYSTEM, BUSINESS, SECURITY, TASK]
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [PUBLISHED, REVOKED]
+        - name: deptId
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int64
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: pageSize
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        '200':
+          description: 成功
+          headers:
+            X-Trace-Id:
+              $ref: '#/components/headers/XTraceId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NoticePageResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/SystemError'
+    post:
+      x-status: IMPLEMENTED
+      tags: [notices]
+      summary: 发布通知
+      description: |
+        接收范围多行并集；DEPT 固定为“该部门及其全部下级部门”。
+        发布时把范围展开为应读人快照（sys_notice_recipient），之后组织调整不补发。
+        需要权限 system:notice:create。
+      operationId: publishNotice
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NoticePublishRequest'
+      responses:
+        '200':
+          description: 发布成功，返回通知详情
+          headers:
+            X-Trace-Id:
+              $ref: '#/components/headers/XTraceId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NoticeResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '500':
+          $ref: '#/components/responses/SystemError'
+
+  /api/v1/notices/{id}:
+    get:
+      x-status: IMPLEMENTED
+      tags: [notices]
+      summary: 通知详情（管理端）
+      description: 受数据权限约束；越权访问返回 404。
+      operationId: getNotice
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: 成功
+          headers:
+            X-Trace-Id:
+              $ref: '#/components/headers/XTraceId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NoticeResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/SystemError'
+    delete:
+      x-status: IMPLEMENTED
+      tags: [notices]
+      summary: 删除通知
+      description: 逻辑删除通知，并级联逻辑删除范围与应读人快照；删除后用户端不可见。需要权限 system:notice:delete。
+      operationId: deleteNotice
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: 删除成功，data 为 null
+          headers:
+            X-Trace-Id:
+              $ref: '#/components/headers/XTraceId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/SystemError'
+
+  /api/v1/notices/{id}/revoke:
+    post:
+      x-status: IMPLEMENTED
+      tags: [notices]
+      summary: 撤回通知
+      description: |
+        撤回后用户端列表、未读数、详情均不再返回该通知；已读快照保留，管理端统计仍可查。
+        已撤回返回 409；发布时 is_revocable=false 的通知撤回返回 409。需要权限 system:notice:revoke。
+      operationId: revokeNotice
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: 撤回成功，返回通知详情
+          headers:
+            X-Trace-Id:
+              $ref: '#/components/headers/XTraceId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NoticeResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/SystemError'
+
+  /api/v1/notices/{id}/readers:
+    get:
+      x-status: IMPLEMENTED
+      tags: [notices]
+      summary: 已读统计名单
+      description: 按应读人快照返回已读/未读名单，含阅读时间。需要权限 system:notice:read-stats。
+      operationId: pageNoticeReaders
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+        - name: readStatus
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [ALL, UNREAD, READ]
+            default: ALL
+        - name: keyword
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: pageSize
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        '200':
+          description: 成功
+          headers:
+            X-Trace-Id:
+              $ref: '#/components/headers/XTraceId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NoticeReaderPageResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/SystemError'
+
+  /api/v1/my-notices:
+    get:
+      x-status: IMPLEMENTED
+      tags: [notices]
+      summary: 我的消息列表
+      description: 仅需登录态；只返回本人应读、未撤回、未删除的通知，按发布时间倒序。
+      operationId: pageMyNotices
+      parameters:
+        - name: readStatus
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [ALL, UNREAD, READ]
+            default: ALL
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: pageSize
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        '200':
+          description: 成功
+          headers:
+            X-Trace-Id:
+              $ref: '#/components/headers/XTraceId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InboxNoticePageResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/SystemError'
+
+  /api/v1/my-notices/unread-count:
+    get:
+      x-status: IMPLEMENTED
+      tags: [notices]
+      summary: 我的未读数
+      description: 仅需登录态；只统计未读、未撤回、未删除的通知。前端 30 秒轮询一次。
+      operationId: getMyUnreadCount
+      responses:
+        '200':
+          description: 成功
+          headers:
+            X-Trace-Id:
+              $ref: '#/components/headers/XTraceId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnreadCountResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/SystemError'
+
+  /api/v1/my-notices/{id}:
+    get:
+      x-status: IMPLEMENTED
+      tags: [notices]
+      summary: 我的消息详情（点开即已读）
+      description: |
+        仅需登录态；返回前把本人该通知的 read_at 写入（幂等，已有值不覆盖）。
+        非本人应读、已撤回或已删除返回 404。
+      operationId: getMyNoticeDetail
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: 成功
+          headers:
+            X-Trace-Id:
+              $ref: '#/components/headers/XTraceId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InboxNoticeDetailResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/SystemError'
+
+  /api/v1/my-notices/read-all:
+    post:
+      x-status: IMPLEMENTED
+      tags: [notices]
+      summary: 全部已读
+      description: 仅需登录态；把本人全部未读（排除已撤回/已删除）标记为已读，返回本次标记条数。
+      operationId: readAllMyNotices
+      responses:
+        '200':
+          description: 成功
+          headers:
+            X-Trace-Id:
+              $ref: '#/components/headers/XTraceId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReadAllResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/SystemError'
+
+  /api/v1/jobs:
+    get:
+      x-status: IMPLEMENTED
+      tags: [jobs]
+      summary: 定时任务列表
+      description: 仅 SUPER_ADMIN 持有 system:job:list；按关键词/分组/状态筛选，分页。nextRunAt 由 cron 表达式动态计算。
+      operationId: pageJobs
+      parameters:
+        - name: keyword
+          in: query
+          required: false
+          schema:
+            type: string
+          description: 任务名称 / 标识模糊匹配
+        - name: groupName
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [ENABLED, DISABLED]
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: pageSize
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        '200':
+          description: 成功
+          headers:
+            X-Trace-Id:
+              $ref: '#/components/headers/XTraceId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobPageResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/SystemError'
+    post:
+      x-status: IMPLEMENTED
+      tags: [jobs]
+      summary: 新增定时任务
+      description: |
+        只允许绑定已注册的任务标识（jobKey），服务端校验必须存在于 JobRegistry。
+        禁止把脚本、Shell 命令或 SQL 字符串写入任务定义。
+        需要权限 system:job:create。
+      operationId: createJob
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JobRequest'
+      responses:
+        '200':
+          description: 创建成功，返回任务详情
+          headers:
+            X-Trace-Id:
+              $ref: '#/components/headers/XTraceId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '500':
+          $ref: '#/components/responses/SystemError'
+
+  /api/v1/jobs/keys:
+    get:
+      x-status: IMPLEMENTED
+      tags: [jobs]
+      summary: 已注册任务标识列表
+      description: 返回代码中已注册的 ScheduledJob 标识与描述，供新增/编辑任务时选择；不允许自由填写未注册标识。
+      operationId: listJobKeys
+      responses:
+        '200':
+          description: 成功
+          headers:
+            X-Trace-Id:
+              $ref: '#/components/headers/XTraceId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobKeyOptionListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/SystemError'
+
+  /api/v1/jobs/{id}:
+    put:
+      x-status: IMPLEMENTED
+      tags: [jobs]
+      summary: 修改定时任务
+      description: |
+        修改 cron 后立即刷新调度（不需重启）；启用状态下改表达式会取消旧调度并按新表达式重建。
+        需要权限 system:job:update。
+      operationId: updateJob
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JobRequest'
+      responses:
+        '200':
+          description: 修改成功，返回任务详情
+          headers:
+            X-Trace-Id:
+              $ref: '#/components/headers/XTraceId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '500':
+          $ref: '#/components/responses/SystemError'
+    delete:
+      x-status: IMPLEMENTED
+      tags: [jobs]
+      summary: 删除定时任务
+      description: 逻辑删除任务定义并取消调度；历史执行日志保留（删除任务不删日志）。需要权限 system:job:delete。
+      operationId: deleteJob
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: 删除成功
+          headers:
+            X-Trace-Id:
+              $ref: '#/components/headers/XTraceId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/SystemError'
+
+  /api/v1/jobs/{id}/status:
+    put:
+      x-status: IMPLEMENTED
+      tags: [jobs]
+      summary: 启用 / 停用定时任务
+      description: 启用后立即注册调度；停用后取消调度、清空下次执行时间，不再自动触发。需要权限 system:job:status。
+      operationId: changeJobStatus
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JobStatusRequest'
+      responses:
+        '200':
+          description: 成功，返回任务详情
+          headers:
+            X-Trace-Id:
+              $ref: '#/components/headers/XTraceId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '500':
+          $ref: '#/components/responses/SystemError'
+
+  /api/v1/jobs/{id}/run:
+    post:
+      x-status: IMPLEMENTED
+      tags: [jobs]
+      summary: 手动执行一次
+      description: |
+        立即执行一次，日志 triggerType=MANUAL，不改变自动调度的 nextRunAt。
+        禁止并发策略下若任务正在执行，返回 409（STATE_CONFLICT）。
+        需要权限 system:job:run。
+      operationId: runJob
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: 执行完成，返回本次执行摘要
+          headers:
+            X-Trace-Id:
+              $ref: '#/components/headers/XTraceId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobRunResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/SystemError'
+
+  /api/v1/job-logs:
+    get:
+      x-status: IMPLEMENTED
+      tags: [jobs]
+      summary: 执行日志列表
+      description: 只读；支持按任务、关键词、结果、触发方式筛选。需要权限 system:job:log。
+      operationId: pageJobLogs
+      parameters:
+        - name: jobId
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int64
+        - name: keyword
+          in: query
+          required: false
+          schema:
+            type: string
+          description: 任务名 / 标识模糊匹配
+        - name: result
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [SUCCESS, FAIL, TIMEOUT, SKIPPED]
+        - name: triggerType
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [AUTO, MANUAL]
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: pageSize
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        '200':
+          description: 成功
+          headers:
+            X-Trace-Id:
+              $ref: '#/components/headers/XTraceId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobLogPageResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/SystemError'
+
+  /api/v1/job-logs/{id}:
+    get:
+      x-status: IMPLEMENTED
+      tags: [jobs]
+      summary: 执行日志详情
+      description: 返回异常摘要与完整堆栈。需要权限 system:job:log。
+      operationId: getJobLog
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: 成功
+          headers:
+            X-Trace-Id:
+              $ref: '#/components/headers/XTraceId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobLogDetailResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/SystemError'
+
+  /api/v1/sessions:
+    get:
+      x-status: IMPLEMENTED
+      tags: [sessions]
+      summary: 会话列表（管理端）
+      description: |
+        仅 SUPER_ADMIN 持有 system:session:list。
+        分页返回全部用户的会话记录；online 由服务端计算：
+        invalidated_at 为空且 last_active_at 在最近 5 分钟内。
+      operationId: pageSessions
+      parameters:
+        - name: userId
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int64
+          description: 按用户精确筛选
+        - name: keyword
+          in: query
+          required: false
+          schema:
+            type: string
+          description: 账号 / 昵称模糊匹配
+        - name: online
+          in: query
+          required: false
+          schema:
+            type: boolean
+          description: true 只看在线；false 只看已失效/离线；缺省不过滤
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: pageSize
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        '200':
+          description: 成功
+          headers:
+            X-Trace-Id:
+              $ref: '#/components/headers/XTraceId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionPageResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/SystemError'
+
+  /api/v1/sessions/{id}:
+    delete:
+      x-status: IMPLEMENTED
+      tags: [sessions]
+      summary: 强制下线单条会话（管理端）
+      description: |
+        需要权限 system:session:kick。只失效目标会话，不增加 sys_user.token_version，
+        该用户其他设备不受影响。不能踢当前请求所在会话（409）。
+      operationId: kickSession
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: 成功，返回影响条数
+          headers:
+            X-Trace-Id:
+              $ref: '#/components/headers/XTraceId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionAffectResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/SystemError'
+
+  /api/v1/sessions/user/{userId}:
+    delete:
+      x-status: IMPLEMENTED
+      tags: [sessions]
+      summary: 按用户一键踢全部（管理端）
+      description: |
+        需要权限 system:session:kick。该用户全部活跃会话置 KICKED_BY_ADMIN，
+        不改 token_version；操作者自己的会话也包含在内。
+      operationId: kickUserSessions
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: 成功，返回影响条数
+          headers:
+            X-Trace-Id:
+              $ref: '#/components/headers/XTraceId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionAffectResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/SystemError'
+
+  /api/v1/sessions/invalidated:
+    delete:
+      x-status: IMPLEMENTED
+      tags: [sessions]
+      summary: 清理已失效会话记录（管理端）
+      description: |
+        需要权限 system:session:clean。物理删除 invalidated_at 非空且失效早于 30 天前的记录；
+        返回实际删除条数，无匹配返回 0。
+      operationId: cleanInvalidatedSessions
+      responses:
+        '200':
+          description: 成功，返回删除条数
+          headers:
+            X-Trace-Id:
+              $ref: '#/components/headers/XTraceId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionAffectResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/SystemError'
+
+  /api/v1/auth/sessions:
+    get:
+      x-status: IMPLEMENTED
+      tags: [sessions]
+      summary: 我的登录设备（用户端）
+      description: 仅需登录态；只返回当前用户自己的会话，current=true 标记本次请求所在会话。
+      operationId: listMySessions
+      responses:
+        '200':
+          description: 成功
+          headers:
+            X-Trace-Id:
+              $ref: '#/components/headers/XTraceId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/SystemError'
+
+  /api/v1/auth/sessions/{id}:
+    delete:
+      x-status: IMPLEMENTED
+      tags: [sessions]
+      summary: 踢掉自己的其他设备（用户端）
+      description: |
+        仅需登录态；目标必须是本人会话。目标为当前会话时返回 409，请改用退出登录。
+        失效原因记为 KICKED_BY_ADMIN（用户自助踢出与管理端踢出共用同一原因值）。
+      operationId: kickMySession
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: 成功，返回影响条数
+          headers:
+            X-Trace-Id:
+              $ref: '#/components/headers/XTraceId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionAffectResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/SystemError'
+
+  /api/v1/cache/overview:
+    get:
+      x-status: IMPLEMENTED
+      tags: [cache]
+      summary: 缓存概览（连接状态、内存占用、key 总数、命名空间分布）
+      description: |
+        只读。`totalKeys` 取 Redis `DBSIZE`；命名空间计数逐前缀 `SCAN`；
+        `unregisteredKeys = totalKeys - 各命名空间计数之和`。
+        Redis 不可用时 `connected=false`，其余数值为 0。
+      operationId: cacheOverview
+      responses:
+        '200':
+          description: 成功
+          headers:
+            X-Trace-Id:
+              $ref: '#/components/headers/XTraceId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CacheOverviewResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/SystemError'
+
+  /api/v1/cache/namespaces:
+    get:
+      x-status: IMPLEMENTED
+      tags: [cache]
+      summary: 缓存命名空间白名单
+      description: |
+        返回代码中登记的 7 类命名空间：名称、前缀、模式、用途、当前键数、敏感标记、
+        是否可清理与清除后果（前端原样展示）。不可清理的命名空间拒绝后续清理操作。
+      operationId: cacheNamespaces
+      responses:
+        '200':
+          description: 成功
+          headers:
+            X-Trace-Id:
+              $ref: '#/components/headers/XTraceId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CacheNamespacesResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/SystemError'
+
+  /api/v1/cache/keys:
+    get:
+      x-status: IMPLEMENTED
+      tags: [cache]
+      summary: 按命名空间分页浏览 key（名称、TTL、类型）
+      description: |
+        只返回 key 名、TTL 秒与类型，**不读取 value**。`ttlSeconds=-1` 表示永久，`-2` 表示已不存在。
+        使用 `SCAN` 游标遍历，扫描到第 page×pageSize 条即停；超过扫描上限返回 `truncated=true`。
+        未登记或不可浏览的命名空间 code 返回 404。
+      operationId: cacheKeys
+      parameters:
+        - name: namespace
+          in: query
+          required: true
+          description: 命名空间 code（如 auth-refresh）
+          schema:
+            type: string
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 1
+            minimum: 1
+        - name: pageSize
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 20
+            minimum: 1
+            maximum: 100
+        - name: keyword
+          in: query
+          required: false
+          description: key 名包含过滤（服务端内存过滤，不改变命名空间边界）
+          schema:
+            type: string
+            maxLength: 128
+      responses:
+        '200':
+          description: 成功
+          headers:
+            X-Trace-Id:
+              $ref: '#/components/headers/XTraceId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CacheKeysPageResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/SystemError'
+    delete:
+      x-status: IMPLEMENTED
+      tags: [cache]
+      summary: 删除单个 key
+      description: |
+        `key` 必须精确属于该命名空间（单键命名空间要求完全相等，前缀命名空间要求以登记前缀开头）。
+        不可清理的命名空间返回 403。不读取 value；删除后写操作日志（含删除数量）。
+      operationId: cacheDeleteKey
+      parameters:
+        - name: namespace
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: key
+          in: query
+          required: true
+          description: 完整 key 名（URL 编码）
+          schema:
+            type: string
+            maxLength: 255
+      responses:
+        '200':
+          description: 成功，返回实际删除数（0 或 1）
+          headers:
+            X-Trace-Id:
+              $ref: '#/components/headers/XTraceId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CacheAffectResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/SystemError'
+
+  /api/v1/cache/namespaces/{code}:
+    delete:
+      x-status: IMPLEMENTED
+      tags: [cache]
+      summary: 清空命名空间
+      description: |
+        只对 `clearable=true` 的命名空间生效，按登记前缀 `SCAN` + 分批 `DEL`；
+        不影响其他命名空间。不可清理或未登记的 code 分别返回 403 / 404。
+        删除后写操作日志（命名空间 code 与删除数量）。
+      operationId: cacheClearNamespace
+      parameters:
+        - name: code
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 成功，返回删除的 key 数量
+          headers:
+            X-Trace-Id:
+              $ref: '#/components/headers/XTraceId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CacheAffectResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/SystemError'
+
+  /api/v1/cache/session-cache:
+    delete:
+      x-status: IMPLEMENTED
+      tags: [cache]
+      summary: 清理过期会话缓存（会话活跃节流命名空间）
+      description: |
+        等价于清空 `session-touch` 命名空间，但作为独立入口便于运维定位。
+        不影响登录态与 `auth-refresh`；下一次请求会重新写一次会话活跃时间。
+      operationId: cacheCleanSessionCache
+      responses:
+        '200':
+          description: 成功，返回删除的 key 数量
+          headers:
+            X-Trace-Id:
+              $ref: '#/components/headers/XTraceId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CacheAffectResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/SystemError'
+
+  /api/v1/cache/clean-logs:
+    get:
+      x-status: IMPLEMENTED
+      tags: [cache]
+      summary: 缓存清理记录
+      description: 从操作日志中过滤模块「缓存管理」的记录，按时间倒序分页。
+      operationId: cacheCleanLogs
+      parameters:
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 1
+            minimum: 1
+        - name: pageSize
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 20
+            minimum: 1
+            maximum: 100
+      responses:
+        '200':
+          description: 成功
+          headers:
+            X-Trace-Id:
+              $ref: '#/components/headers/XTraceId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CacheCleanLogPageResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/SystemError'
+
+  /api/v1/demo-tasks/import-template:
+    get:
+      x-status: IMPLEMENTED
+      tags: [demo]
+      summary: 下载示例任务导入模板
+      description: |
+        模板由后端字段元数据生成，与导入校验同源。文件为 xlsx，含「任务数据」与「填写须知」两页；
+        数据页首行是表头，必填列表头带 `*`，示例行只在填写须知页。
+        权限码 `demo:task:import`（模板是导入的必要前置）。
+      operationId: demoTaskImportTemplate
+      responses:
+        '200':
+          description: 成功，返回 xlsx 文件
+          headers:
+            X-Trace-Id:
+              $ref: '#/components/headers/XTraceId'
+          content:
+            application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+              schema:
+                type: string
+                format: binary
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/SystemError'
+
+  /api/v1/demo-tasks/import:
+    post:
+      x-status: IMPLEMENTED
+      tags: [demo]
+      summary: 导入示例任务（只新增，整批校验）
+      description: |
+        单批上限 20000 行，文件上限 50MB，仅支持 .xlsx；单一同步通道，单事务。
+        任一行校验失败则整批不落库，返回 `422 VALIDATION_FAILED`，
+        `data.errors[]` 的 `field` 形如「第 3 行 · 任务标题」，`code` 取 `REQUIRED`／`INVALID_FORMAT`／`TOO_LONG`／`VALIDATION_FAILED`；
+        `data.errors` 最多返回 200 条，同时返回三个独立数字：`totalRows`（数据行数，不含表头）、`errorRows`（出错行数）、
+        `errorCount`（字段级错误总数），以及 `remainingErrors`（未显示的剩余条数）。
+        超过行数或体积上限返回 `400`，不转异步；同一用户 5 分钟内重复提交同一文件（SHA-256 相同）返回 `400`。
+      operationId: demoTaskImport
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        '200':
+          description: 成功，返回总行数与写入行数
+          headers:
+            X-Trace-Id:
+              $ref: '#/components/headers/XTraceId'
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/ImportResult'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ImportValidationError'
+        '500':
+          $ref: '#/components/responses/SystemError'
+
+  /api/v1/demo-tasks/export:
+    get:
+      x-status: IMPLEMENTED
+      tags: [demo]
+      summary: 导出示例任务（快通道 ≤2000 行，超出转异步）
+      description: |
+        按导出人权限过滤：数据权限决定可见行，字段级脱敏决定可见列。
+        隐藏态字段整列不输出；手机号列按 `system:user:phone:view`／`system:user:phone:mask` 决定明文、打码或缺列。
+        ≤2000 行同步返回文件；>2000 行返回异步任务信息，任务完成后通过通知或「我的任务」下载。
+        超过 100000 行返回 `400` 并提示缩小筛选范围。同步文件在内存生成，不落盘、不进文件管理。
+        权限码 `demo:task:export`。
+      operationId: demoTaskExport
+      parameters:
+        - name: keyword
+          in: query
+          required: false
+          schema:
+            type: string
+          description: 任务标题关键词
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [TODO, DOING, DONE]
+        - name: deptId
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: |
+            成功。≤2000 行为同步通道，直接返回 xlsx；>2000 行转异步，返回 JSON 任务信息（`data.mode=ASYNC` 与 `taskId`）。
+          headers:
+            X-Trace-Id:
+              $ref: '#/components/headers/XTraceId'
+          content:
+            application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+              schema:
+                type: string
+                format: binary
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/ExportAccepted'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/SystemError'
+
+  /api/v1/demo-tasks/export-tasks:
+    get:
+      x-status: IMPLEMENTED
+      tags: [demo]
+      summary: 我的导出任务列表
+      description: 仅返回当前登录人发起的导出任务。
+      operationId: demoTaskExportTasks
+      parameters:
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: pageSize
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/ExportTaskItem'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/SystemError'
+
+  /api/v1/demo-tasks/export-tasks/{id}:
+    get:
+      x-status: IMPLEMENTED
+      tags: [demo]
+      summary: 导出任务详情（进度/行数/错误信息）
+      operationId: demoTaskExportTaskDetail
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/ExportTaskItem'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/SystemError'
+
+  /api/v1/demo-tasks/export-tasks/{id}/cancel:
+    post:
+      x-status: IMPLEMENTED
+      tags: [demo]
+      summary: 取消导出任务
+      description: 仅 `PENDING`/`RUNNING` 可取消；`RUNNING` 在检查点停止并删除部分文件。
+      operationId: demoTaskExportCancel
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: 成功，返回最新任务状态
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/ExportTaskItem'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/SystemError'
+
+  /api/v1/demo-tasks/export-tasks/{id}/file:
+    get:
+      x-status: IMPLEMENTED
+      tags: [demo]
+      summary: 下载导出文件
+      description: 仅任务发起人可下载；仅 `SUCCESS` 且未过期可用。
+      operationId: demoTaskExportFile
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: 成功，返回 xlsx
+          content:
+            application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+              schema:
+                type: string
+                format: binary
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/SystemError'
+
+  /api/v1/posts/import-template:
+    get:
+      x-status: IMPLEMENTED
+      tags: [system]
+      summary: 下载岗位导入模板
+      description: |
+        模板由岗位字段元数据（`PostExcelSchema`）生成，与导入校验、导出表头同源。
+        含「岗位」与「填写须知」两页；必填列表头带 `*`，示例行只在填写须知页。
+        权限码 `system:post:import`（模板是导入的必要前置）。
+      operationId: postImportTemplate
+      responses:
+        '200':
+          description: 成功，返回 xlsx 文件
+          headers:
+            X-Trace-Id:
+              $ref: '#/components/headers/XTraceId'
+          content:
+            application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+              schema:
+                type: string
+                format: binary
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/SystemError'
+
+  /api/v1/posts/import:
+    post:
+      x-status: IMPLEMENTED
+      tags: [system]
+      summary: 导入岗位（只新增，整批校验）
+      description: |
+        与示例任务共用同一导入引擎：单批上限 20000 行、文件上限 50MB、仅支持 .xlsx、单一同步通道、单事务。
+        任一行失败整批不落库，返回 `422`，`data` 含 `totalRows`／`errorRows`／`errorCount`／`remainingErrors` 与最多 200 条 `errors`。
+        岗位编码全局唯一（含文件内重复）；所属部门必须存在。同一用户 5 分钟内重复提交同一文件返回 `400`。
+        权限码 `system:post:import`。
+      operationId: postImport
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        '200':
+          description: 成功，返回总行数与写入行数
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/ImportResult'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ImportValidationError'
+        '500':
+          $ref: '#/components/responses/SystemError'
+
+  /api/v1/posts/export:
+    get:
+      x-status: IMPLEMENTED
+      tags: [system]
+      summary: 导出岗位（快通道 ≤2000 行，超出转异步）
+      description: |
+        复用岗位列表查询（同一筛选、同一排序）；岗位列表本身无数据范围过滤，导出不新增可见性规则。
+        岗位无字段级脱敏对象，但走同一导出通道与掩码判定。
+        ≤2000 行同步返回 xlsx；>2000 行返回异步任务；超过 100000 行返回 `400`。权限码 `system:post:export`。
+      operationId: postExport
+      parameters:
+        - name: keyword
+          in: query
+          required: false
+          schema:
+            type: string
+          description: 岗位名称或编码关键词
+        - name: deptId
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int64
+        - name: isEnabled
+          in: query
+          required: false
+          schema:
+            type: boolean
+        - name: sort
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: order
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [asc, desc]
+      responses:
+        '200':
+          description: ≤2000 行返回 xlsx；>2000 行返回异步任务信息
+          content:
+            application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+              schema:
+                type: string
+                format: binary
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/ExportAccepted'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/SystemError'
+
+  /api/v1/posts/export-tasks:
+    get:
+      x-status: IMPLEMENTED
+      tags: [system]
+      summary: 我的岗位导出任务列表
+      description: 仅返回当前登录人发起的导出任务。权限码 `system:post:export`。
+      operationId: postExportTasks
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/ExportTaskItem'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/SystemError'
+
+  /api/v1/posts/export-tasks/{id}:
+    get:
+      x-status: IMPLEMENTED
+      tags: [system]
+      summary: 岗位导出任务详情
+      operationId: postExportTaskDetail
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/ExportTaskItem'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/SystemError'
+
+  /api/v1/posts/export-tasks/{id}/cancel:
+    post:
+      x-status: IMPLEMENTED
+      tags: [system]
+      summary: 取消岗位导出任务
+      description: 仅 `PENDING`/`RUNNING` 可取消。
+      operationId: postExportCancel
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: 成功，返回最新任务状态
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/ExportTaskItem'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/SystemError'
+
+  /api/v1/posts/export-tasks/{id}/file:
+    get:
+      x-status: IMPLEMENTED
+      tags: [system]
+      summary: 下载岗位导出文件
+      description: 仅任务发起人可下载；仅 `SUCCESS` 且未过期可用。临时文件独立区存储，不进 `sys_file`。
+      operationId: postExportFile
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: 成功，返回 xlsx
+          content:
+            application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+              schema:
+                type: string
+                format: binary
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/SystemError'
+
+components:
+  headers:
+    XTraceId:
+      description: 链路标识，必须与响应体 traceId 一致（CT-TRACE-002）
+      schema:
+        type: string
+    IdempotentReplay:
+      description: 幂等重放标记，重放时返回 true（CT-IDEM-003）
+      schema:
+        type: string
+        enum: ['true']
+  schemas:
+    Envelope:
+      type: object
+      description: 统一响应信封，字段定义方为 CT-RESP-001
+      required: [code, message, data, traceId]
+      properties:
+        code:
+          type: integer
+          description: 成功为 0；失败为基础码或项目扩展码（CT-ERR-011）
+        message:
+          type: string
+          description: 默认可直接展示的文案
+        data:
+          nullable: true
+          description: 业务数据；无数据时为 null，不得省略
+        traceId:
+          type: string
+          description: 链路标识，见 CT-TRACE-001
+    FieldError:
+      type: object
+      description: 字段校验错误结构，定义方为 CT-ERR-006
+      required: [field, code, message]
+      properties:
+        field:
+          type: string
+          description: 字段路径，如 name
+        code:
+          type: string
+          description: 字段级错误符号名，取值见 CT-ERR-006 的四值枚举
+        message:
+          type: string
+    ErrorData:
+      type: object
+      required: [errors]
+      properties:
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/FieldError'
+    ImportErrorData:
+      type: object
+      required: [errors, totalRows, errorRows, errorCount, remainingErrors]
+      properties:
+        errors:
+          type: array
+          description: 最多 200 条；`field` 形如「第 3 行 · 任务标题」
+          items:
+            $ref: '#/components/schemas/FieldError'
+        totalRows:
+          type: integer
+          description: 本次上传的数据行数（不含表头）
+        errorRows:
+          type: integer
+          description: 存在至少一处错误的行数（同一行多字段错误只计 1 行）
+        errorCount:
+          type: integer
+          description: 字段级错误总数（同一行多个字段错误分别计数）
+        remainingErrors:
+          type: integer
+          description: 未显示的剩余错误条数；等于 errorCount - errors.size()
+    FileRecord:
+      type: object
+      description: 文件记录；字段与 FileDtos.Response 一致
+      required: [id, originalName, size, createdAt, downloadUrl]
+      properties:
+        id:
+          type: integer
+          format: int64
+        originalName:
+          type: string
+          description: 上传时的原始文件名
+        contentType:
+          type: string
+          nullable: true
+        size:
+          type: integer
+          format: int64
+          description: 文件字节数
+        uploaderId:
+          type: integer
+          format: int64
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        downloadUrl:
+          type: string
+          description: 下载地址（/api/v1/files/{id}/download）
+        previewUrl:
+          type: string
+          nullable: true
+          description: 预览地址（/api/v1/files/{id}/preview）；仅图片/PDF 非空，其余为 null
+        instant:
+          type: boolean
+          nullable: true
+          description: 本次上传是否命中秒传（历史记录为 null）
+        deletedAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: 进入回收站时间；正常文件为 null
+        deletedBy:
+          type: integer
+          format: int64
+          nullable: true
+    FilePageResponse:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+        - type: object
+          properties:
+            data:
+              type: object
+              required: [list, total]
+              properties:
+                list:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/FileRecord'
+                total:
+                  type: integer
+                  format: int64
+    InstantUploadRequest:
+      type: object
+      required: [fileName, size, sha256]
+      properties:
+        fileName:
+          type: string
+          maxLength: 255
+        size:
+          type: integer
+          format: int64
+        contentType:
+          type: string
+          maxLength: 128
+          nullable: true
+        sha256:
+          type: string
+          pattern: '^[a-f0-9]{64}$'
+    InstantUploadResponse:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+        - type: object
+          properties:
+            data:
+              type: object
+              required: [instant]
+              properties:
+                instant:
+                  type: boolean
+                file:
+                  nullable: true
+                  allOf:
+                    - $ref: '#/components/schemas/FileRecord'
+    ChunkInitRequest:
+      type: object
+      required: [fileName, size, sha256, chunkSize]
+      properties:
+        fileName:
+          type: string
+          maxLength: 255
+        size:
+          type: integer
+          format: int64
+        contentType:
+          type: string
+          maxLength: 128
+          nullable: true
+        sha256:
+          type: string
+          pattern: '^[a-f0-9]{64}$'
+        chunkSize:
+          type: integer
+          description: 分片字节数，256KB–5MB
+    ChunkSessionResponse:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+        - type: object
+          properties:
+            data:
+              type: object
+              required: [uploadId, chunkSize, totalChunks, uploadedChunks, instant]
+              properties:
+                uploadId:
+                  type: string
+                  description: 32 位十六进制会话标识
+                chunkSize:
+                  type: integer
+                totalChunks:
+                  type: integer
+                uploadedChunks:
+                  type: array
+                  items:
+                    type: integer
+                instant:
+                  type: boolean
+                  description: 命中秒传时为 true，此时 file 非空
+                file:
+                  nullable: true
+                  allOf:
+                    - $ref: '#/components/schemas/FileRecord'
+    FileResponse:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/FileRecord'
+    PublicConfigResponse:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+        - type: object
+          properties:
+            data:
+              type: object
+              description: 白名单公开参数；未配置时为 null，前端回落默认值
+              required: [name, slogan, copyright, icp, uploadMaxSize]
+              properties:
+                name:
+                  type: string
+                  nullable: true
+                  description: 对应 sys.name；显示在浏览器标题、登录页品牌与侧栏
+                slogan:
+                  type: string
+                  nullable: true
+                  description: 对应 sys.name.slogan；登录页副标题
+                copyright:
+                  type: string
+                  nullable: true
+                  description: 对应 sys.copyright；登录页页脚版权
+                icp:
+                  type: string
+                  nullable: true
+                  description: 对应 sys.icp；登录页页脚备案号
+                uploadMaxSize:
+                  type: integer
+                  format: int64
+                  minimum: 1048576
+                  maximum: 209715200
+                  description: 单个文件上传上限（字节），对应 sys.upload.max-size；1MB–200MB，200MB 为容器天花板
+    NoticeScope:
+      type: object
+      required: [scopeType, targetId, targetName]
+      properties:
+        scopeType:
+          type: string
+          enum: [ALL, ROLE, DEPT, USER]
+        targetId:
+          type: integer
+          format: int64
+          nullable: true
+          description: ROLE=角色 id；DEPT=部门 id；USER=用户 id；ALL 为 null
+        targetName:
+          type: string
+          nullable: true
+          description: 展示名；DEPT 追加“（含下级）”
+    NoticeReadStats:
+      type: object
+      required: [totalRecipients, readCount, unreadCount]
+      properties:
+        totalRecipients:
+          type: integer
+          format: int64
+          description: 应读人数（发布时快照）
+        readCount:
+          type: integer
+          format: int64
+        unreadCount:
+          type: integer
+          format: int64
+    Notice:
+      type: object
+      required: [id, title, level, type, revocable, revoked, publishedAt, scopes, stats]
+      properties:
+        id:
+          type: integer
+          format: int64
+        title:
+          type: string
+          maxLength: 200
+        content:
+          type: string
+          nullable: true
+          description: 纯文本；列表接口为 null，详情接口返回全文
+        level:
+          type: string
+          enum: [NORMAL, IMPORTANT, URGENT]
+        type:
+          type: string
+          enum: [SYSTEM, BUSINESS, SECURITY, TASK]
+        revocable:
+          type: boolean
+          description: 是否允许撤回；false 时撤回返回 409
+        revoked:
+          type: boolean
+        publishedAt:
+          type: string
+          format: date-time
+        publisherId:
+          type: integer
+          format: int64
+          nullable: true
+          description: 发布人；系统调用为 null，展示为“系统”
+        publisherName:
+          type: string
+        deptId:
+          type: integer
+          format: int64
+          nullable: true
+          description: 发布人部门（数据权限组织范围）
+        deptName:
+          type: string
+          nullable: true
+        revokedAt:
+          type: string
+          format: date-time
+          nullable: true
+        revokedBy:
+          type: integer
+          format: int64
+          nullable: true
+        revokedByName:
+          type: string
+          nullable: true
+        scopes:
+          type: array
+          items:
+            $ref: '#/components/schemas/NoticeScope'
+        stats:
+          $ref: '#/components/schemas/NoticeReadStats'
+        createdAt:
+          type: string
+          format: date-time
+    NoticeResponse:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/Notice'
+    NoticePageResponse:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+        - type: object
+          properties:
+            data:
+              type: object
+              required: [list, total, page, pageSize]
+              properties:
+                list:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/Notice'
+                total:
+                  type: integer
+                  format: int64
+                page:
+                  type: integer
+                pageSize:
+                  type: integer
+    NoticePublishRequest:
+      type: object
+      required: [title, content, scopes]
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 200
+        content:
+          type: string
+          minLength: 1
+        level:
+          type: string
+          enum: [NORMAL, IMPORTANT, URGENT]
+          default: NORMAL
+        type:
+          type: string
+          enum: [SYSTEM, BUSINESS, SECURITY, TASK]
+          default: SYSTEM
+        revocable:
+          type: boolean
+          default: true
+        scopes:
+          type: array
+          minItems: 1
+          items:
+            type: object
+            required: [scopeType]
+            properties:
+              scopeType:
+                type: string
+                enum: [ALL, ROLE, DEPT, USER]
+              targetId:
+                type: integer
+                format: int64
+                nullable: true
+                description: ALL 时忽略；其余必填
+    NoticeReader:
+      type: object
+      required: [userId, username, nickname, read]
+      properties:
+        userId:
+          type: integer
+          format: int64
+        username:
+          type: string
+        nickname:
+          type: string
+        deptName:
+          type: string
+          nullable: true
+        read:
+          type: boolean
+        readAt:
+          type: string
+          format: date-time
+          nullable: true
+    NoticeReaderPageResponse:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+        - type: object
+          properties:
+            data:
+              type: object
+              required: [list, total, page, pageSize]
+              properties:
+                list:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/NoticeReader'
+                total:
+                  type: integer
+                  format: int64
+                page:
+                  type: integer
+                pageSize:
+                  type: integer
+    InboxNotice:
+      type: object
+      required: [id, title, level, type, publishedAt, publisherName, read]
+      properties:
+        id:
+          type: integer
+          format: int64
+        title:
+          type: string
+        level:
+          type: string
+          enum: [NORMAL, IMPORTANT, URGENT]
+        type:
+          type: string
+          enum: [SYSTEM, BUSINESS, SECURITY, TASK]
+        publishedAt:
+          type: string
+          format: date-time
+        publisherName:
+          type: string
+        read:
+          type: boolean
+        readAt:
+          type: string
+          format: date-time
+          nullable: true
+    InboxNoticePageResponse:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+        - type: object
+          properties:
+            data:
+              type: object
+              required: [list, total, page, pageSize]
+              properties:
+                list:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/InboxNotice'
+                total:
+                  type: integer
+                  format: int64
+                page:
+                  type: integer
+                pageSize:
+                  type: integer
+    InboxNoticeDetailResponse:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+        - type: object
+          properties:
+            data:
+              allOf:
+                - $ref: '#/components/schemas/InboxNotice'
+                - type: object
+                  required: [content]
+                  properties:
+                    content:
+                      type: string
+    UnreadCountResponse:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+        - type: object
+          properties:
+            data:
+              type: object
+              required: [count]
+              properties:
+                count:
+                  type: integer
+                  format: int64
+    ReadAllResponse:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+        - type: object
+          properties:
+            data:
+              type: object
+              required: [marked]
+              properties:
+                marked:
+                  type: integer
+                  description: 本次标记为已读的条数
+    Job:
+      type: object
+      description: 定时任务定义；字段与 JobDtos.Response 一致
+      required: [id, name, groupName, jobKey, cronExpression, status, concurrencyPolicy, timeoutSeconds, retryTimes, retryIntervalSeconds, notifyPolicy, notifyThreshold, createdAt]
+      properties:
+        id:
+          type: integer
+          format: int64
+        name:
+          type: string
+          maxLength: 64
+        groupName:
+          type: string
+          maxLength: 64
+        jobKey:
+          type: string
+          maxLength: 128
+          description: 已注册任务标识（ScheduledJob.key），不是类名或脚本
+        cronExpression:
+          type: string
+          maxLength: 64
+          description: Spring 6 段 cron：秒 分 时 日 月 周
+        description:
+          type: string
+          maxLength: 255
+          nullable: true
+        status:
+          type: string
+          enum: [ENABLED, DISABLED]
+        concurrencyPolicy:
+          type: string
+          enum: [DISALLOW, ALLOW]
+          description: DISALLOW 为单机进程内禁止并发，不是分布式锁
+        timeoutSeconds:
+          type: integer
+          minimum: 1
+          maximum: 3600
+        retryTimes:
+          type: integer
+          minimum: 0
+          maximum: 10
+          description: 首次之外的额外重试次数
+        retryIntervalSeconds:
+          type: integer
+          minimum: 0
+          maximum: 3600
+        notifyPolicy:
+          type: string
+          enum: [NEVER, ON_FAILURE, ON_CONSECUTIVE]
+        notifyThreshold:
+          type: integer
+          minimum: 1
+          maximum: 10
+          description: 连续失败阈值，仅 ON_CONSECUTIVE 生效
+        notifyTargets:
+          type: string
+          nullable: true
+          description: 指定接收人 id，逗号分隔；空=任务创建人
+        lastRunAt:
+          type: string
+          format: date-time
+          nullable: true
+        lastRunResult:
+          type: string
+          nullable: true
+          enum: [SUCCESS, FAIL, TIMEOUT, SKIPPED]
+        nextRunAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: 由 cron 表达式动态计算；手动执行不改变它
+        running:
+          type: boolean
+          description: 当前实例内是否正在执行
+        registered:
+          type: boolean
+          description: jobKey 是否存在于代码注册表
+        createdBy:
+          type: integer
+          format: int64
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    JobRequest:
+      type: object
+      description: 新增/修改任务的请求体；不允许任何可执行脚本字段
+      required: [name, jobKey, cronExpression]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 64
+        groupName:
+          type: string
+          maxLength: 64
+          default: DEFAULT
+        jobKey:
+          type: string
+          minLength: 1
+          maxLength: 128
+          description: 必须是 GET /jobs/keys 返回的已注册标识
+        cronExpression:
+          type: string
+          minLength: 1
+          maxLength: 64
+        description:
+          type: string
+          maxLength: 255
+        status:
+          type: string
+          enum: [ENABLED, DISABLED]
+          default: DISABLED
+        concurrencyPolicy:
+          type: string
+          enum: [DISALLOW, ALLOW]
+          default: DISALLOW
+        timeoutSeconds:
+          type: integer
+          minimum: 1
+          maximum: 3600
+          default: 60
+        retryTimes:
+          type: integer
+          minimum: 0
+          maximum: 10
+          default: 0
+        retryIntervalSeconds:
+          type: integer
+          minimum: 0
+          maximum: 3600
+          default: 10
+        notifyPolicy:
+          type: string
+          enum: [NEVER, ON_FAILURE, ON_CONSECUTIVE]
+          default: NEVER
+        notifyThreshold:
+          type: integer
+          minimum: 1
+          maximum: 10
+          default: 3
+        notifyTargets:
+          type: string
+          maxLength: 255
+          description: 用户 id 逗号分隔；为空回退任务创建人
+    JobStatusRequest:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [ENABLED, DISABLED]
+    JobKeyOption:
+      type: object
+      required: [key, description]
+      properties:
+        key:
+          type: string
+          description: 已注册任务标识
+        description:
+          type: string
+          description: 任务说明（来自代码）
+    JobRunResult:
+      type: object
+      description: 单次执行摘要；字段与 JobDtos.RunResponse 一致
+      required: [logId, result, elapsedMs, attemptCount, startedAt, finishedAt]
+      properties:
+        logId:
+          type: integer
+          format: int64
+        result:
+          type: string
+          enum: [SUCCESS, FAIL, TIMEOUT, SKIPPED]
+        elapsedMs:
+          type: integer
+          format: int64
+          description: 含重试间隔的耗时
+        attemptCount:
+          type: integer
+          description: 实际执行次数（首次 + 重试）
+        affectedRows:
+          type: integer
+          format: int64
+          nullable: true
+        errorSummary:
+          type: string
+          nullable: true
+        startedAt:
+          type: string
+          format: date-time
+        finishedAt:
+          type: string
+          format: date-time
+    JobPageResponse:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+        - type: object
+          properties:
+            data:
+              type: object
+              required: [list, total, page, pageSize]
+              properties:
+                list:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/Job'
+                total:
+                  type: integer
+                  format: int64
+                page:
+                  type: integer
+                pageSize:
+                  type: integer
+    JobResponse:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/Job'
+    JobKeyOptionListResponse:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+        - type: object
+          properties:
+            data:
+              type: array
+              items:
+                $ref: '#/components/schemas/JobKeyOption'
+    JobRunResponse:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/JobRunResult'
+    JobLog:
+      type: object
+      description: 一次触发一行的执行日志；字段与 JobLogDtos.Response 一致
+      required: [id, jobId, jobName, jobKey, triggerType, startedAt, finishedAt, elapsedMs, result, attemptCount]
+      properties:
+        id:
+          type: integer
+          format: int64
+        jobId:
+          type: integer
+          format: int64
+        jobName:
+          type: string
+          description: 执行时的任务名快照
+        jobKey:
+          type: string
+        triggerType:
+          type: string
+          enum: [AUTO, MANUAL]
+        startedAt:
+          type: string
+          format: date-time
+        finishedAt:
+          type: string
+          format: date-time
+        elapsedMs:
+          type: integer
+          format: int64
+        result:
+          type: string
+          enum: [SUCCESS, FAIL, TIMEOUT, SKIPPED]
+        attemptCount:
+          type: integer
+        errorSummary:
+          type: string
+          nullable: true
+        affectedRows:
+          type: integer
+          format: int64
+          nullable: true
+    JobLogDetail:
+      allOf:
+        - $ref: '#/components/schemas/JobLog'
+        - type: object
+          properties:
+            errorStack:
+              type: string
+              nullable: true
+              description: 异常堆栈（截断）
+    JobLogPageResponse:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+        - type: object
+          properties:
+            data:
+              type: object
+              required: [list, total, page, pageSize]
+              properties:
+                list:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/JobLog'
+                total:
+                  type: integer
+                  format: int64
+                page:
+                  type: integer
+                pageSize:
+                  type: integer
+    JobLogDetailResponse:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/JobLogDetail'
+    Session:
+      type: object
+      description: 会话记录；字段与 UserSessionAppService 的 DTO 一致
+      required: [id, userId, username, loginAt, lastActiveAt, deviceType, online]
+      properties:
+        id:
+          type: integer
+          format: int64
+        userId:
+          type: integer
+          format: int64
+        username:
+          type: string
+          description: 登录账号快照
+        nickname:
+          type: string
+          nullable: true
+        ip:
+          type: string
+          nullable: true
+        userAgent:
+          type: string
+          nullable: true
+        deviceType:
+          type: string
+          enum: [PC, MOBILE, TABLET, UNKNOWN]
+        browser:
+          type: string
+          nullable: true
+        os:
+          type: string
+          nullable: true
+        loginAt:
+          type: string
+          format: date-time
+        lastActiveAt:
+          type: string
+          format: date-time
+        invalidatedAt:
+          type: string
+          format: date-time
+          nullable: true
+        invalidateReason:
+          type: string
+          nullable: true
+          enum: [LOGOUT, KICKED_BY_ADMIN, PASSWORD_CHANGED, ACCOUNT_DISABLED, USER_DELETED]
+        online:
+          type: boolean
+          description: invalidatedAt 为空且 lastActiveAt 在最近 5 分钟内
+        current:
+          type: boolean
+          description: 仅用户端返回；是否为本次请求所在会话
+    SessionPageResponse:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+        - type: object
+          properties:
+            data:
+              type: object
+              required: [list, total, page, pageSize]
+              properties:
+                list:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/Session'
+                total:
+                  type: integer
+                  format: int64
+                page:
+                  type: integer
+                pageSize:
+                  type: integer
+    SessionListResponse:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+        - type: object
+          properties:
+            data:
+              type: array
+              items:
+                $ref: '#/components/schemas/Session'
+    SessionAffectResponse:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+        - type: object
+          properties:
+            data:
+              type: object
+              required: [affected]
+              properties:
+                affected:
+                  type: integer
+                  format: int64
+                  description: 本次受影响（失效或删除）的会话条数
+    CacheOverviewResponse:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+        - type: object
+          properties:
+            data:
+              type: object
+              required: [connected, cacheType, totalKeys, unregisteredKeys, namespaces]
+              properties:
+                connected:
+                  type: boolean
+                  description: Redis 是否可连接（PING 成功）
+                cacheType:
+                  type: string
+                  description: 当前缓存实现（redis / memory）
+                usedMemoryBytes:
+                  type: integer
+                  format: int64
+                usedMemoryHuman:
+                  type: string
+                maxMemoryBytes:
+                  type: integer
+                  format: int64
+                  description: 0 表示未设置上限
+                maxMemoryHuman:
+                  type: string
+                maxMemoryPolicy:
+                  type: string
+                totalKeys:
+                  type: integer
+                  format: int64
+                  description: Redis DBSIZE
+                unregisteredKeys:
+                  type: integer
+                  format: int64
+                  description: 不属于任何已登记命名空间的 key 数量（只读）
+                namespaces:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/CacheNamespaceCount'
+    CacheNamespaceCount:
+      type: object
+      required: [code, name, prefix, keyCount]
+      properties:
+        code:
+          type: string
+        name:
+          type: string
+        prefix:
+          type: string
+        keyCount:
+          type: integer
+          format: int64
+    CacheNamespace:
+      type: object
+      required: [code, name, prefix, mode, purpose, clearEffect, sensitive, clearable, keyCount]
+      properties:
+        code:
+          type: string
+        name:
+          type: string
+        prefix:
+          type: string
+        mode:
+          type: string
+          enum: [EXACT, PREFIX]
+        purpose:
+          type: string
+        clearEffect:
+          type: string
+          description: 清除后果，前端原样展示
+        sensitive:
+          type: boolean
+          description: 为 true 时仅展示 key 名与 TTL，不读取 value
+        clearable:
+          type: boolean
+        keyCount:
+          type: integer
+          format: int64
+    CacheNamespacesResponse:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+        - type: object
+          properties:
+            data:
+              type: array
+              items:
+                $ref: '#/components/schemas/CacheNamespace'
+    CacheKey:
+      type: object
+      required: [name, ttlSeconds, type]
+      properties:
+        name:
+          type: string
+        ttlSeconds:
+          type: integer
+          format: int64
+          description: -1 永久；-2 已不存在
+        type:
+          type: string
+          description: Redis 数据类型（string/list/set/zset/hash/stream）
+    CacheKeysPageResponse:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+        - type: object
+          properties:
+            data:
+              type: object
+              required: [list, total, page, pageSize, truncated, namespace]
+              properties:
+                list:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/CacheKey'
+                total:
+                  type: integer
+                  format: int64
+                page:
+                  type: integer
+                pageSize:
+                  type: integer
+                truncated:
+                  type: boolean
+                  description: 达到扫描批次上限仍未凑齐当前页时为 true
+                namespace:
+                  $ref: '#/components/schemas/CacheNamespace'
+    CacheAffectResponse:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+        - type: object
+          properties:
+            data:
+              type: object
+              required: [deleted]
+              properties:
+                deleted:
+                  type: integer
+                  format: int64
+                  description: 本次实际删除的 key 数量
+    ImportResult:
+      type: object
+      required: [totalRows, imported]
+      properties:
+        totalRows:
+          type: integer
+          description: 文件中解析到的有效数据行数（不含表头）
+        imported:
+          type: integer
+          description: 实际写入行数（整批校验通过时等于 totalRows）
+    ExportAccepted:
+      type: object
+      required: [mode, taskId]
+      properties:
+        mode:
+          type: string
+          enum: [ASYNC]
+        taskId:
+          type: integer
+          format: int64
+          description: 导出任务 ID，用于轮询详情与下载
+        totalRows:
+          type: integer
+          description: 命中的总行数
+    ExportTaskItem:
+      type: object
+      required: [id, status, progress]
+      properties:
+        id:
+          type: integer
+          format: int64
+        status:
+          type: string
+          enum: [PENDING, RUNNING, SUCCESS, FAILED, CANCELED, EXPIRED]
+        progress:
+          type: integer
+          minimum: 0
+          maximum: 100
+        totalRows:
+          type: integer
+        fileName:
+          type: string
+        errorMessage:
+          type: string
+        downloadable:
+          type: boolean
+          description: 是否可下载（SUCCESS 且未过期）
+        createdAt:
+          type: string
+          format: date-time
+        finishedAt:
+          type: string
+          format: date-time
+        expiresAt:
+          type: string
+          format: date-time
+    CacheCleanLog:
+      type: object
+      required: [id, action, deletedCount, createdAt]
+      properties:
+        id:
+          type: integer
+          format: int64
+        action:
+          type: string
+          description: CLEAR_NAMESPACE / DELETE_KEY / CLEAN_SESSION
+        namespaceCode:
+          type: string
+        namespacePrefix:
+          type: string
+        keyName:
+          type: string
+          nullable: true
+        deletedCount:
+          type: integer
+        username:
+          type: string
+          nullable: true
+        ip:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+    CacheCleanLogPageResponse:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+        - type: object
+          properties:
+            data:
+              type: object
+              required: [list, total, page, pageSize]
+              properties:
+                list:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/CacheCleanLog'
+                total:
+                  type: integer
+                  format: int64
+                page:
+                  type: integer
+                pageSize:
+                  type: integer
+  responses:
+    BadRequest:
+      description: 参数格式错误（400），如 JSON 无法解析
+      headers:
+        X-Trace-Id:
+          $ref: '#/components/headers/XTraceId'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Envelope'
+    Unauthorized:
+      description: >-
+        未认证（401）。分码：20101 未登录或登录已过期；20102 登录状态已过期；
+        20103 账号已被停用；20104 账号已被删除；20105 登录状态已失效；
+        20106 密码已被重置；20107 密码已修改；20108 已被管理员下线。
+        前端对 20103/20104/20106/20107/20108 不重试刷新令牌，直接回登录页并展示对应文案。
+      headers:
+        X-Trace-Id:
+          $ref: '#/components/headers/XTraceId'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Envelope'
+    Forbidden:
+      description: 缺功能权限（403）
+      headers:
+        X-Trace-Id:
+          $ref: '#/components/headers/XTraceId'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Envelope'
+    NotFound:
+      description: 不存在或越权访问他人资源（404）
+      headers:
+        X-Trace-Id:
+          $ref: '#/components/headers/XTraceId'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Envelope'
+    Conflict:
+      description: 状态冲突（409）
+      headers:
+        X-Trace-Id:
+          $ref: '#/components/headers/XTraceId'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Envelope'
+    ValidationError:
+      description: 字段校验失败（422）
+      headers:
+        X-Trace-Id:
+          $ref: '#/components/headers/XTraceId'
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: '#/components/schemas/Envelope'
+              - type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/ErrorData'
+    ImportValidationError:
+      description: |
+        导入校验失败（422）：整批不落库。`data.errors` 最多 200 条，
+        `totalRows`／`errorRows`／`errorCount` 为三个独立数字，`remainingErrors` 为未显示条数。
+      headers:
+        X-Trace-Id:
+          $ref: '#/components/headers/XTraceId'
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: '#/components/schemas/Envelope'
+              - type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/ImportErrorData'
+    TooManyRequests:
+      description: 触发限流（429）
+      headers:
+        X-Trace-Id:
+          $ref: '#/components/headers/XTraceId'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Envelope'
+    PayloadTooLarge:
+      description: |
+        文件超过当前业务上限（413）。data.maxSize 为当前上限字节数，来自参数 sys.upload.max-size；
+        message 已写明真实上限，可直接展示。
+        例外：超过容器天花板 200MB 时由 Spring Multipart 直接拒绝，data 为 null、message 为“请求体过大”。
+      headers:
+        X-Trace-Id:
+          $ref: '#/components/headers/XTraceId'
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: '#/components/schemas/Envelope'
+              - type: object
+                properties:
+                  data:
+                    type: object
+                    required: [maxSize]
+                    properties:
+                      maxSize:
+                        type: integer
+                        format: int64
+                        description: 当前业务上限（字节），来自 sys.upload.max-size
+          example:
+            code: 10002
+            message: 文件大小不能超过 1MB
+            data:
+              maxSize: 1048576
+            traceId: 3f1a2b4c5d6e7f8091a2b3c4d5e6f708
+    SystemError:
+      description: 系统错误（500）
+      headers:
+        X-Trace-Id:
+          $ref: '#/components/headers/XTraceId'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Envelope'
+
+# TODO(API): 补齐本项目其余接口；每新增接口必须回写错误码与字段约定，并把 x-status 从 DRAFT 推进到 APPROVED
+
+# 变更记录（CT-VER-005：版本号 / 日期 / 影响面 / 迁移方式）
+# 1.0.1 | 2026-11-11 | 文件预览说明更正：越权由「返回 403」改为「与不存在统一返回 404（同一文案）」，403 仅代表缺功能权限。
+#         实现随之修改（FileAppService.requireVisible 两处抛 404）。属「实现向既有契约回归」而非契约变更——CT-HTTP-008 与
+#         CT-ERR-009 本就要求越权统一 404。影响面：GET /api/v1/files/{id}/preview、/download 的越权响应由 403 变 404；
+#         正常路径、字段、权限码、错误码集合均不变（仍为 20401）。
+#         迁移方式：调用方若曾按 403 区分「越权」，需改为按 404 处理；本项目前端对 403/404 均走全局提示，无需改动。
+# 1.0.0 | 2026-11-11 | 由脚手架示例转为本项目契约：info.title、info.version（0.0.0 → 1.0.0）、servers 改为本项目；
+#         删除从未实现的示例路径 `/api/v1/resources` 及其 `Resource`/`ResourceCreateRequest`/`ResourceResponse`/`ResourcePageResponse`
+#         四个 schema 与 `resources` tag；修复 `Content-Disposition: inline` 未加引号导致整份文件无法被 YAML 解析的语法错误。
+#         影响面：仅契约文档，无运行时接口/字段/错误码变更（示例路径在实现基线中不存在）。
+#         迁移方式：无（未有任何调用方依赖被删示例路径）。接口覆盖范围仍按 `AGENTS.md` §4.4 豁免，未列入本文件的接口以实现基线为准。
+

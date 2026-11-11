@@ -1,0 +1,75 @@
+name: CI
+
+# 三条门禁，对应 AGENTS.md §7 的 error 级阻断：
+#   1. spec-lint  —— 文档/编号/路径/配置台账/TODO 一致性（零依赖，最快，先跑）
+#   2. backend    —— Maven 多模块编译打包（JDK 17）
+#   3. frontend   —— vue-tsc 类型检查 + Vite 生产构建
+#
+# 说明（2026-11-11 引入）：
+# - 后端暂时用 -DskipTests：现有唯一测试 NotificationPublisherTransactionTest 需要真实 MySQL/Redis，
+#   在不接服务容器的 CI 上必然失败；等它改成 Testcontainers 或按 profile 跳过后再开启 mvn test。
+# - 契约测试（docs/api/examples/backend）尚未落地，接入后应在 backend job 里追加一步；
+#   在此之前本工作流只保证"能编译、能构建、文档门禁通过"，不等于契约与实现一致。
+# - 仓库当前尚未初始化 Git，本文件在 git init + 首次推送后才会真正生效。
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  spec-lint:
+    name: 文档门禁（spec-lint）
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      # 零第三方依赖，直接用仓库自带的 Node 脚本；退出码 1 = 存在 error，直接失败
+      - name: Run spec-lint
+        run: node tools/spec-lint/cli.mjs
+
+  backend:
+    name: 后端编译（JDK 17）
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: maven
+      # -pl web -am：只构建 web 及其依赖模块（common / system / auth），与本地验证口径一致
+      - name: Build
+        working-directory: server
+        run: mvn -B -pl web -am -DskipTests package
+
+  frontend:
+    name: 前端类型检查与构建
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.7.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: pnpm
+      - name: Install
+        run: pnpm install --frozen-lockfile
+      # apps/pc 的 build = vue-tsc -b && vite build
+      - name: Build
+        run: pnpm build

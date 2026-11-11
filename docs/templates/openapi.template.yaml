@@ -1,0 +1,302 @@
+# OpenAPI 实例骨架（模板 · EXAMPLE-ONLY）
+# 用途：项目的接口实例定义，复制为 docs/api/openapi.yaml 后逐项填写。
+# 本文件所有业务名、字段与示例均为 EXAMPLE-ONLY，项目初始化必须全量替换。
+# 响应结构、错误码、分页、时间与金额格式以 docs/specs/api-contract.md 为准；此处只做实例，不重复定义。
+# 逐接口状态用 x-status 扩展字段表达：DRAFT / APPROVED / IMPLEMENTED / DEPRECATED（AGENTS.md §3）。
+# TODO 只允许写在 YAML 注释里（AGENTS.md §3 的合法 TODO 载体）。
+
+openapi: 3.0.3
+info:
+  title: 项目接口（请替换；EXAMPLE-ONLY）
+  version: 0.0.0
+  description: |
+    实例定义文件。统一响应信封见 CT-RESP-001（data 必须存在，无值时为 null），
+    禁止 204/空 body 见 CT-RESP-009；基础错误码见 CT-ERR-011；分页字段见 CT-PAGE-001，
+    默认值与上限见 CT-PAGE-002；时间格式见 CT-FMT-001，金额用字符串见 CT-FMT-003。
+servers:
+  - url: http://localhost:8080
+    description: 本地开发
+  - url: https://api.example.com
+    description: 生产（请替换）
+
+tags:
+  - name: resources
+    description: 通用资源示例（EXAMPLE-ONLY）
+
+paths:
+  /api/v1/resources:
+    get:
+      x-status: DRAFT
+      tags: [resources]
+      summary: 查询资源列表
+      operationId: listResources
+      parameters:
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+          description: 页码，默认值以 CT-PAGE-002 为准
+        - name: pageSize
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+          description: 每页条数，默认值与上限以 CT-PAGE-002 为准
+        - name: keyword
+          in: query
+          required: false
+          schema:
+            type: string
+            maxLength: 64
+          description: 名称模糊匹配
+      responses:
+        '200':
+          description: 成功
+          headers:
+            X-Trace-Id:
+              $ref: '#/components/headers/XTraceId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResourcePageResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '500':
+          $ref: '#/components/responses/SystemError'
+    post:
+      x-status: DRAFT
+      x-idempotencyTtl: 86400
+      tags: [resources]
+      summary: 创建资源
+      operationId: createResource
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema:
+            type: string
+            maxLength: 64
+          description: 幂等键，见 CT-IDEM-001；同键重复提交返回同结果
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResourceCreateRequest'
+      responses:
+        '201':
+          description: 创建成功
+          headers:
+            X-Trace-Id:
+              $ref: '#/components/headers/XTraceId'
+            Idempotent-Replay:
+              $ref: '#/components/headers/IdempotentReplay'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResourceResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '500':
+          $ref: '#/components/responses/SystemError'
+
+components:
+  headers:
+    XTraceId:
+      description: 链路标识，必须与响应体 traceId 一致（CT-TRACE-002）
+      schema:
+        type: string
+    IdempotentReplay:
+      description: 幂等重放标记，重放时返回 true（CT-IDEM-003）
+      schema:
+        type: string
+        enum: ['true']
+  schemas:
+    Envelope:
+      type: object
+      description: 统一响应信封，字段定义方为 CT-RESP-001
+      required: [code, message, data, traceId]
+      properties:
+        code:
+          type: integer
+          description: 成功为 0；失败为基础码或项目扩展码（CT-ERR-011）
+        message:
+          type: string
+          description: 默认可直接展示的文案
+        data:
+          nullable: true
+          description: 业务数据；无数据时为 null，不得省略
+        traceId:
+          type: string
+          description: 链路标识，见 CT-TRACE-001
+    Resource:
+      type: object
+      description: 通用资源示例（EXAMPLE-ONLY）
+      required: [id, name, createdAt]
+      properties:
+        id:
+          type: string
+          description: 大整数 ID 以字符串传输，见 CT-FMT-004
+        name:
+          type: string
+          maxLength: 64
+        createdAt:
+          type: string
+          format: date-time
+    ResourceCreateRequest:
+      type: object
+      description: 通用创建请求（EXAMPLE-ONLY）；不接受客户端传入 userId，归属由服务端从登录态得出
+      required: [name]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 64
+        remark:
+          type: string
+          maxLength: 200
+    ResourceResponse:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/Resource'
+    ResourcePageResponse:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+        - type: object
+          properties:
+            data:
+              type: object
+              required: [list, total, page, pageSize]
+              properties:
+                list:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/Resource'
+                total:
+                  type: integer
+                  format: int64
+                page:
+                  type: integer
+                pageSize:
+                  type: integer
+    FieldError:
+      type: object
+      description: 字段校验错误结构，定义方为 CT-ERR-006
+      required: [field, code, message]
+      properties:
+        field:
+          type: string
+          description: 字段路径，如 name
+        code:
+          type: string
+          description: 字段级错误符号名，取值见 CT-ERR-006 的四值枚举
+        message:
+          type: string
+    ErrorData:
+      type: object
+      required: [errors]
+      properties:
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/FieldError'
+  responses:
+    BadRequest:
+      description: 参数格式错误（400）
+      headers:
+        X-Trace-Id:
+          $ref: '#/components/headers/XTraceId'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Envelope'
+    Unauthorized:
+      description: 未认证（401）
+      headers:
+        X-Trace-Id:
+          $ref: '#/components/headers/XTraceId'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Envelope'
+    Forbidden:
+      description: 缺功能权限（403）
+      headers:
+        X-Trace-Id:
+          $ref: '#/components/headers/XTraceId'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Envelope'
+    NotFound:
+      description: 不存在或越权访问他人资源（404）
+      headers:
+        X-Trace-Id:
+          $ref: '#/components/headers/XTraceId'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Envelope'
+    Conflict:
+      description: 状态冲突（409）
+      headers:
+        X-Trace-Id:
+          $ref: '#/components/headers/XTraceId'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Envelope'
+    ValidationError:
+      description: 字段校验失败（422）
+      headers:
+        X-Trace-Id:
+          $ref: '#/components/headers/XTraceId'
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: '#/components/schemas/Envelope'
+              - type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/ErrorData'
+    SystemError:
+      description: 系统错误（500）
+      headers:
+        X-Trace-Id:
+          $ref: '#/components/headers/XTraceId'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Envelope'
+
+# TODO(API): 补齐本项目其余接口；每新增接口必须回写错误码与字段约定，并把 x-status 从 DRAFT 推进到 APPROVED

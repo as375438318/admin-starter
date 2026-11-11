@@ -1,0 +1,311 @@
+# 事实注册表（facts.yaml）· 由 docs/specs/INDEX-facts.md 派生
+# 用途：机器可读版本。md 索引是源，本文件是派生副本；owner/refs 必须与 md 逐行一致。
+# 维护规则：先改 md 索引，再同步本文件；id 只追加不复用（PRC-IDX-003）。
+# 校验口径：owner/refs 的逐行一致性由 spec-lint 的 SL-FACT-001 校验；本文件内的规则编号由 SL-REF-001 校验存在性。
+# 只做事实映射，不写规则正文。
+
+version: 0.5.0
+updated: 2026-11-08
+
+schema:
+  id: 事实编号，F-* 形式，只追加不复用
+  name: 事实的一句话描述
+  owner: 唯一定义方；规则编号，或 AGENTS.md#节号，或 PRC-LAY-007 登记的项目层资产路径
+  fields: 该事实管辖的字段名或键名清单
+  refs: 引用该事实的规则编号清单（可为空）
+  keywords: 检索关键词，中英文均可
+
+facts:
+  - id: F-RESP-ENVELOPE
+    name: 统一响应信封
+    owner: CT-RESP-001
+    fields: [code, message, data, traceId]
+    refs: [BE-CON-001, FE-REQ-003]
+    keywords: [信封, envelope, 响应结构, data 必存在]
+
+  - id: F-RESP-NO-204
+    name: 成功响应不得无响应体
+    owner: CT-RESP-009
+    fields: [httpStatus, body]
+    refs: [BE-CON-001, FE-REQ-003]
+    keywords: [204, 空 body, no content, 删除 200]
+
+  - id: F-RESP-SUCCESS-CODE
+    name: 成功码固定为 0
+    owner: CT-RESP-002
+    fields: [code]
+    refs: [FE-REQ-004]
+    keywords: [成功码, success code, code 0]
+
+  - id: F-RESP-FIELD-NAMING
+    name: 接口字段命名 lowerCamelCase
+    owner: CT-RESP-007
+    fields: [requestField, responseField]
+    refs: [BE-CON-001, FE-REQ-014]
+    keywords: [lowerCamelCase, 字段命名, user_name, userName]
+
+  - id: F-ERR-SEGMENT
+    name: 业务错误码分段与符号名
+    owner: CT-ERR-001
+    fields: [code, name, message, http]
+    refs: [CT-ERR-002, BE-CON-002, BE-ERR-001, FE-ERR-002]
+    keywords: [错误码, error code, 10xxx, 20xxx, 30xxx, 40xxx, 50xxx, UPPER_SNAKE]
+
+  - id: F-ERR-BASE-CODES
+    name: 基础错误码固定值
+    owner: CT-ERR-011
+    fields: [INVALID_PARAMETER, PAYLOAD_TOO_LARGE, UNAUTHORIZED, TOKEN_EXPIRED, FORBIDDEN, RESOURCE_NOT_FOUND, RATE_LIMITED, VALIDATION_FAILED, STATE_CONFLICT, SYSTEM_ERROR]
+    refs: [CT-ERR-006, CT-ERR-012, BE-ERR-001]
+    keywords: [基础码, 10001, 10002, 413, 20101, 20301, 20401, 20501, 30201, 40901, 50001, PAYLOAD_TOO_LARGE, 体积超限]
+
+  - id: F-ERR-PAYLOAD-413
+    name: 体积超限 413 响应体
+    owner: CT-ERR-012
+    fields: [code, message, data.maxSize]
+    refs: [CT-HTTP-003, CT-ERR-011]
+    keywords: [413, PAYLOAD_TOO_LARGE, 10002, maxSize, 上传上限, 体积超限, sys.upload.max-size]
+
+  - id: F-DICT-ENUM-SCOPE
+    name: 枚举是否进字典以业务需求方标注为准
+    owner: BE-CFG-009
+    fields: [硬编码枚举, 字典表, 业务标注, 待业务确认]
+    refs: [BE-CFG-011]
+    keywords: [字典, 枚举, 硬编码, yes_no, user_status, 迁移, 删除字典, 业务标注]
+
+  - id: F-DICT-VALUE-BINDING
+    name: 字典项 value 被代码消费后只可改 label
+    owner: BE-CFG-010
+    fields: [value, label, 破坏性变更, 状态判断]
+    refs: [BE-CFG-009]
+    keywords: [字典项, value, label, user_status, 状态判断, 破坏性变更, PRC-CR-001]
+
+  - id: F-ERR-VALIDATION-STRUCT
+    name: 字段校验错误结构
+    owner: CT-ERR-006
+    fields: [errors, field, code, message]
+    refs: [BE-VAL-006, FE-ERR-005]
+    keywords: [校验错误, validation error, data.errors, 字段明细]
+
+  - id: F-ERR-FIELD-ENUM
+    name: 字段级错误码枚举
+    owner: CT-ERR-006
+    fields: [REQUIRED, INVALID_FORMAT, TOO_LONG, VALIDATION_FAILED]
+    refs: [CT-ERR-005, CT-ERR-011, BE-VAL-006, FE-ERR-005]
+    keywords: [字段错误, REQUIRED, INVALID_FORMAT, TOO_LONG, VALIDATION_FAILED, 422, data.errors, 空白串]
+
+  - id: F-HTTP-MAPPING
+    name: HTTP 状态码与业务语义映射
+    owner: CT-HTTP-003
+    fields: [httpStatus]
+    refs: [BE-CON-010, FE-ERR-002]
+    keywords: [400, 401, 403, 404, 409, 413, 422, 429, 状态码映射, http status, 体积超限]
+
+  - id: F-HTTP-422
+    name: 校验失败状态码 422
+    owner: CT-HTTP-003
+    fields: [httpStatus, code]
+    refs: [BE-VAL-006, FE-ERR-005]
+    keywords: [422, 校验失败, VALIDATION_FAILED, 30201]
+
+  - id: F-HTTP-UNPARSEABLE
+    name: 请求不可解析统一 400
+    owner: CT-HTTP-009
+    fields: [httpStatus, code]
+    refs: [BE-VAL-006, FE-ERR-002]
+    keywords: [400, INVALID_PARAMETER, 10001, Content-Type, 415, JSON 语法错误, 请求体为空, multipart, 缺少 part]
+
+  - id: F-FMT-LOGIN-LIMITS
+    name: 登录与用户字段长度上限
+    owner: CT-FMT-009
+    fields: [username, password, maxLength, errors]
+    refs: [BE-VAL-001, BE-VAL-006, FE-ERR-005]
+    keywords: [64, 128, 超长, 422, 长度上限, TOO_LONG]
+
+  - id: F-HTTP-403-404
+    name: 越权访问 404 与缺功能权限 403 的判定
+    owner: CT-HTTP-008
+    fields: [httpStatus, code]
+    refs: [BE-SEC-003, CT-ERR-009]
+    keywords: [403, 404, 越权, 数据范围, forbidden, not found]
+
+  - id: F-HTTP-DELETE-SEMANTICS
+    name: 删除语义
+    owner: CT-HTTP-007
+    fields: [httpStatus, data, deleted, deletedAt]
+    refs: [BE-IDEM-005, FE-REQ-009]
+    keywords: [删除, delete, 幂等, 首次 200, 重复 200, 从未存在 404]
+
+  - id: F-PAGE-FIELDS
+    name: 分页四字段
+    owner: CT-PAGE-001
+    fields: [page, pageSize, list, total]
+    refs: [BE-CON-004, FE-REQ-003]
+    keywords: [分页, pagination, page, pageSize, list, total]
+
+  - id: F-PAGE-DEFAULTS
+    name: 分页默认值
+    owner: CT-PAGE-002
+    fields: [page, pageSize]
+    refs: [FE-REQ-003, UI-PC-TBL-007]
+    keywords: [默认分页, page 1, pageSize 20, 每页条数]
+
+  - id: F-PAGE-MAX
+    name: pageSize 硬上限
+    owner: CT-PAGE-002
+    fields: [pageSize]
+    refs: [CT-PAGE-003, BE-DB-007]
+    keywords: [上限, 100, max pageSize, 深分页]
+
+  - id: F-FMT-TIME
+    name: 时间格式
+    owner: CT-FMT-001
+    fields: [createdAt, updatedAt]
+    refs: [BE-CON-005, FE-CODE-008]
+    keywords: [时间, datetime, ISO 8601, UTC, 时区]
+
+  - id: F-FMT-AMOUNT
+    name: 金额格式
+    owner: CT-FMT-003
+    fields: [amount, price]
+    refs: [BE-CON-006]
+    keywords: [金额, 字符串, decimal, 精度, amount string]
+
+  - id: F-FMT-BIGINT-ID
+    name: 大整数 ID 传输格式
+    owner: CT-FMT-004
+    fields: [id]
+    refs: [BE-CON-001, FE-REQ-014]
+    keywords: [大整数, 字符串 ID, long, snowflake, 精度丢失]
+
+  - id: F-IDEM-KEY
+    name: 幂等键
+    owner: CT-IDEM-001
+    fields: [Idempotency-Key]
+    refs: [BE-CON-007, FE-REQ-010]
+    keywords: [幂等, idempotency, 重复提交, 请求头]
+
+  - id: F-TRACE-GENERATE
+    name: traceId 生成与透传
+    owner: CT-TRACE-001
+    fields: [traceId]
+    refs: [BE-LOG-001, FE-ERR-006]
+    keywords: [traceId, 链路, 透传, 日志关联]
+
+  - id: F-TRACE-HEADER
+    name: 响应头 X-Trace-Id 与响应体一致
+    owner: CT-TRACE-002
+    fields: [X-Trace-Id, traceId]
+    refs: [BE-LOG-001, FE-ERR-006]
+    keywords: [X-Trace-Id, 响应头, header, 一致]
+
+  - id: F-AUTH-PROTOCOL
+    name: 令牌协议载体
+    owner: CT-AUTH-001
+    fields: [ACCESS_TOKEN, HttpOnly, Secure, SameSite, Path, Authorization]
+    refs: [CT-AUTH-002, CT-AUTH-003, CT-AUTH-004, BE-SEC-016, FE-AUTH-001]
+    keywords: [令牌, token, Cookie, 协议载体, CSRF, Set-Cookie]
+
+  - id: F-AUTH-STORAGE
+    name: 令牌本地存储
+    owner: FE-AUTH-001
+    fields: [ACCESS_TOKEN, secureStorage, Authorization]
+    refs: [FE-AUTH-002]
+    keywords: [本地存储, localStorage, Cookie, 移动端安全存储, Bearer]
+
+  - id: F-DB-NAMING
+    name: 数据库字段命名 snake_case
+    owner: BE-DB-001
+    fields: [tableName, columnName]
+    refs: [BE-DB-003]
+    keywords: [snake_case, 数据库命名, 表名, 列名, DDL]
+
+  - id: F-PERM-CODE
+    name: 权限码格式与取值清单
+    owner: docs/design/permission-matrix.md
+    fields: [permissionCode, domain, resource, action]
+    refs: [BE-SEC-003, FE-AUTH-006]
+    keywords: [权限码, permission, 三段式, read, write, delete, manage]
+
+  - id: F-SOFT-DELETE
+    name: 软删除表示与唯一索引含删除列
+    owner: BE-DB-013
+    fields: [deleted, deletedAt, deletedBy]
+    refs: [BE-DB-003]
+    keywords: [软删除, soft delete, deleted 标记, 唯一索引, 墓碑]
+
+  - id: F-UI-TOKENS
+    name: 颜色/字号/间距数值 token
+    owner: UI-PC-TOKEN-001
+    fields: [color, fontSize, spacing]
+    refs: [UI-PC-TOKEN-002, UI-H5-TOKEN-001, UI-H5-TOKEN-002]
+    keywords: [设计 token, 颜色, 字号, 间距, 视觉数值]
+
+  - id: F-STATUS-TODO
+    name: 条目状态与 TODO 定义
+    owner: AGENTS.md#3
+    fields: [status, TODO]
+    refs: [PRC-STG-005, PRC-STG-007]
+    keywords: [状态, APPROVED, DRAFT, IMPLEMENTED, DEPRECATED, TODO 类型]
+
+  - id: F-CHANGE-CLASS
+    name: 变更分级（必须人工／可自动）
+    owner: AGENTS.md#4
+    fields: [changeClass]
+    refs: [PRC-STG-006, PRC-CR-001]
+    keywords: [变更分级, 人工审批, 自动变更, 影响面]
+
+  - id: F-APPROVAL-SCOPE
+    name: 人工审批范围（七类）
+    owner: PRC-APR-001
+    fields: [approvalItem]
+    refs: [PRC-STG-002, PRC-CR-004]
+    keywords: [审批, 签核, approval, 七类, 人工确认]
+
+  - id: F-CHANGE-PROCESS
+    name: 变更流程与阶段门
+    owner: PRC-STG-006
+    fields: [stage, gate]
+    refs: [PRC-CR-001]
+    keywords: [阶段门, 阶段流程, change request, CR, 回归]
+
+  - id: F-MODULE-SWITCH
+    name: 可选模块启用清单
+    owner: PRC-LAY-004
+    fields: [module, enabled, reason]
+    refs: [PRC-LAY-003]
+    keywords: [可选模块, 模块开关, 启用清单, modules]
+
+  - id: F-TEMPLATE-MAPPING
+    name: 模板到目标路径映射
+    owner: AGENTS.md#11.1
+    fields: [template, targetPath]
+    refs: [PRC-LAY-006]
+    keywords: [模板映射, 落位路径, target path, 初始化]
+
+  - id: F-DIR-LAYOUT
+    name: 项目目录结构
+    owner: AGENTS.md#11
+    fields: [docs/specs, docs/templates, docs/api, docs/requirements, docs/design, docs/decisions, docs/plan, docs/audit, docs/env, docs/baseline]
+    refs: [PRC-STG-001]
+    keywords: [目录结构, 文档落位, docs layout, 阶段 0]
+
+  - id: F-CFG-CONSUMPTION
+    name: 配置项消费点与生效方式
+    owner: BE-CFG-007
+    fields: [key, owner, consumedBy, effect, afterChange, verify]
+    refs: [BE-CFG-008, PRC-DOD-001]
+    keywords: [配置台账, config registry, 消费点, consumedBy, effect, afterChange, 假开关, 无消费点]
+
+  - id: F-CFG-STARTUP
+    name: 启动期配置不得伪装成可热改
+    owner: BE-CFG-008
+    fields: [effect, afterChange]
+    refs: [BE-CFG-007, PRC-DOD-001]
+    keywords: [STARTUP, HOT, DISPLAY_ONLY, 重启, 热生效, 仅展示]
+
+  - id: F-BASELINE
+    name: 系统基线（as-is）与规范（to-be）的定位
+    owner: AGENTS.md#1
+    fields: [baseline, specs]
+    refs: []
+    keywords: [基线, baseline, as-is, to-be, 系统现状, 竣工基线]

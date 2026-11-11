@@ -1,0 +1,35 @@
+# 配置项台账（模板 · `EXAMPLE-ONLY`）
+#
+# 用途：登记“哪些配置项真的被代码消费、改值后在哪里生效、怎么验证”。
+# 定位：本文件是“配置项存在 + 消费点 + 生效方式”的唯一事实源；
+#      规则约束见 backend-spec.md BE-CFG-007、BE-CFG-008；验收口径见 startup-change-process.md PRC-DOD-001。
+# 用法：复制到 docs/design/config-registry.yaml 后按本项目全量替换；docs/templates/ 下保持空壳。
+#
+# 字段（六项必填）：
+#   key          配置键，全局唯一，与代码/参数管理中的键逐字一致（区分大小写）
+#   owner        定义方：规则编号，或项目层文件路径
+#   consumedBy   消费点：类名/文件/位置描述，必须能定位到读取该键的代码或接口
+#   effect       STARTUP（启动期读取，改库不生效） / HOT（热生效） / DISPLAY_ONLY（仅展示，与行为无关）
+#   afterChange  改值后的生效方式：立即 / 刷新页面 / 重启应用（effect=STARTUP 必须含“重启”）
+#   verify       一条可执行的验证方式（命令、操作步骤或断言）
+#
+# 维护：新增配置项、改变消费点或生效方式时同批更新；未登记的配置项视为缺陷（BE-CFG-007）。
+# 解析口径：spec-lint 按最小 YAML 子集解析（`- key:` 起一条，缩进 `字段: 值`），verify 等字段写单行，不使用多行块（`|`、`>`）。
+
+version: 0.1.0
+updated: 2026-11-08
+
+items:
+  # EXAMPLE-ONLY：以下两条只演示字段写法，取值不是本项目事实；项目初始化时整段替换。
+  - key: example.upload.max-size
+    owner: ADR-000
+    consumedBy: ExampleStorageProperties.maxSize（启动期绑定）
+    effect: STARTUP
+    afterChange: 重启应用
+    verify: 改库后重启，上传超过上限的文件应返回 422，字段 errors[0].code=TOO_LONG
+  - key: example.login.title
+    owner: docs/requirements/requirement-spec.md
+    consumedBy: 登录页标题读取处（前端视图组件或登录配置接口）
+    effect: DISPLAY_ONLY
+    afterChange: 刷新页面
+    verify: 改值后刷新登录页，标题文案变化且无其他行为变化

@@ -1,0 +1,3967 @@
+# 本文件由 scripts/export-openapi.ps1 从运行中的后端 /v3/api-docs.yaml 自动生成，禁止手工编辑。
+# 契约源（手写维护）：docs/api/openapi.yaml；本文件只是实现基线（as-built），用于契约差异比对。
+# 生成时间：2026-11-10 16:17:22
+
+openapi: 3.0.1
+info:
+  title: OpenAPI definition
+  version: v0
+servers:
+- url: http://127.0.0.1:8080
+  description: Generated server url
+paths:
+  /api/v1/users/{id}:
+    get:
+      tags:
+      - user-controller
+      operationId: get
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseResponse'
+    put:
+      tags:
+      - user-controller
+      operationId: update
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateRequest'
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseResponse'
+    delete:
+      tags:
+      - user-controller
+      operationId: delete
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseVoid'
+  /api/v1/users/{id}/status:
+    put:
+      tags:
+      - user-controller
+      operationId: updateStatus
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StatusRequest'
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseVoid'
+  /api/v1/users/{id}/roles:
+    put:
+      tags:
+      - user-controller
+      operationId: assignRoles
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AssignRolesRequest'
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseVoid'
+  /api/v1/users/{id}/password:
+    put:
+      tags:
+      - user-controller
+      operationId: resetPassword
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResetPasswordRequest'
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseVoid'
+  /api/v1/roles/{id}:
+    get:
+      tags:
+      - role-controller
+      operationId: get_1
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseResponse'
+    put:
+      tags:
+      - role-controller
+      operationId: update_1
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SaveRequest'
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseResponse'
+    delete:
+      tags:
+      - role-controller
+      operationId: delete_1
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseVoid'
+  /api/v1/roles/{id}/menus:
+    put:
+      tags:
+      - role-controller
+      operationId: assignMenus
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AssignMenuRequest'
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseVoid'
+  /api/v1/roles/{id}/data-scope:
+    put:
+      tags:
+      - role-controller
+      operationId: assignDataScope
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DataScopeRequest'
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseVoid'
+  /api/v1/profile:
+    get:
+      tags:
+      - profile-controller
+      operationId: profile
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseResponse'
+    put:
+      tags:
+      - profile-controller
+      operationId: update_2
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateRequest'
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseResponse'
+  /api/v1/profile/password:
+    put:
+      tags:
+      - profile-controller
+      operationId: changePassword
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChangePasswordRequest'
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseVoid'
+  /api/v1/posts/{id}:
+    put:
+      tags:
+      - post-controller
+      operationId: update_3
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SaveRequest'
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseResponse'
+    delete:
+      tags:
+      - post-controller
+      operationId: delete_2
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseVoid'
+  /api/v1/menus/{id}:
+    put:
+      tags:
+      - menu-controller
+      operationId: update_4
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SaveRequest'
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseResponse'
+    delete:
+      tags:
+      - menu-controller
+      operationId: delete_4
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseVoid'
+  /api/v1/jobs/{id}:
+    put:
+      tags:
+      - job-controller
+      operationId: update_5
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Request'
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseResponse'
+    delete:
+      tags:
+      - job-controller
+      operationId: delete_5
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseVoid'
+  /api/v1/jobs/{id}/status:
+    put:
+      tags:
+      - job-controller
+      operationId: changeStatus
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StatusRequest'
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseResponse'
+  /api/v1/files/chunk-sessions/{uploadId}/chunks/{index}:
+    put:
+      tags:
+      - file-controller
+      operationId: uploadChunk
+      parameters:
+      - name: uploadId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: index
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int32
+      requestBody:
+        content:
+          application/json:
+            schema:
+              required:
+              - chunk
+              type: object
+              properties:
+                chunk:
+                  type: string
+                  format: binary
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseListInteger'
+  /api/v1/dicts/types/{id}:
+    put:
+      tags:
+      - dict-controller
+      operationId: updateType
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TypeSaveRequest'
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseTypeResponse'
+    delete:
+      tags:
+      - dict-controller
+      operationId: deleteType
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseVoid'
+  /api/v1/dicts/items/{id}:
+    put:
+      tags:
+      - dict-controller
+      operationId: updateItem
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ItemSaveRequest'
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseItemResponse'
+    delete:
+      tags:
+      - dict-controller
+      operationId: deleteItem
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseVoid'
+  /api/v1/depts/{id}:
+    put:
+      tags:
+      - dept-controller
+      operationId: update_6
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SaveRequest'
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseResponse'
+    delete:
+      tags:
+      - dept-controller
+      operationId: delete_7
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseVoid'
+  /api/v1/demo-tasks/{id}:
+    get:
+      tags:
+      - demo-task-controller
+      operationId: get_2
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseResponse'
+    put:
+      tags:
+      - demo-task-controller
+      operationId: update_7
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SaveRequest'
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseResponse'
+    delete:
+      tags:
+      - demo-task-controller
+      operationId: delete_8
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseVoid'
+  /api/v1/configs/{id}:
+    get:
+      tags:
+      - config-controller
+      operationId: get_3
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseResponse'
+    put:
+      tags:
+      - config-controller
+      operationId: update_8
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SaveRequest'
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseResponse'
+    delete:
+      tags:
+      - config-controller
+      operationId: delete_9
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseVoid'
+  /api/v1/users:
+    get:
+      tags:
+      - user-controller
+      operationId: page
+      parameters:
+      - name: pageQuery
+        in: query
+        required: true
+        schema:
+          $ref: '#/components/schemas/PageQuery'
+      - name: keyword
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: isEnabled
+        in: query
+        required: false
+        schema:
+          type: boolean
+      - name: deptId
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int64
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponsePageResponseResponse'
+    post:
+      tags:
+      - user-controller
+      operationId: create
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateRequest'
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseResponse'
+  /api/v1/roles:
+    get:
+      tags:
+      - role-controller
+      operationId: page_2
+      parameters:
+      - name: pageQuery
+        in: query
+        required: true
+        schema:
+          $ref: '#/components/schemas/PageQuery'
+      - name: keyword
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: isEnabled
+        in: query
+        required: false
+        schema:
+          type: boolean
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponsePageResponseResponse'
+    post:
+      tags:
+      - role-controller
+      operationId: create_1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SaveRequest'
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseResponse'
+  /api/v1/posts:
+    get:
+      tags:
+      - post-controller
+      operationId: page_3
+      parameters:
+      - name: pageQuery
+        in: query
+        required: true
+        schema:
+          $ref: '#/components/schemas/PageQuery'
+      - name: keyword
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: deptId
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int64
+      - name: isEnabled
+        in: query
+        required: false
+        schema:
+          type: boolean
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponsePageResponseResponse'
+    post:
+      tags:
+      - post-controller
+      operationId: create_2
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SaveRequest'
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseResponse'
+  /api/v1/posts/import:
+    post:
+      tags:
+      - post-controller
+      operationId: importFile
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              required:
+              - file
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseImportResult'
+  /api/v1/posts/export-tasks/{id}/cancel:
+    post:
+      tags:
+      - post-controller
+      operationId: cancelExportTask
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseExportTaskItem'
+  /api/v1/notices:
+    get:
+      tags:
+      - notice-controller
+      operationId: page_5
+      parameters:
+      - name: pageQuery
+        in: query
+        required: true
+        schema:
+          $ref: '#/components/schemas/PageQuery'
+      - name: keyword
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: level
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: type
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: status
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: deptId
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int64
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponsePageResponseResponse'
+    post:
+      tags:
+      - notice-controller
+      operationId: publish
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PublishRequest'
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseResponse'
+  /api/v1/notices/{id}/revoke:
+    post:
+      tags:
+      - notice-controller
+      operationId: revoke
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseResponse'
+  /api/v1/my-notices/read-all:
+    post:
+      tags:
+      - my-notice-controller
+      operationId: readAll
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseReadAllResponse'
+  /api/v1/menus:
+    get:
+      tags:
+      - menu-controller
+      operationId: tree
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseListResponse'
+    post:
+      tags:
+      - menu-controller
+      operationId: create_3
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SaveRequest'
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseResponse'
+  /api/v1/jobs:
+    get:
+      tags:
+      - job-controller
+      operationId: page_6
+      parameters:
+      - name: pageQuery
+        in: query
+        required: true
+        schema:
+          $ref: '#/components/schemas/PageQuery'
+      - name: keyword
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: groupName
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: status
+        in: query
+        required: false
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponsePageResponseResponse'
+    post:
+      tags:
+      - job-controller
+      operationId: create_4
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Request'
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseResponse'
+  /api/v1/jobs/{id}/run:
+    post:
+      tags:
+      - job-controller
+      operationId: run
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseRunResponse'
+  /api/v1/files:
+    get:
+      tags:
+      - file-controller
+      operationId: page_8
+      parameters:
+      - name: pageQuery
+        in: query
+        required: true
+        schema:
+          $ref: '#/components/schemas/PageQuery'
+      - name: keyword
+        in: query
+        required: false
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponsePageResponseResponse'
+    post:
+      tags:
+      - file-controller
+      operationId: upload
+      requestBody:
+        content:
+          application/json:
+            schema:
+              required:
+              - file
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseResponse'
+        "413":
+          description: 文件超过当前业务上限（sys.upload.max-size，来自 /api/v1/public/configs 的
+            uploadMaxSize）；data.maxSize 为当前上限字节数
+  /api/v1/files/{id}/restore:
+    post:
+      tags:
+      - file-controller
+      operationId: restore
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseVoid'
+  /api/v1/files/instant:
+    post:
+      tags:
+      - file-controller
+      operationId: instant
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InstantRequest'
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseInstantResponse'
+  /api/v1/files/chunk-sessions:
+    post:
+      tags:
+      - file-controller
+      operationId: initChunkSession
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChunkInitRequest'
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseChunkSessionResponse'
+  /api/v1/files/chunk-sessions/{uploadId}/complete:
+    post:
+      tags:
+      - file-controller
+      operationId: completeChunkSession
+      parameters:
+      - name: uploadId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseResponse'
+  /api/v1/dicts/types:
+    get:
+      tags:
+      - dict-controller
+      operationId: pageTypes
+      parameters:
+      - name: pageQuery
+        in: query
+        required: true
+        schema:
+          $ref: '#/components/schemas/PageQuery'
+      - name: keyword
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: isEnabled
+        in: query
+        required: false
+        schema:
+          type: boolean
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponsePageResponseTypeResponse'
+    post:
+      tags:
+      - dict-controller
+      operationId: createType
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TypeSaveRequest'
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseTypeResponse'
+  /api/v1/dicts/items:
+    post:
+      tags:
+      - dict-controller
+      operationId: createItem
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ItemSaveRequest'
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseItemResponse'
+  /api/v1/depts:
+    get:
+      tags:
+      - dept-controller
+      operationId: tree_1
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseListResponse'
+    post:
+      tags:
+      - dept-controller
+      operationId: create_5
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SaveRequest'
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseResponse'
+  /api/v1/demo-tasks:
+    get:
+      tags:
+      - demo-task-controller
+      operationId: page_9
+      parameters:
+      - name: pageQuery
+        in: query
+        required: true
+        schema:
+          $ref: '#/components/schemas/PageQuery'
+      - name: keyword
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: status
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: deptId
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int64
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponsePageResponseResponse'
+    post:
+      tags:
+      - demo-task-controller
+      operationId: create_6
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SaveRequest'
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseResponse'
+  /api/v1/demo-tasks/import:
+    post:
+      tags:
+      - demo-task-controller
+      operationId: importFile_1
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              required:
+              - file
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseImportResult'
+  /api/v1/demo-tasks/export-tasks/{id}/cancel:
+    post:
+      tags:
+      - demo-task-controller
+      operationId: cancelExportTask_1
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseExportTaskItem'
+  /api/v1/configs:
+    get:
+      tags:
+      - config-controller
+      operationId: page_10
+      parameters:
+      - name: pageQuery
+        in: query
+        required: true
+        schema:
+          $ref: '#/components/schemas/PageQuery'
+      - name: keyword
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: isSensitive
+        in: query
+        required: false
+        schema:
+          type: boolean
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponsePageResponseResponse'
+    post:
+      tags:
+      - config-controller
+      operationId: create_7
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SaveRequest'
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseResponse'
+  /api/v1/auth/refresh:
+    post:
+      tags:
+      - auth-controller
+      operationId: refresh
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseLoginResponse'
+  /api/v1/auth/logout:
+    post:
+      tags:
+      - auth-controller
+      operationId: logout
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseVoid'
+  /api/v1/auth/login:
+    post:
+      tags:
+      - auth-controller
+      operationId: login
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseLoginResponse'
+  /api/v1/users/options:
+    get:
+      tags:
+      - user-controller
+      operationId: options
+      parameters:
+      - name: keyword
+        in: query
+        required: false
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseListOption'
+  /api/v1/sessions:
+    get:
+      tags:
+      - session-controller
+      operationId: page_1
+      parameters:
+      - name: pageQuery
+        in: query
+        required: true
+        schema:
+          $ref: '#/components/schemas/PageQuery'
+      - name: userId
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int64
+      - name: keyword
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: online
+        in: query
+        required: false
+        schema:
+          type: boolean
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponsePageResponseResponse'
+  /api/v1/roles/all:
+    get:
+      tags:
+      - role-controller
+      operationId: listAll
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseListResponse'
+  /api/v1/public/configs:
+    get:
+      tags:
+      - public-config-controller
+      operationId: configs
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseResponse'
+  /api/v1/profile/login-logs:
+    get:
+      tags:
+      - profile-controller
+      operationId: loginLogs
+      parameters:
+      - name: pageQuery
+        in: query
+        required: true
+        schema:
+          $ref: '#/components/schemas/PageQuery'
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponsePageResponseLoginLogResponse'
+  /api/v1/posts/import-template:
+    get:
+      tags:
+      - post-controller
+      operationId: importTemplate
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  type: string
+                  format: byte
+  /api/v1/posts/export:
+    get:
+      tags:
+      - post-controller
+      operationId: export
+      parameters:
+      - name: keyword
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: deptId
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int64
+      - name: isEnabled
+        in: query
+        required: false
+        schema:
+          type: boolean
+      - name: sort
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: order
+        in: query
+        required: false
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: object
+  /api/v1/posts/export-tasks:
+    get:
+      tags:
+      - post-controller
+      operationId: exportTasks
+      parameters:
+      - name: pageQuery
+        in: query
+        required: true
+        schema:
+          $ref: '#/components/schemas/PageQuery'
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponsePageResponseExportTaskItem'
+  /api/v1/posts/export-tasks/{id}:
+    get:
+      tags:
+      - post-controller
+      operationId: exportTask
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseExportTaskItem'
+  /api/v1/posts/export-tasks/{id}/file:
+    get:
+      tags:
+      - post-controller
+      operationId: exportTaskFile
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: string
+                format: binary
+  /api/v1/oper-logs:
+    get:
+      tags:
+      - oper-log-controller
+      operationId: page_4
+      parameters:
+      - name: pageQuery
+        in: query
+        required: true
+        schema:
+          $ref: '#/components/schemas/PageQuery'
+      - name: keyword
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: resultCode
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+      - name: from
+        in: query
+        required: false
+        schema:
+          type: string
+          format: date-time
+      - name: to
+        in: query
+        required: false
+        schema:
+          type: string
+          format: date-time
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponsePageResponseOperLogResponse'
+  /api/v1/notices/{id}:
+    get:
+      tags:
+      - notice-controller
+      operationId: detail
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseResponse'
+    delete:
+      tags:
+      - notice-controller
+      operationId: delete_3
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseVoid'
+  /api/v1/notices/{id}/readers:
+    get:
+      tags:
+      - notice-controller
+      operationId: readers
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      - name: pageQuery
+        in: query
+        required: true
+        schema:
+          $ref: '#/components/schemas/PageQuery'
+      - name: readStatus
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: keyword
+        in: query
+        required: false
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponsePageResponseReaderResponse'
+  /api/v1/my-notices:
+    get:
+      tags:
+      - my-notice-controller
+      operationId: inbox
+      parameters:
+      - name: pageQuery
+        in: query
+        required: true
+        schema:
+          $ref: '#/components/schemas/PageQuery'
+      - name: readStatus
+        in: query
+        required: false
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponsePageResponseInboxResponse'
+  /api/v1/my-notices/{id}:
+    get:
+      tags:
+      - my-notice-controller
+      operationId: detail_1
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseInboxDetailResponse'
+  /api/v1/my-notices/unread-count:
+    get:
+      tags:
+      - my-notice-controller
+      operationId: unreadCount
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseUnreadCountResponse'
+  /api/v1/jobs/keys:
+    get:
+      tags:
+      - job-controller
+      operationId: keys
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseListJobKeyOption'
+  /api/v1/job-logs:
+    get:
+      tags:
+      - job-log-controller
+      operationId: page_7
+      parameters:
+      - name: pageQuery
+        in: query
+        required: true
+        schema:
+          $ref: '#/components/schemas/PageQuery'
+      - name: jobId
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int64
+      - name: keyword
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: result
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: triggerType
+        in: query
+        required: false
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponsePageResponseResponse'
+  /api/v1/job-logs/{id}:
+    get:
+      tags:
+      - job-log-controller
+      operationId: detail_2
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseDetailResponse'
+  /api/v1/health:
+    get:
+      tags:
+      - health-controller
+      operationId: health
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseMapStringObject'
+  /api/v1/files/{id}/preview:
+    get:
+      tags:
+      - file-controller
+      operationId: preview
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: string
+                format: binary
+  /api/v1/files/{id}/download:
+    get:
+      tags:
+      - file-controller
+      operationId: download
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: string
+                format: binary
+  /api/v1/files/recycle:
+    get:
+      tags:
+      - file-controller
+      operationId: recyclePage
+      parameters:
+      - name: pageQuery
+        in: query
+        required: true
+        schema:
+          $ref: '#/components/schemas/PageQuery'
+      - name: keyword
+        in: query
+        required: false
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponsePageResponseResponse'
+  /api/v1/files/chunk-sessions/{uploadId}:
+    get:
+      tags:
+      - file-controller
+      operationId: chunkStatus
+      parameters:
+      - name: uploadId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseChunkSessionResponse'
+    delete:
+      tags:
+      - file-controller
+      operationId: abortChunkSession
+      parameters:
+      - name: uploadId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseVoid'
+  /api/v1/dicts/types/{id}/items:
+    get:
+      tags:
+      - dict-controller
+      operationId: items
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseListItemResponse'
+  /api/v1/dicts/bundles:
+    get:
+      tags:
+      - dict-controller
+      operationId: bundles
+      parameters:
+      - name: types
+        in: query
+        required: true
+        schema:
+          type: array
+          items:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseListTypeBundle'
+  /api/v1/depts/options:
+    get:
+      tags:
+      - dept-controller
+      operationId: options_1
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseListOption'
+  /api/v1/demo-tasks/import-template:
+    get:
+      tags:
+      - demo-task-controller
+      operationId: importTemplate_1
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  type: string
+                  format: byte
+  /api/v1/demo-tasks/export:
+    get:
+      tags:
+      - demo-task-controller
+      operationId: export_1
+      parameters:
+      - name: keyword
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: status
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: deptId
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int64
+      - name: sort
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: order
+        in: query
+        required: false
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: object
+  /api/v1/demo-tasks/export-tasks:
+    get:
+      tags:
+      - demo-task-controller
+      operationId: exportTasks_1
+      parameters:
+      - name: pageQuery
+        in: query
+        required: true
+        schema:
+          $ref: '#/components/schemas/PageQuery'
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponsePageResponseExportTaskItem'
+  /api/v1/demo-tasks/export-tasks/{id}:
+    get:
+      tags:
+      - demo-task-controller
+      operationId: exportTask_1
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseExportTaskItem'
+  /api/v1/demo-tasks/export-tasks/{id}/file:
+    get:
+      tags:
+      - demo-task-controller
+      operationId: exportTaskFile_1
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: string
+                format: binary
+  /api/v1/cache/overview:
+    get:
+      tags:
+      - cache-controller
+      operationId: overview
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseOverviewResponse'
+  /api/v1/cache/namespaces:
+    get:
+      tags:
+      - cache-controller
+      operationId: namespaces
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseObject'
+  /api/v1/cache/keys:
+    get:
+      tags:
+      - cache-controller
+      operationId: keys_1
+      parameters:
+      - name: pageQuery
+        in: query
+        required: true
+        schema:
+          $ref: '#/components/schemas/PageQuery'
+      - name: namespace
+        in: query
+        required: true
+        schema:
+          type: string
+      - name: keyword
+        in: query
+        required: false
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseKeyPageResponse'
+    delete:
+      tags:
+      - cache-controller
+      operationId: deleteKey
+      parameters:
+      - name: namespace
+        in: query
+        required: true
+        schema:
+          type: string
+      - name: key
+        in: query
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseAffectResponse'
+  /api/v1/cache/clean-logs:
+    get:
+      tags:
+      - cache-controller
+      operationId: cleanLogs
+      parameters:
+      - name: pageQuery
+        in: query
+        required: true
+        schema:
+          $ref: '#/components/schemas/PageQuery'
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponsePageResponseCleanLogResponse'
+  /api/v1/auth/sessions:
+    get:
+      tags:
+      - auth-controller
+      operationId: mySessions
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseListResponse'
+  /api/v1/auth/routes:
+    get:
+      tags:
+      - auth-controller
+      operationId: routes
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseListRoute'
+  /api/v1/auth/permissions:
+    get:
+      tags:
+      - auth-controller
+      operationId: permissions
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseListString'
+  /api/v1/auth/me:
+    get:
+      tags:
+      - auth-controller
+      operationId: me
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseResponse'
+  /api/v1/sessions/{id}:
+    delete:
+      tags:
+      - session-controller
+      operationId: kick
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseAffectResponse'
+  /api/v1/sessions/user/{userId}:
+    delete:
+      tags:
+      - session-controller
+      operationId: kickUser
+      parameters:
+      - name: userId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseAffectResponse'
+  /api/v1/sessions/invalidated:
+    delete:
+      tags:
+      - session-controller
+      operationId: cleanInvalidated
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseAffectResponse'
+  /api/v1/files/{id}:
+    delete:
+      tags:
+      - file-controller
+      operationId: delete_6
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseVoid'
+  /api/v1/files/recycle/{id}:
+    delete:
+      tags:
+      - file-controller
+      operationId: purge
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseVoid'
+  /api/v1/cache/session-cache:
+    delete:
+      tags:
+      - cache-controller
+      operationId: cleanSessionCache
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseAffectResponse'
+  /api/v1/cache/namespaces/{code}:
+    delete:
+      tags:
+      - cache-controller
+      operationId: clearNamespace
+      parameters:
+      - name: code
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseAffectResponse'
+  /api/v1/auth/sessions/{id}:
+    delete:
+      tags:
+      - auth-controller
+      operationId: kickMySession
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseAffectResponse'
+components:
+  schemas:
+    UpdateRequest:
+      required:
+      - nickname
+      type: object
+      properties:
+        nickname:
+          maxLength: 64
+          minLength: 0
+          type: string
+        deptId:
+          type: integer
+          format: int64
+        roleIds:
+          type: array
+          items:
+            type: integer
+            format: int64
+        email:
+          maxLength: 64
+          minLength: 0
+          type: string
+        phone:
+          maxLength: 32
+          minLength: 0
+          type: string
+    ApiResponseResponse:
+      type: object
+      properties:
+        code:
+          type: integer
+          format: int32
+        message:
+          type: string
+        data:
+          $ref: '#/components/schemas/Response'
+        traceId:
+          type: string
+    Response:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        username:
+          type: string
+        nickname:
+          type: string
+        deptId:
+          type: integer
+          format: int64
+        deptName:
+          type: string
+        email:
+          type: string
+        phone:
+          type: string
+        isEnabled:
+          type: boolean
+        roleIds:
+          type: array
+          items:
+            type: integer
+            format: int64
+        roleNames:
+          type: array
+          items:
+            type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        maskStates:
+          type: object
+          additionalProperties:
+            type: string
+    StatusRequest:
+      required:
+      - isEnabled
+      type: object
+      properties:
+        isEnabled:
+          type: boolean
+    ApiResponseVoid:
+      type: object
+      properties:
+        code:
+          type: integer
+          format: int32
+        message:
+          type: string
+        data:
+          type: object
+        traceId:
+          type: string
+    AssignRolesRequest:
+      required:
+      - roleIds
+      type: object
+      properties:
+        roleIds:
+          type: array
+          items:
+            type: integer
+            format: int64
+    ResetPasswordRequest:
+      required:
+      - password
+      type: object
+      properties:
+        password:
+          maxLength: 64
+          minLength: 8
+          type: string
+    SaveRequest:
+      required:
+      - code
+      - name
+      type: object
+      properties:
+        name:
+          maxLength: 64
+          minLength: 0
+          type: string
+        code:
+          pattern: "^[a-zA-Z0-9_]{2,64}$"
+          type: string
+        sort:
+          type: integer
+          format: int32
+        remark:
+          maxLength: 255
+          minLength: 0
+          type: string
+        isEnabled:
+          type: boolean
+    AssignMenuRequest:
+      required:
+      - menuIds
+      type: object
+      properties:
+        menuIds:
+          type: array
+          items:
+            type: integer
+            format: int64
+    DataScopeRequest:
+      required:
+      - dataScope
+      - ownFilter
+      type: object
+      properties:
+        dataScope:
+          type: string
+        ownFilter:
+          type: string
+        deptIds:
+          type: array
+          items:
+            type: integer
+            format: int64
+        userIds:
+          type: array
+          items:
+            type: integer
+            format: int64
+    ChangePasswordRequest:
+      required:
+      - newPassword
+      - oldPassword
+      type: object
+      properties:
+        oldPassword:
+          maxLength: 128
+          minLength: 0
+          type: string
+        newPassword:
+          maxLength: 64
+          minLength: 8
+          type: string
+    Request:
+      required:
+      - cronExpression
+      - jobKey
+      - name
+      type: object
+      properties:
+        name:
+          maxLength: 64
+          minLength: 0
+          type: string
+        groupName:
+          maxLength: 64
+          minLength: 0
+          type: string
+        jobKey:
+          maxLength: 128
+          minLength: 0
+          type: string
+        cronExpression:
+          maxLength: 64
+          minLength: 0
+          type: string
+        description:
+          maxLength: 255
+          minLength: 0
+          type: string
+        status:
+          type: string
+        concurrencyPolicy:
+          type: string
+        timeoutSeconds:
+          maximum: 3600
+          minimum: 1
+          type: integer
+          format: int32
+        retryTimes:
+          maximum: 10
+          minimum: 0
+          type: integer
+          format: int32
+        retryIntervalSeconds:
+          maximum: 3600
+          minimum: 0
+          type: integer
+          format: int32
+        notifyPolicy:
+          type: string
+        notifyThreshold:
+          maximum: 10
+          minimum: 1
+          type: integer
+          format: int32
+        notifyTargets:
+          maxLength: 255
+          minLength: 0
+          type: string
+    ApiResponseListInteger:
+      type: object
+      properties:
+        code:
+          type: integer
+          format: int32
+        message:
+          type: string
+        data:
+          type: array
+          items:
+            type: integer
+            format: int32
+        traceId:
+          type: string
+    TypeSaveRequest:
+      required:
+      - name
+      - type
+      type: object
+      properties:
+        name:
+          maxLength: 64
+          minLength: 0
+          type: string
+        type:
+          pattern: "^[a-zA-Z0-9_-]{2,64}$"
+          type: string
+        remark:
+          maxLength: 255
+          minLength: 0
+          type: string
+        isEnabled:
+          type: boolean
+    ApiResponseTypeResponse:
+      type: object
+      properties:
+        code:
+          type: integer
+          format: int32
+        message:
+          type: string
+        data:
+          $ref: '#/components/schemas/TypeResponse'
+        traceId:
+          type: string
+    TypeResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        name:
+          type: string
+        type:
+          type: string
+        remark:
+          type: string
+        isEnabled:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    ItemSaveRequest:
+      required:
+      - dictTypeId
+      - label
+      - value
+      type: object
+      properties:
+        dictTypeId:
+          type: integer
+          format: int64
+        label:
+          maxLength: 64
+          minLength: 0
+          type: string
+        value:
+          maxLength: 64
+          minLength: 0
+          type: string
+        sort:
+          type: integer
+          format: int32
+        isEnabled:
+          type: boolean
+        remark:
+          maxLength: 255
+          minLength: 0
+          type: string
+    ApiResponseItemResponse:
+      type: object
+      properties:
+        code:
+          type: integer
+          format: int32
+        message:
+          type: string
+        data:
+          $ref: '#/components/schemas/ItemResponse'
+        traceId:
+          type: string
+    ItemResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        dictTypeId:
+          type: integer
+          format: int64
+        label:
+          type: string
+        value:
+          type: string
+        sort:
+          type: integer
+          format: int32
+        isEnabled:
+          type: boolean
+        remark:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    CreateRequest:
+      required:
+      - nickname
+      - password
+      - username
+      type: object
+      properties:
+        username:
+          pattern: "^[a-zA-Z0-9_]{4,32}$"
+          type: string
+        nickname:
+          maxLength: 64
+          minLength: 0
+          type: string
+        password:
+          maxLength: 64
+          minLength: 8
+          type: string
+        deptId:
+          type: integer
+          format: int64
+        email:
+          maxLength: 64
+          minLength: 0
+          type: string
+        phone:
+          maxLength: 32
+          minLength: 0
+          type: string
+        roleIds:
+          type: array
+          items:
+            type: integer
+            format: int64
+    ApiResponseImportResult:
+      type: object
+      properties:
+        code:
+          type: integer
+          format: int32
+        message:
+          type: string
+        data:
+          $ref: '#/components/schemas/ImportResult'
+        traceId:
+          type: string
+    ImportResult:
+      type: object
+      properties:
+        totalRows:
+          type: integer
+          format: int64
+        imported:
+          type: integer
+          format: int32
+    ApiResponseExportTaskItem:
+      type: object
+      properties:
+        code:
+          type: integer
+          format: int32
+        message:
+          type: string
+        data:
+          $ref: '#/components/schemas/ExportTaskItem'
+        traceId:
+          type: string
+    ExportTaskItem:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        fileName:
+          type: string
+        totalRows:
+          type: integer
+          format: int64
+        progress:
+          type: integer
+          format: int32
+        status:
+          type: string
+        cancelRequested:
+          type: boolean
+        errorMessage:
+          type: string
+        fileSize:
+          type: integer
+          format: int64
+        createdAt:
+          type: string
+          format: date-time
+        expiresAt:
+          type: string
+          format: date-time
+    PublishRequest:
+      required:
+      - content
+      - scopes
+      - title
+      type: object
+      properties:
+        title:
+          maxLength: 200
+          minLength: 0
+          type: string
+        content:
+          type: string
+        level:
+          type: string
+        type:
+          type: string
+        revocable:
+          type: boolean
+        scopes:
+          type: array
+          items:
+            $ref: '#/components/schemas/ScopeRequest'
+    ScopeRequest:
+      required:
+      - scopeType
+      type: object
+      properties:
+        scopeType:
+          type: string
+        targetId:
+          type: integer
+          format: int64
+    ApiResponseReadAllResponse:
+      type: object
+      properties:
+        code:
+          type: integer
+          format: int32
+        message:
+          type: string
+        data:
+          $ref: '#/components/schemas/ReadAllResponse'
+        traceId:
+          type: string
+    ReadAllResponse:
+      type: object
+      properties:
+        marked:
+          type: integer
+          format: int32
+    ApiResponseRunResponse:
+      type: object
+      properties:
+        code:
+          type: integer
+          format: int32
+        message:
+          type: string
+        data:
+          $ref: '#/components/schemas/RunResponse'
+        traceId:
+          type: string
+    RunResponse:
+      type: object
+      properties:
+        logId:
+          type: integer
+          format: int64
+        result:
+          type: string
+        elapsedMs:
+          type: integer
+          format: int64
+        attemptCount:
+          type: integer
+          format: int32
+        affectedRows:
+          type: integer
+          format: int64
+        errorSummary:
+          type: string
+        startedAt:
+          type: string
+          format: date-time
+        finishedAt:
+          type: string
+          format: date-time
+    InstantRequest:
+      type: object
+      properties:
+        fileName:
+          type: string
+        size:
+          type: integer
+          format: int64
+        contentType:
+          type: string
+        sha256:
+          type: string
+    ApiResponseInstantResponse:
+      type: object
+      properties:
+        code:
+          type: integer
+          format: int32
+        message:
+          type: string
+        data:
+          $ref: '#/components/schemas/InstantResponse'
+        traceId:
+          type: string
+    InstantResponse:
+      type: object
+      properties:
+        instant:
+          type: boolean
+        file:
+          $ref: '#/components/schemas/Response'
+    ChunkInitRequest:
+      type: object
+      properties:
+        fileName:
+          type: string
+        size:
+          type: integer
+          format: int64
+        contentType:
+          type: string
+        sha256:
+          type: string
+        chunkSize:
+          type: integer
+          format: int32
+    ApiResponseChunkSessionResponse:
+      type: object
+      properties:
+        code:
+          type: integer
+          format: int32
+        message:
+          type: string
+        data:
+          $ref: '#/components/schemas/ChunkSessionResponse'
+        traceId:
+          type: string
+    ChunkSessionResponse:
+      type: object
+      properties:
+        uploadId:
+          type: string
+        chunkSize:
+          type: integer
+          format: int32
+        totalChunks:
+          type: integer
+          format: int32
+        uploadedChunks:
+          type: array
+          items:
+            type: integer
+            format: int32
+        instant:
+          type: boolean
+        file:
+          $ref: '#/components/schemas/Response'
+    ApiResponseLoginResponse:
+      type: object
+      properties:
+        code:
+          type: integer
+          format: int32
+        message:
+          type: string
+        data:
+          $ref: '#/components/schemas/LoginResponse'
+        traceId:
+          type: string
+    LoginResponse:
+      type: object
+      properties:
+        userId:
+          type: integer
+          format: int64
+        username:
+          type: string
+        nickname:
+          type: string
+        accessExpiresIn:
+          type: integer
+          format: int64
+        refreshExpiresIn:
+          type: integer
+          format: int64
+    LoginRequest:
+      required:
+      - password
+      - username
+      type: object
+      properties:
+        username:
+          maxLength: 64
+          minLength: 0
+          type: string
+        password:
+          maxLength: 128
+          minLength: 0
+          type: string
+    PageQuery:
+      type: object
+      properties:
+        page:
+          type: integer
+          format: int32
+        pageSize:
+          type: integer
+          format: int32
+        sort:
+          type: string
+        order:
+          type: string
+    ApiResponsePageResponseResponse:
+      type: object
+      properties:
+        code:
+          type: integer
+          format: int32
+        message:
+          type: string
+        data:
+          $ref: '#/components/schemas/PageResponseResponse'
+        traceId:
+          type: string
+    PageResponseResponse:
+      type: object
+      properties:
+        page:
+          type: integer
+          format: int64
+        pageSize:
+          type: integer
+          format: int64
+        list:
+          type: array
+          items:
+            $ref: '#/components/schemas/Response'
+        total:
+          type: integer
+          format: int64
+    ApiResponseListOption:
+      type: object
+      properties:
+        code:
+          type: integer
+          format: int32
+        message:
+          type: string
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Option'
+        traceId:
+          type: string
+    Option:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        username:
+          type: string
+        nickname:
+          type: string
+        deptId:
+          type: integer
+          format: int64
+        deptName:
+          type: string
+    ApiResponseListResponse:
+      type: object
+      properties:
+        code:
+          type: integer
+          format: int32
+        message:
+          type: string
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Response'
+        traceId:
+          type: string
+    ApiResponsePageResponseLoginLogResponse:
+      type: object
+      properties:
+        code:
+          type: integer
+          format: int32
+        message:
+          type: string
+        data:
+          $ref: '#/components/schemas/PageResponseLoginLogResponse'
+        traceId:
+          type: string
+    LoginLogResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        userId:
+          type: integer
+          format: int64
+        username:
+          type: string
+        ip:
+          type: string
+        userAgent:
+          type: string
+        isSuccess:
+          type: boolean
+        message:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+    PageResponseLoginLogResponse:
+      type: object
+      properties:
+        page:
+          type: integer
+          format: int64
+        pageSize:
+          type: integer
+          format: int64
+        list:
+          type: array
+          items:
+            $ref: '#/components/schemas/LoginLogResponse'
+        total:
+          type: integer
+          format: int64
+    ApiResponsePageResponseExportTaskItem:
+      type: object
+      properties:
+        code:
+          type: integer
+          format: int32
+        message:
+          type: string
+        data:
+          $ref: '#/components/schemas/PageResponseExportTaskItem'
+        traceId:
+          type: string
+    PageResponseExportTaskItem:
+      type: object
+      properties:
+        page:
+          type: integer
+          format: int64
+        pageSize:
+          type: integer
+          format: int64
+        list:
+          type: array
+          items:
+            $ref: '#/components/schemas/ExportTaskItem'
+        total:
+          type: integer
+          format: int64
+    ApiResponsePageResponseOperLogResponse:
+      type: object
+      properties:
+        code:
+          type: integer
+          format: int32
+        message:
+          type: string
+        data:
+          $ref: '#/components/schemas/PageResponseOperLogResponse'
+        traceId:
+          type: string
+    OperLogResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        traceId:
+          type: string
+        userId:
+          type: integer
+          format: int64
+        username:
+          type: string
+        deptId:
+          type: integer
+          format: int64
+        deptName:
+          type: string
+        module:
+          type: string
+        action:
+          type: string
+        method:
+          type: string
+        requestUri:
+          type: string
+        requestMethod:
+          type: string
+        ip:
+          type: string
+        params:
+          type: string
+        resultCode:
+          type: integer
+          format: int32
+        resultMessage:
+          type: string
+        elapsedMs:
+          type: integer
+          format: int64
+        createdAt:
+          type: string
+          format: date-time
+    PageResponseOperLogResponse:
+      type: object
+      properties:
+        page:
+          type: integer
+          format: int64
+        pageSize:
+          type: integer
+          format: int64
+        list:
+          type: array
+          items:
+            $ref: '#/components/schemas/OperLogResponse'
+        total:
+          type: integer
+          format: int64
+    ApiResponsePageResponseReaderResponse:
+      type: object
+      properties:
+        code:
+          type: integer
+          format: int32
+        message:
+          type: string
+        data:
+          $ref: '#/components/schemas/PageResponseReaderResponse'
+        traceId:
+          type: string
+    PageResponseReaderResponse:
+      type: object
+      properties:
+        page:
+          type: integer
+          format: int64
+        pageSize:
+          type: integer
+          format: int64
+        list:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReaderResponse'
+        total:
+          type: integer
+          format: int64
+    ReaderResponse:
+      type: object
+      properties:
+        userId:
+          type: integer
+          format: int64
+        username:
+          type: string
+        nickname:
+          type: string
+        deptName:
+          type: string
+        read:
+          type: boolean
+        readAt:
+          type: string
+          format: date-time
+    ApiResponsePageResponseInboxResponse:
+      type: object
+      properties:
+        code:
+          type: integer
+          format: int32
+        message:
+          type: string
+        data:
+          $ref: '#/components/schemas/PageResponseInboxResponse'
+        traceId:
+          type: string
+    InboxResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        title:
+          type: string
+        level:
+          type: string
+        type:
+          type: string
+        publishedAt:
+          type: string
+          format: date-time
+        publisherName:
+          type: string
+        read:
+          type: boolean
+        readAt:
+          type: string
+          format: date-time
+    PageResponseInboxResponse:
+      type: object
+      properties:
+        page:
+          type: integer
+          format: int64
+        pageSize:
+          type: integer
+          format: int64
+        list:
+          type: array
+          items:
+            $ref: '#/components/schemas/InboxResponse'
+        total:
+          type: integer
+          format: int64
+    ApiResponseInboxDetailResponse:
+      type: object
+      properties:
+        code:
+          type: integer
+          format: int32
+        message:
+          type: string
+        data:
+          $ref: '#/components/schemas/InboxDetailResponse'
+        traceId:
+          type: string
+    InboxDetailResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        title:
+          type: string
+        content:
+          type: string
+        level:
+          type: string
+        type:
+          type: string
+        publishedAt:
+          type: string
+          format: date-time
+        publisherName:
+          type: string
+        read:
+          type: boolean
+        readAt:
+          type: string
+          format: date-time
+    ApiResponseUnreadCountResponse:
+      type: object
+      properties:
+        code:
+          type: integer
+          format: int32
+        message:
+          type: string
+        data:
+          $ref: '#/components/schemas/UnreadCountResponse'
+        traceId:
+          type: string
+    UnreadCountResponse:
+      type: object
+      properties:
+        count:
+          type: integer
+          format: int64
+    ApiResponseListJobKeyOption:
+      type: object
+      properties:
+        code:
+          type: integer
+          format: int32
+        message:
+          type: string
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/JobKeyOption'
+        traceId:
+          type: string
+    JobKeyOption:
+      type: object
+      properties:
+        key:
+          type: string
+        description:
+          type: string
+    ApiResponseDetailResponse:
+      type: object
+      properties:
+        code:
+          type: integer
+          format: int32
+        message:
+          type: string
+        data:
+          $ref: '#/components/schemas/DetailResponse'
+        traceId:
+          type: string
+    DetailResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        jobId:
+          type: integer
+          format: int64
+        jobName:
+          type: string
+        jobKey:
+          type: string
+        triggerType:
+          type: string
+        startedAt:
+          type: string
+          format: date-time
+        finishedAt:
+          type: string
+          format: date-time
+        elapsedMs:
+          type: integer
+          format: int64
+        result:
+          type: string
+        attemptCount:
+          type: integer
+          format: int32
+        errorSummary:
+          type: string
+        errorStack:
+          type: string
+        affectedRows:
+          type: integer
+          format: int64
+    ApiResponseMapStringObject:
+      type: object
+      properties:
+        code:
+          type: integer
+          format: int32
+        message:
+          type: string
+        data:
+          type: object
+          additionalProperties:
+            type: object
+        traceId:
+          type: string
+    ApiResponsePageResponseTypeResponse:
+      type: object
+      properties:
+        code:
+          type: integer
+          format: int32
+        message:
+          type: string
+        data:
+          $ref: '#/components/schemas/PageResponseTypeResponse'
+        traceId:
+          type: string
+    PageResponseTypeResponse:
+      type: object
+      properties:
+        page:
+          type: integer
+          format: int64
+        pageSize:
+          type: integer
+          format: int64
+        list:
+          type: array
+          items:
+            $ref: '#/components/schemas/TypeResponse'
+        total:
+          type: integer
+          format: int64
+    ApiResponseListItemResponse:
+      type: object
+      properties:
+        code:
+          type: integer
+          format: int32
+        message:
+          type: string
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/ItemResponse'
+        traceId:
+          type: string
+    ApiResponseListTypeBundle:
+      type: object
+      properties:
+        code:
+          type: integer
+          format: int32
+        message:
+          type: string
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/TypeBundle'
+        traceId:
+          type: string
+    TypeBundle:
+      type: object
+      properties:
+        type:
+          type: string
+        name:
+          type: string
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ItemResponse'
+    ApiResponseOverviewResponse:
+      type: object
+      properties:
+        code:
+          type: integer
+          format: int32
+        message:
+          type: string
+        data:
+          $ref: '#/components/schemas/OverviewResponse'
+        traceId:
+          type: string
+    NamespaceCount:
+      type: object
+      properties:
+        code:
+          type: string
+        name:
+          type: string
+        prefix:
+          type: string
+        keyCount:
+          type: integer
+          format: int64
+    OverviewResponse:
+      type: object
+      properties:
+        connected:
+          type: boolean
+        cacheType:
+          type: string
+        usedMemoryBytes:
+          type: integer
+          format: int64
+        usedMemoryHuman:
+          type: string
+        maxMemoryBytes:
+          type: integer
+          format: int64
+        maxMemoryHuman:
+          type: string
+        maxMemoryPolicy:
+          type: string
+        totalKeys:
+          type: integer
+          format: int64
+        unregisteredKeys:
+          type: integer
+          format: int64
+        namespaces:
+          type: array
+          items:
+            $ref: '#/components/schemas/NamespaceCount'
+    ApiResponseObject:
+      type: object
+      properties:
+        code:
+          type: integer
+          format: int32
+        message:
+          type: string
+        data:
+          type: object
+        traceId:
+          type: string
+    ApiResponseKeyPageResponse:
+      type: object
+      properties:
+        code:
+          type: integer
+          format: int32
+        message:
+          type: string
+        data:
+          $ref: '#/components/schemas/KeyPageResponse'
+        traceId:
+          type: string
+    KeyPageResponse:
+      type: object
+      properties:
+        list:
+          type: array
+          items:
+            $ref: '#/components/schemas/KeyResponse'
+        total:
+          type: integer
+          format: int64
+        page:
+          type: integer
+          format: int32
+        pageSize:
+          type: integer
+          format: int32
+        truncated:
+          type: boolean
+        namespace:
+          $ref: '#/components/schemas/NamespaceResponse'
+    KeyResponse:
+      type: object
+      properties:
+        name:
+          type: string
+        ttlSeconds:
+          type: integer
+          format: int64
+        type:
+          type: string
+    NamespaceResponse:
+      type: object
+      properties:
+        code:
+          type: string
+        name:
+          type: string
+        prefix:
+          type: string
+        mode:
+          type: string
+        purpose:
+          type: string
+        clearEffect:
+          type: string
+        sensitive:
+          type: boolean
+        clearable:
+          type: boolean
+        keyCount:
+          type: integer
+          format: int64
+    ApiResponsePageResponseCleanLogResponse:
+      type: object
+      properties:
+        code:
+          type: integer
+          format: int32
+        message:
+          type: string
+        data:
+          $ref: '#/components/schemas/PageResponseCleanLogResponse'
+        traceId:
+          type: string
+    CleanLogResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        action:
+          type: string
+        namespaceCode:
+          type: string
+        namespacePrefix:
+          type: string
+        keyName:
+          type: string
+        deletedCount:
+          type: integer
+          format: int32
+        username:
+          type: string
+        ip:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+    PageResponseCleanLogResponse:
+      type: object
+      properties:
+        page:
+          type: integer
+          format: int64
+        pageSize:
+          type: integer
+          format: int64
+        list:
+          type: array
+          items:
+            $ref: '#/components/schemas/CleanLogResponse'
+        total:
+          type: integer
+          format: int64
+    ApiResponseListRoute:
+      type: object
+      properties:
+        code:
+          type: integer
+          format: int32
+        message:
+          type: string
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Route'
+        traceId:
+          type: string
+    Route:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        path:
+          type: string
+        name:
+          type: string
+        component:
+          type: string
+        meta:
+          $ref: '#/components/schemas/RouteMeta'
+    RouteMeta:
+      type: object
+      properties:
+        title:
+          type: string
+        icon:
+          type: string
+        hidden:
+          type: boolean
+        permission:
+          type: string
+    ApiResponseListString:
+      type: object
+      properties:
+        code:
+          type: integer
+          format: int32
+        message:
+          type: string
+        data:
+          type: array
+          items:
+            type: string
+        traceId:
+          type: string
+    AffectResponse:
+      type: object
+      properties:
+        affected:
+          type: integer
+          format: int32
+    ApiResponseAffectResponse:
+      type: object
+      properties:
+        code:
+          type: integer
+          format: int32
+        message:
+          type: string
+        data:
+          $ref: '#/components/schemas/AffectResponse'
+        traceId:
+          type: string

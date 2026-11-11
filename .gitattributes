@@ -1,0 +1,19 @@
+# 统一换行：仓库内一律 LF，避免 Windows 开发机（core.autocrlf=true）签出后被改成 CRLF，
+# 造成整文件「假改动」。二进制文件由 Git 自动识别，这里显式标注 PDF/Office/压缩包以防误判。
+* text=auto eol=lf
+
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.ico binary
+*.pdf binary
+*.zip binary
+*.jar binary
+*.xlsx binary
+*.docx binary
+*.pptx binary

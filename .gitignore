@@ -1,0 +1,42 @@
+# 构建产物
+server/**/target/
+**/dist/
+**/node_modules/
+*.tsbuildinfo
+apps/pc/vite.config.js
+apps/pc/vite.config.d.ts
+
+# 包管理器
+.pnpm-store/
+
+# 本地运行态（MySQL 数据目录、日志）
+.local/
+
+# 本地开发凭据（含口令，禁止提交到版本库）
+/docs/env/local-dev.md
+server/web/src/main/resources/application-local.yml
+server/web/src/main/resources/application-local.yaml
+
+# IDE
+.idea/
+*.iml
+.vscode/
+.settings/
+.classpath
+.project
+
+# 系统与临时文件
+*.log
+*.tmp
+
+# 上传目录（本地开发）
+# 应用默认 app.file.upload-dir=./data/uploads，相对工作目录解析：
+#   仓库根启动 → data/uploads；server/ 启动 → server/data/uploads；server/web 启动 → server/web/data/uploads。
+# 三处都是运行期字节，不入库。
+/data/
+server/data/uploads/
+server/web/data/
+
+# 设计过程产物（登录页 mockup 打包，非源码，体积 20MB+）
+.trae-html-share-packages/
+.screenshots/

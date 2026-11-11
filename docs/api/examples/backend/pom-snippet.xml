@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  契约验证测试的 Maven 依赖片段（复制到项目 pom.xml 的 <dependencies> 内）。
+  坐标已核对存在：com.atlassian.oai:swagger-request-validator-mockmvc:2.44.9（Maven Central，2025-06 发布）。
+  同一版本线的相关模块：swagger-request-validator-core、-spring-webmvc、-springmvc。
+
+  选型说明（复制后按项目情况二选一，其余保持）：
+  - Spring Boot 3 + MockMvc 单测：用 swagger-request-validator-mockmvc（本片段的默认选择）。
+  - 想用真实 HTTP Filter 拦截（集成测试或本地联调）：改用 swagger-request-validator-spring-webmvc，
+    并把测试里的 OpenApiValidationMatchers 换成 OpenApiValidationFilter。
+  - 版本与 Spring 版本不匹配时，先统一升级到 2.44.9；仍冲突则退到 core 手工组装校验器。
+
+  注意：
+  - 契约文件放在 src/test/resources/openapi.yaml（从 docs/api/openapi.yaml 复制，构建时勿手改源文件）。
+  - 该依赖只在 test 作用域使用，不要进主代码依赖。
+-->
+<dependencies>
+  <dependency>
+    <groupId>com.atlassian.oai</groupId>
+    <artifactId>swagger-request-validator-mockmvc</artifactId>
+    <version>2.44.9</version>
+    <scope>test</scope>
+  </dependency>
+
+  <!-- Spring Boot 测试标配；项目一般已有，缺失时补 -->
+  <dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-test</artifactId>
+    <scope>test</scope>
+  </dependency>
+</dependencies>

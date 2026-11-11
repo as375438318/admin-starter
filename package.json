@@ -1,0 +1,14 @@
+{
+  "name": "admin-starter",
+  "private": true,
+  "version": "1.0.0",
+  "packageManager": "pnpm@11.7.0",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "pnpm --filter @admin-starter/pc dev",
+    "build": "pnpm --filter @admin-starter/pc build",
+    "preview": "pnpm --filter @admin-starter/pc preview"
+  }
+}

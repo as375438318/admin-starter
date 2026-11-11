@@ -1,0 +1,398 @@
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#app {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--color-canvas);
+  color: var(--color-text-primary);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB',
+    'Microsoft YaHei', Arial, sans-serif;
+  font-size: var(--font-size-md);
+  line-height: var(--line-height-normal);
+  -webkit-font-smoothing: antialiased;
+}
+
+a {
+  color: var(--color-primary);
+  text-decoration: none;
+}
+
+/* Element Plus 主题变量映射 */
+:root {
+  --el-color-primary: var(--color-primary);
+  --el-color-primary-light-3: var(--color-primary-light-3);
+  --el-color-primary-light-5: var(--color-primary-light-5);
+  --el-color-primary-light-7: var(--color-primary-light-7);
+  --el-color-primary-light-8: var(--color-primary-light-8);
+  --el-color-primary-light-9: var(--color-primary-light-9);
+  --el-color-primary-dark-2: var(--color-primary-hover);
+  --el-color-success: var(--color-success);
+  --el-color-warning: var(--color-warning);
+  --el-color-danger: var(--color-danger);
+  --el-color-error: var(--color-danger);
+  --el-color-info: var(--color-info);
+  --el-text-color-primary: var(--color-text-primary);
+  --el-text-color-regular: var(--color-text-secondary);
+  --el-text-color-placeholder: var(--color-text-tertiary);
+  --el-border-color: var(--color-border);
+  --el-border-color-light: var(--color-divider);
+  --el-border-color-lighter: var(--color-divider);
+  --el-fill-color-blank: var(--color-surface);
+  --el-bg-color: var(--color-surface);
+  --el-bg-color-overlay: var(--color-surface);
+  --el-bg-color-page: var(--color-canvas);
+  --el-border-radius-base: var(--radius-md);
+  --el-border-radius-small: var(--radius-sm);
+  --el-font-size-base: var(--font-size-md);
+  --el-component-size: 34px;
+  --el-component-size-small: 28px;
+  --el-component-size-large: 38px;
+  --el-box-shadow: var(--shadow-md);
+  --el-box-shadow-light: var(--shadow-sm);
+  --el-mask-color: var(--color-overlay);
+}
+
+/* 按钮 */
+.el-button {
+  height: 36px;
+  padding: 0 var(--space-4);
+  border-radius: var(--radius-md);
+  font-weight: 500;
+  transition: background-color var(--motion-base) var(--ease-enter),
+    border-color var(--motion-base) var(--ease-enter), color var(--motion-base) var(--ease-enter);
+}
+
+.el-button--small {
+  height: 28px;
+  padding: 0 var(--space-3);
+  border-radius: var(--radius-sm);
+}
+
+.el-button--large {
+  height: 40px;
+  padding: 0 var(--space-5);
+}
+
+.el-button + .el-button {
+  margin-left: var(--space-2);
+}
+
+/* 输入类控件统一高度与圆角 */
+.el-input__wrapper,
+.el-select__wrapper,
+.el-textarea__inner {
+  border-radius: var(--radius-md);
+}
+
+.el-input__wrapper.is-focus,
+.el-select__wrapper.is-focused {
+  box-shadow: 0 0 0 1px var(--color-primary) inset;
+}
+
+/* 表格：表头 40px、行高 48px、正文 13px */
+.el-table {
+  font-size: var(--table-font-size);
+  color: var(--color-text-primary);
+}
+
+.el-table th.el-table__cell {
+  height: var(--table-header-height);
+  padding: 0 var(--space-3);
+  background: var(--color-surface-subtle);
+  color: var(--color-text-secondary);
+  font-size: var(--table-font-size);
+  font-weight: 600;
+}
+
+.el-table td.el-table__cell {
+  height: var(--table-row-height);
+  padding: 0 var(--space-3);
+  font-size: var(--table-font-size);
+}
+
+.el-table .cell {
+  line-height: var(--line-height-tight);
+}
+
+/* 行内文字按钮点击区 ≥32×32；link 按钮背景透明，视觉密度不变 */
+.row-actions .el-button {
+  min-width: 32px;
+  min-height: 32px;
+  padding-top: 4px;
+  padding-bottom: 4px;
+  margin: 0;
+}
+
+/* 选中行与悬停 */
+.el-table__body tr:hover > td.el-table__cell {
+  background: var(--color-surface-subtle);
+}
+
+/* 固定列阴影 */
+.el-table .el-table-fixed-column--left.is-last-column::before,
+.el-table .el-table-fixed-column--left.is-last-column::after {
+  box-shadow: none;
+}
+
+.el-table .el-table-fixed-column--left.is-last-column {
+  box-shadow: 4px 0 8px -4px rgba(15, 23, 42, 0.12);
+}
+
+.el-table .el-table-fixed-column--right.is-first-column {
+  box-shadow: -4px 0 8px -4px rgba(15, 23, 42, 0.12);
+}
+
+/* 复选框全局统一，禁止页面各自实现 */
+.el-checkbox__inner {
+  border-radius: var(--radius-sm);
+  width: 16px;
+  height: 16px;
+}
+
+.el-checkbox__inner::after {
+  left: 5px;
+  top: 2px;
+}
+
+.el-radio__inner {
+  width: 16px;
+  height: 16px;
+}
+
+/* 浮层：圆角与阴影 */
+.el-dialog {
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+}
+
+.el-dialog__header {
+  padding: var(--space-5) var(--space-6) var(--space-3);
+  margin: 0;
+}
+
+.el-dialog__title {
+  font-size: var(--font-size-xl);
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.el-dialog__body {
+  padding: var(--space-4) var(--space-6);
+}
+
+.el-dialog__footer {
+  padding: var(--space-3) var(--space-6) var(--space-5);
+}
+
+.el-drawer {
+  border-radius: var(--radius-xl) 0 0 var(--radius-xl);
+}
+
+.el-drawer__header {
+  margin-bottom: 0;
+  padding: var(--space-5) var(--space-6) var(--space-3);
+  font-size: var(--font-size-xl);
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.el-drawer__body {
+  padding: var(--space-4) var(--space-6);
+}
+
+.el-drawer__footer {
+  padding: var(--space-3) var(--space-6) var(--space-5);
+}
+
+/* 下拉与气泡 */
+.el-dropdown-menu,
+.el-select-dropdown,
+.el-popper {
+  border-radius: var(--radius-md) !important;
+}
+
+.el-message {
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+}
+
+/* 分页 */
+.el-pagination {
+  --el-pagination-button-height: 32px;
+  --el-pagination-button-width: 32px;
+  font-size: var(--font-size-sm);
+}
+
+/* 骨架屏与卡片的底色贴合画布 */
+.el-skeleton__item {
+  background: var(--color-surface-muted);
+}
+
+/* 通用布局工具 */
+.page-container {
+  width: 100%;
+  max-width: var(--layout-content-max-width);
+  margin: 0 auto;
+}
+
+.form-page {
+  width: 100%;
+  max-width: var(--layout-form-max-width);
+  margin: 0 auto;
+}
+
+.page-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+}
+
+.page-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+  padding: var(--space-4) var(--space-5);
+  margin-bottom: var(--space-3);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+}
+
+/* 删除确认弹窗固定 440px，且点遮罩不关闭（由调用方传 closeOnClickModal:false） */
+.confirm-dialog-440 {
+  width: 440px !important;
+}
+
+.page-title {
+  margin: 0;
+  font-size: var(--font-size-xl);
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+.text-ellipsis {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.text-secondary {
+  color: var(--color-text-secondary);
+}
+
+.text-tertiary {
+  color: var(--color-text-tertiary);
+}
+
+/* 列表页通用结构：工具栏、行内操作、错误提示、空状态、分页
+   这里是唯一定义来源。新增列表页直接复用这些类，不要在单页 scoped 里重新定义；
+   历史页面里的同名 scoped 规则属冗余副本，可随时删除（漏定义会导致搜索区竖向塌陷） */
+.toolbar-filters,
+.toolbar-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.toolbar-actions {
+  margin-left: auto;
+}
+
+.row-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.row-actions .el-button + .el-button {
+  margin-left: 0;
+}
+
+.table-error {
+  margin: var(--space-4);
+}
+
+.error-retry {
+  margin-top: var(--space-2);
+}
+
+.table-pagination {
+  padding: var(--space-4) var(--space-5);
+}
+
+.page-pagination {
+  display: flex;
+  justify-content: flex-end;
+  padding: var(--space-4) var(--space-5);
+}
+
+.table-empty {
+  padding: var(--space-8) 0;
+  text-align: center;
+  color: var(--color-text-secondary);
+}
+
+.empty-title {
+  margin: 0 0 var(--space-2);
+  font-size: var(--font-size-md);
+  color: var(--color-text-primary);
+}
+
+.empty-desc {
+  margin: 0 0 var(--space-4);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-tertiary);
+}
+
+/* 滚动条 */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-border-strong);
+  border-radius: var(--radius-pill);
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* 路由过渡 */
+.fade-enter-active {
+  transition: opacity var(--motion-base) var(--ease-enter), transform var(--motion-base) var(--ease-enter);
+}
+
+.fade-leave-active {
+  transition: opacity var(--motion-fast) var(--ease-exit);
+}
+
+.fade-enter-from {
+  opacity: 0;
+  transform: translateY(4px);
+}
+
+.fade-leave-to {
+  opacity: 0;
+}

@@ -1,0 +1,15 @@
+package com.adminstarter.auth.application.dto;
+
+import lombok.AllArgsConstructor;
+import lombok.Data;
+
+@Data
+@AllArgsConstructor
+public class LoginResponse {
+
+    private Long userId;
+    private String username;
+    private String nickname;
+    private long accessExpiresIn;
+    private long refreshExpiresIn;
+}

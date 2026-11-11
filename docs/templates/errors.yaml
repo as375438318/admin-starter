@@ -1,0 +1,99 @@
+# 错误码实例（errors.yaml 骨架 · EXAMPLE-ONLY）
+# 用途：项目业务错误码清单，复制为 docs/api/errors.yaml 后维护。
+# 基础码由 CT-ERR-011 固定，不得改写；项目只能在对应段扩展。
+# code 为整数；name 为 UPPER_SNAKE；每个码必须有 message 与 http。
+# codes: 业务码清单；field_error_codes: 字段级码（字符串，只用于 data.errors[].code，不是业务码）。
+# TODO 只允许写在 YAML 注释里（AGENTS.md §3 的合法 TODO 载体）。
+
+version: 0.0.0
+owner: backend
+# 说明：本文件所有条目均为 EXAMPLE-ONLY，项目初始化必须替换为本项目码表。
+
+codes:
+  - code: 0
+    name: OK
+    http: 200
+    message: 成功
+    status: APPROVED
+  - code: 10001
+    name: INVALID_PARAMETER
+    http: 400
+    message: 请求参数不合法
+    status: APPROVED
+  - code: 10002
+    name: PAYLOAD_TOO_LARGE
+    http: 413
+    message: 文件大小不能超过 {{maxSizeHuman}}
+    status: APPROVED
+    # message 为模板：运行时按 CT-ERR-012 填入当前真实上限的可读值（如 1MB），并返回 data.maxSize（字节整数）
+  - code: 20101
+    name: UNAUTHORIZED
+    http: 401
+    message: 未登录或登录态无效
+    status: APPROVED
+  - code: 20102
+    name: TOKEN_EXPIRED
+    http: 401
+    message: 登录态已过期，请重新登录
+    status: APPROVED
+  - code: 20301
+    name: FORBIDDEN
+    http: 403
+    message: 没有该功能的操作权限
+    status: APPROVED
+  - code: 20401
+    name: RESOURCE_NOT_FOUND
+    http: 404
+    message: 资源不存在
+    status: APPROVED
+  - code: 20501
+    name: RATE_LIMITED
+    http: 429
+    message: 请求过于频繁，请稍后重试
+    status: APPROVED
+  - code: 30201
+    name: VALIDATION_FAILED
+    http: 422
+    message: 提交内容校验未通过
+    status: APPROVED
+  - code: 40901
+    name: STATE_CONFLICT
+    http: 409
+    message: 当前状态不允许该操作
+    status: APPROVED
+  - code: 50001
+    name: SYSTEM_ERROR
+    http: 500
+    message: 系统繁忙，请稍后重试
+    status: APPROVED
+  - code: 40001
+    name: BIZ_RULE_VIOLATED
+    http: 409
+    message: 业务规则校验未通过
+    status: DRAFT
+    # TODO(API): 确认该码的触发场景与文案，签核后改 APPROVED
+
+# 字段级错误码：完整枚举由 CT-ERR-006 定义，项目不得自造；只放在 data.errors[].code。
+field_error_codes:
+  - code: REQUIRED
+    http: 422
+    message: 必填项未提供
+    trigger: 字段缺失、为 null、或为空白字符串
+    status: APPROVED
+  - code: INVALID_FORMAT
+    http: 422
+    message: 格式不符合要求
+    trigger: 提供了值但不满足格式约束（如 @Email、@Pattern）
+    status: APPROVED
+  - code: TOO_LONG
+    http: 422
+    message: 长度超过上限
+    trigger: 值长度超过 CT-FMT-009 或 OpenAPI maxLength
+    status: APPROVED
+  - code: VALIDATION_FAILED
+    http: 422
+    message: 字段校验未通过
+    trigger: 无法归入 REQUIRED／INVALID_FORMAT／TOO_LONG 的字段级错误
+    status: APPROVED
+
+# TODO(API): 按业务域补充项目错误码（40xxx 段），每个码必须写触发场景

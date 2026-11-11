@@ -1,0 +1,55 @@
+# 配置项台账 · 本项目
+#
+# 登记口径：
+#   1. 只登记“用户能在后台改、且会被系统消费”的项；能改但无消费点、或只存库不生效的键不得出现在参数管理（BE-CFG-007）。
+#   2. effect 只允许 STARTUP（启动期读取，改库不生效）/ HOT（热生效）/ DISPLAY_ONLY（仅展示，与行为无关）；
+#      effect=STARTUP 的 afterChange 必须写“重启”。
+#   3. 已删除项、纯展示且与行为无关的项不登记，但须在下方“未登记项去处”说明，避免被误认为漏登。
+#
+# 未登记项去处：
+#   - sys.security.token.secret：已由 Flyway V5__config_governance.sql 从库中物理删除，不得重新登记为后台可改配置；
+#     真实签名密钥来自 application-local.yml / 环境变量 APP_AUTH_SECRET（见 docs/env/local-dev.md §6），
+#     改后必须重启，且旧访问/刷新令牌全部失效。
+#   - 纯展示且无行为影响的项：不登记；DISPLAY_ONLY 只用于“已登记但确认与行为无关”的项。
+#
+# owner 口径：ADR-000 是模板占位编号，不是本项目决策，不能作为定义方；这 5 项的公开契约由
+#   docs/api/openapi.yaml 定义（公开配置白名单、字段语义与 uploadMaxSize 上限），
+#   治理过程与实测证据见 docs/audit/impl-notes.md 的 CFG-AUDIT-001–006。
+#
+# 维护：新增配置项、改变消费点或生效方式时同批更新；未登记即缺陷（BE-CFG-007）。
+# 解析口径：spec-lint 按最小 YAML 子集解析（`- key:` 起一条，缩进 `字段: 值`）；字段写单行，不使用多行块。
+
+- key: sys.name
+  owner: docs/api/openapi.yaml
+  consumedBy: PublicConfigAppService.load → GET /api/v1/public/configs → apps/pc/src/stores/appConfig.ts（document.title/登录页/侧栏/页脚）
+  effect: HOT
+  afterChange: 参数保存后主动失效公开配置缓存，刷新页面即生效
+  verify: 改值后 GET /api/v1/public/configs 立即返回新值，刷新页面四处同步变化
+
+- key: sys.name.slogan
+  owner: docs/api/openapi.yaml
+  consumedBy: PublicConfigAppService.load → 公开接口 slogan → 登录页副标题
+  effect: HOT
+  afterChange: 参数保存后失效缓存，刷新页面生效
+  verify: 改值后公开接口 slogan 变化，登录页副标题同步
+
+- key: sys.copyright
+  owner: docs/api/openapi.yaml
+  consumedBy: PublicConfigAppService.load → 公开接口 copyright → 登录页页脚
+  effect: HOT
+  afterChange: 参数保存后失效缓存，刷新页面生效
+  verify: 改值后公开接口 copyright 变化，页脚同步
+
+- key: sys.icp
+  owner: docs/api/openapi.yaml
+  consumedBy: PublicConfigAppService.load → 公开接口 icp → 登录页页脚备案号
+  effect: HOT
+  afterChange: 参数保存后失效缓存，刷新页面生效
+  verify: 改值后公开接口 icp 变化，页脚同步
+
+- key: sys.upload.max-size
+  owner: docs/api/openapi.yaml
+  consumedBy: PublicConfigAppService.uploadMaxSize（缓存）← FileAppService.upload 比对；公开接口 uploadMaxSize → apps/pc/src/views/system/file/index.vue beforeUpload
+  effect: HOT  # 受容器天花板 200MB 约束；multipart 上限为启动期配置，改库不可突破（CFG-AUDIT-006）
+  afterChange: 参数保存时校验 1MB–200MB，成功即失效缓存；下一次上传/刷新页面生效，无需重启
+  verify: 库值改 1MB 传 2MB 返回 413；改 50MB 同一文件 200；越界值保存返回 422

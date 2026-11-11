@@ -1,0 +1,14 @@
+{
+  "_comment": "把 scripts 与 devDependencies 合并进项目 package.json。openapi-typescript 7.13.0 / msw 3.0.4 / js-yaml 4.1.0 为 npm registry 当前版本（均已核对存在）；typescript 沿用项目自身版本，>=5.0 且满足 openapi-typescript 的 peer 要求。",
+  "scripts": {
+    "gen:types": "openapi-typescript ../docs/api/openapi.yaml -o src/api/schema.d.ts",
+    "gen:mocks": "node scripts/generate-mocks.mjs",
+    "gen:api": "npm run gen:types && npm run gen:mocks"
+  },
+  "devDependencies": {
+    "openapi-typescript": "^7.13.0",
+    "msw": "^3.0.4",
+    "js-yaml": "^4.1.0",
+    "typescript": "^5.0.0"
+  }
+}
