@@ -10,6 +10,11 @@ updates:
     open-pull-requests-limit: 5
     commit-message:
       prefix: "chore(deps)"
+    # 主版本升级会破坏兼容（Spring Boot 4 / 校验器 3.x 等），且 `AGENTS.md` §9-B 规定技术栈版本
+    # 以该节为唯一定义处、升级需走评估。因此这里只收 minor/patch，主版本由人手动发起并开 CR/ADR。
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
     groups:
       # 小版本/补丁合并成一个 PR，避免每周开十几个 PR 互相冲突
       maven-minor-patch:
@@ -25,6 +30,11 @@ updates:
     open-pull-requests-limit: 5
     commit-message:
       prefix: "chore(deps)"
+    # 同上：前端主版本（Vite 5→8、Pinia 2→4、vue-router 4→5）必须评估后再升，
+    # 单元测试通过不代表运行时没坏（我们的单测覆盖不到类型/插件生态的全部破坏面）。
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
     groups:
       npm-minor-patch:
         patterns: ["*"]
