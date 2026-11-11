@@ -1015,3 +1015,14 @@
 - `src/api/*.ts` 的 11 个接口包装：本质是 URL+方法+类型的声明式映射，单测只能断言字符串本身；其正确性由 E2E 与后端契约（`docs/api/openapi.yaml`）约束，投入产出比低。
 - `src/api/http.ts` 剩余 64%（`downloadFile`/`saveBlob`/`upload` 等）：需要 DOM Blob 下载桩，价值低于已覆盖的拦截器分支，留待需要时补。
 - `src/router/index.ts`（守卫）：与权限路由注册强耦合，E2E 的「未登录重定向」「无权限不可见」两条已覆盖其对外行为。
+
+## 远端仓库与 CI 首次运行（2026-11-11）
+
+- 远端：`https://github.com/as375438318/admin-starter.git`（**public**，默认分支 `main`），首次推送 4 个提交至 `e854242`。
+- 推送前做了全历史审计：`git grep` 扫全部 4 个提交，无明文口令 / 私钥 / 令牌；`docs/env/local-dev.md` 与 `application-local.yml` 从未入历史；历史中 >1MB 的文件只有 11 张登录页设计稿 PNG（约 20MB，属预期设计资产）。
+- CI 首次运行（run #1，`e854242`，39s）三条 job 全绿：
+  - 文档门禁（spec-lint）✅ 9s
+  - 后端编译（JDK 17）✅ 33s
+  - 前端：Install → **Unit tests（95 用例，6s）** → Build（vue-tsc + vite，16s）✅
+- 由此关闭此前"CI 未在 GitHub Actions 上实测"的一半：**`ci.yml` 已实测通过**；`e2e.yml` 仍为 `workflow_dispatch`、尚未在 Actions 上跑过（本机已跑通 4 条主链路），首次需在 Actions 页面手动触发。
+- 仓库可见性提醒：当前为 public。若将来要转私有，需在 GitHub Settings 改；届时 `ci.yml` 的 Actions 额度会按私有仓库规则计费。
