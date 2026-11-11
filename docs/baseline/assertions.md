@@ -1,4 +1,4 @@
-# 系统基线 · 设计断言（as-built v1.25）
+# 系统基线 · 设计断言（as-built v1.26）
 
 | 项目 | 内容 |
 |---|---|
@@ -99,3 +99,4 @@
 | 73 | 导入错误清单有**两个不同口径**：`errorRows` 按行去重、`errorCount` 按字段累计，清单最多 200 条且 `remainingErrors` 必须给出未显示条数；导出通道由三个阈值决定——≤2000 同步返回字节、>2000 建异步任务返回 taskId、>100000 直接拒绝 | `ImportErrorCollector.toData`；`ExcelExportPlanner.SYNC_MAX_ROWS`/`MAX_EXPORT_ROWS`；`ImportErrorCollectorTest`、`ExcelExportPlannerTest` | 把两个口径混成一个数字，用户会以为"改完 3 处就好了"其实有 5 行有问题；阈值写错表现为同步响应过大、或用户等一个不存在的任务、或导出打爆内存 | 2026-11-11 |
 | 74 | 彻底删除文件必须**先删行 → 再按 `storage_path` 计数 → 计数为 0 才删物理字节**（文件按 SHA-256 去重，计数不为 0 时删字节会把其它记录的文件变成空壳）；删除/恢复对"不存在或不可见"一律静默成功（幂等且不暴露存在性）。xlsx 解析保留 Excel 真实行号、跳过空行、表头去必填星号 | `FileAppService.purge`／`delete`／`restore`；`ExcelStreamParser.finishRow`／`buildHeader`；`FileRecycleTest`、`ExcelStreamParserTest` | 顺序反了会删掉仍被共享的字节（不可逆）；行号算错用户按提示找不到问题行；空行不跳过会刷屏"第 N 行为空" | 2026-11-11 |
 | 75 | 导出列集合由「schema 的 exportFields + 掩码三态」共同决定：无 `view`/`mask` 权限的掩码字段**整列不输出**（不是输出空串）；模板表头必须带 `*` 必填标记且只包含参与导入的字段 | `ExcelExportWriter.visibleColumns`／`value`；`ExcelTemplateWriter.write`；`ExcelExportWriterTest`、`ExcelTemplateWriterTest` | 列可见性写错 = 导出文件把无权限字段整列外流；模板漏 `*` 用户不知道必填；模板数据页名与导入期望不一致会让整份文件被判「缺少数据页」 | 2026-11-11 |
+| 76 | 秒传命中条件必须是「记录存在 **且字节仍存在**」，只有记录不算（否则返回打不开的文件）；分片大小必须 256KB–5MB、序号必须在 `0..totalChunks-1`、会话只能由上传者本人续传 | `FileAppService.upload`／`instant`／`initChunkSession`／`uploadChunk`；`FileUploadTest` | 只看记录不看字节会产生"秒传成功但下载 404"；分片范围不校验会被塞任意大小请求；会话不校验上传者 = 任何人可污染他人文件 | 2026-11-11 |
