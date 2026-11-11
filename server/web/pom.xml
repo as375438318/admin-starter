@@ -61,7 +61,7 @@
         <dependency>
             <groupId>com.atlassian.oai</groupId>
             <artifactId>swagger-request-validator-mockmvc</artifactId>
-            <version>2.44.9</version>
+            <version>3.0.0</version>
             <scope>test</scope>
         </dependency>
     </dependencies>
