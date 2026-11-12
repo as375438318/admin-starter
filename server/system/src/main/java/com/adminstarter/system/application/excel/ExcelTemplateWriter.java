@@ -245,20 +245,27 @@ public class ExcelTemplateWriter {
         }
     }
 
-    /** 表头富文本：可见文字 + 必填星号（红色加粗）。 */
+    /**
+     * 表头富文本：**所有列都走富文本并给文字段显式加粗**，必填列的星号单独一段标红。
+     *
+     * <p>为什么不能"必填用富文本、非必填用普通字符串"：普通字符串的加粗来自**单元格样式**，
+     * 富文本的加粗来自 **run 自己的字体**。两套机制在 Excel 里表现不一致，会出现
+     * 「有的表头加粗、有的不加粗」（2026-11-12 用户实测反馈）。统一走富文本就没这个歧义。</p>
+     */
     private XSSFRichTextString headerText(XSSFWorkbook workbook, ExcelField<?> field) {
         String header = field.getImportHeader();
-        if (!field.isRequired()) {
-            return new XSSFRichTextString(header);
-        }
         Font base = workbook.createFont();
         base.setBold(true);
-        Font required = workbook.createFont();
-        required.setBold(true);
-        required.setColor(IndexedColors.RED.getIndex());
-        XSSFRichTextString text = new XSSFRichTextString(header + "*");
+        XSSFRichTextString text = field.isRequired()
+                ? new XSSFRichTextString(header + "*")
+                : new XSSFRichTextString(header);
         text.applyFont(0, header.length(), base);
-        text.applyFont(header.length(), header.length() + 1, required);
+        if (field.isRequired()) {
+            Font required = workbook.createFont();
+            required.setBold(true);
+            required.setColor(IndexedColors.RED.getIndex());
+            text.applyFont(header.length(), header.length() + 1, required);
+        }
         return text;
     }
 

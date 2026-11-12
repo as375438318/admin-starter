@@ -1,4 +1,4 @@
-# 系统基线 · 设计断言（as-built v1.43）
+# 系统基线 · 设计断言（as-built v1.44）
 
 | 项目 | 内容 |
 |---|---|
@@ -118,3 +118,4 @@
 | 92 | 契约测试里读响应必须 `getContentAsString(StandardCharsets.UTF_8)`：本项目响应是 `application/json`（不带 charset），MockMvc 默认按 ISO-8859-1 解码，**汉字会膨胀成 3 倍字符**（24 字 → 72 字符），回写请求体后假报 `maxLength` 违规。另：负例要"只校验响应"的校验器；契约里 **`allOf` 成员必须显式 `additionalProperties: true`**，漏了的话 `components/responses` 与路径内联 schema 会一起漏（1.0.4 补齐 13 处） | `ContractValidationTest`；`docs/api/openapi.yaml`（1.0.4）；`CR-20261112-027` | 中文夹具被解成乱码后会误判成"数据超长/实现违约"，浪费整轮排查；allOf 漏声明会让错误响应的契约校验形同虚设 | 2026-11-12 |
 | 93 | 列表排序默认是**升序**：`SortSupport.isAsc(order)` 对 null 返回 `true`，所以「不传 sort/order」= 按默认列升序（最早的在前）。后端**已支持** `?sort=createdAt&order=desc`（`PageQuery` 含两字段 → 控制器绑定 → service 传进 `NoticeQuery` → `SORTS` 白名单 `createdAt`/`title`/`id`，白名单外的值**静默回落**）。通知管理页因此显式传 desc，与收件箱（SQL 写死 desc）保持一致 | `SortSupport`；`NoticeRepositoryImpl`；`apps/pc/src/views/system/notice/index.vue`；`CR-20261112-028` | 以为"默认就是最新的在前"会把管理页顺序当成 bug 反复排查；想改全局默认又不知道影响十几个列表 | 2026-11-12 |
 | 94 | Excel 模板的下拉箭头由 `showDropDown` 控制，而该属性**语义是反的**（`true` = 隐藏箭头）：POI `setSuppressDropDownArrow(true)` 才写出 `showDropDown="false"`＝显示箭头。另：POI `DataValidation` **没有** `setPromptTitle`/`setPrompt`，只有 `createPromptBox(title, text)`；表头要"只有星号是红的"必须用 `XSSFRichTextString` 两段字体 | `ExcelTemplateWriter`；`CR-20261112-029` | 传 `false` 会让模板"看起来配了下拉但箭头被隐藏"，用户以为功能没做；猜 POI 方法名会反复编译失败 | 2026-11-12 |
+| 95 | Excel 表头**必须整行统一富文本**：普通字符串的加粗来自单元格样式、富文本的加粗来自 run 自己的字体，两套机制在 Excel 里表现不一致 → 只给部分列用富文本会出现「有的表头粗有的不粗」。改 `headerText()` 时必须对所有列 `applyFont(0, len, boldFont)` | `ExcelTemplateWriter.headerText`；`ExcelTemplateWriterTest.allHeadersAreBoldRichText`；`CR-20261112-030` | 混用两种机制会重现"表头粗细不一"，且只差一行代码，很容易被后来者"简化"掉 | 2026-11-12 |
