@@ -66,7 +66,7 @@ public class JobRepositoryImpl implements JobRepository {
             wrapper.eq("status", query.getStatus());
         }
         String column = SortSupport.resolveColumn(SORTS, query.getSort(), "created_at");
-        wrapper.orderBy(true, SortSupport.isAsc(query.getOrder()), column).orderByDesc("id");
+        SortSupport.applyOrder(wrapper, column, SortSupport.isAsc(query.getOrder(), SortSupport.NEWEST_FIRST));
         IPage<JobDO> page = jobMapper.selectPage(new Page<>(query.getPage(), query.getPageSize()), wrapper);
         return PageResult.of(page.getRecords().stream().map(converter::toDomain).toList(), page.getTotal());
     }

@@ -107,7 +107,7 @@ public class UserRepositoryImpl implements UserRepository {
         }
 
         String column = SortSupport.resolveColumn(SORTS, query.getSort(), "created_at");
-        wrapper.orderBy(true, SortSupport.isAsc(query.getOrder()), column);
+        SortSupport.applyOrder(wrapper, column, SortSupport.isAsc(query.getOrder(), SortSupport.NEWEST_FIRST));
 
         Page<UserDO> page = userMapper.selectPage(new Page<>(query.getPage(), query.getPageSize()), wrapper);
         List<User> list = page.getRecords().stream().map(converter::toDomain).toList();

@@ -112,7 +112,7 @@ public class DemoTaskRepositoryImpl implements DemoTaskRepository {
             wrapper.eq("dept_id", query.getDeptId());
         }
         String column = SortSupport.resolveColumn(SORTS, query.getSort(), "created_at");
-        wrapper.orderBy(true, SortSupport.isAsc(query.getOrder()), column);
+        SortSupport.applyOrder(wrapper, column, SortSupport.isAsc(query.getOrder(), SortSupport.NEWEST_FIRST));
         return wrapper;
     }
 }

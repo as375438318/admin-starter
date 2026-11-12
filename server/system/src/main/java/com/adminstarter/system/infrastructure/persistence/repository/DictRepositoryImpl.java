@@ -45,7 +45,7 @@ public class DictRepositoryImpl implements DictRepository {
             wrapper.eq("is_enabled", query.getIsEnabled());
         }
         String column = SortSupport.resolveColumn(SORTS, query.getSort(), "created_at");
-        wrapper.orderBy(true, SortSupport.isAsc(query.getOrder()), column);
+        SortSupport.applyOrder(wrapper, column, SortSupport.isAsc(query.getOrder(), SortSupport.NEWEST_FIRST));
         Page<DictTypeDO> page = dictTypeMapper.selectPage(new Page<>(query.getPage(), query.getPageSize()), wrapper);
         return PageResult.of(page.getRecords().stream().map(converter::toDomain).toList(), page.getTotal());
     }

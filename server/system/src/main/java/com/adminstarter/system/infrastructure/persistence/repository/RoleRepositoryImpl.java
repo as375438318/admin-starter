@@ -72,7 +72,7 @@ public class RoleRepositoryImpl implements RoleRepository {
             wrapper.eq("is_enabled", query.getIsEnabled());
         }
         String column = SortSupport.resolveColumn(SORTS, query.getSort(), "sort");
-        wrapper.orderBy(true, SortSupport.isAsc(query.getOrder()), column);
+        SortSupport.applyOrder(wrapper, column, SortSupport.isAsc(query.getOrder(), SortSupport.BY_SORT_COLUMN));
         Page<RoleDO> page = roleMapper.selectPage(new Page<>(query.getPage(), query.getPageSize()), wrapper);
         return PageResult.of(page.getRecords().stream().map(converter::toDomain).toList(), page.getTotal());
     }

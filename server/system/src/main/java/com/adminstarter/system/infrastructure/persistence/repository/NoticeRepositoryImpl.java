@@ -89,7 +89,7 @@ public class NoticeRepositoryImpl implements NoticeRepository {
             wrapper.eq("dept_id", query.getDeptId());
         }
         String column = SortSupport.resolveColumn(SORTS, query.getSort(), "created_at");
-        wrapper.orderBy(true, SortSupport.isAsc(query.getOrder()), column).orderByDesc("id");
+        SortSupport.applyOrder(wrapper, column, SortSupport.isAsc(query.getOrder(), SortSupport.NEWEST_FIRST));
         Page<NoticeDO> page = noticeMapper.selectPage(new Page<>(query.getPage(), query.getPageSize()), wrapper);
         return PageResult.of(page.getRecords().stream().map(converter::toDomain).toList(), page.getTotal());
     }
