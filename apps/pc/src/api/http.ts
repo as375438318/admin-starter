@@ -176,6 +176,17 @@ http.interceptors.response.use(
       throw new ApiError(envelope?.code ?? 20101, message, 401, envelope?.traceId ?? null);
     }
 
+    if (status === 403 && envelope?.code === 20302) {
+      // 必须改密：服务端拦下了业务请求。置位标记并跳到改密页（不弹全局错误，避免首屏一串红条）
+      const { useAuthStore } = await import('@/stores/auth');
+      useAuthStore().setMustChangePassword(true);
+      if (!window.location.pathname.startsWith('/profile')) {
+        window.location.assign('/profile?mustChange=1');
+      }
+      throw new ApiError(20302, envelope?.message ?? '请先修改密码后再使用其他功能', 403,
+        envelope?.traceId ?? null);
+    }
+
     if (status === 422) {
       const data = envelope?.data as {
         errors?: FieldError[];

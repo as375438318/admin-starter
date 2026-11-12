@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { loginAsAdmin, loginAsEmployee } from './helpers';
 
 /**
  * 主链路冒烟（ADR-006 的第 2 步）：只保 3–5 条，覆盖此前靠人工 CDP 验证的场景。
@@ -10,6 +11,14 @@ const ADMIN = { username: 'admin', password: 'admin123' };
 const EMPLOYEE = { username: 'dev1', password: 'admin123' };
 
 async function login(page: Page, username: string, password: string): Promise<void> {
+  if (username === ADMIN.username) {
+    await loginAsAdmin(page);
+    return;
+  }
+  if (username === EMPLOYEE.username) {
+    await loginAsEmployee(page);
+    return;
+  }
   await page.goto('/login');
   await page.getByPlaceholder('请输入账号').fill(username);
   await page.getByPlaceholder('请输入密码').fill(password);

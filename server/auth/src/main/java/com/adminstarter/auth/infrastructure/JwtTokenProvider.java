@@ -37,7 +37,8 @@ public class JwtTokenProvider {
         this.key = Keys.hmacShaKeyFor(properties.getSecret().getBytes(StandardCharsets.UTF_8));
     }
 
-    public String createAccessToken(CurrentUser user, String jti, long tokenVersion, String sessionId) {
+    public String createAccessToken(CurrentUser user, String jti, long tokenVersion, String sessionId,
+            boolean mustChangePassword) {
         Instant now = Instant.now();
         return Jwts.builder()
                 .subject(String.valueOf(user.getUserId()))
@@ -49,6 +50,8 @@ public class JwtTokenProvider {
                 .claim("deptId", user.getDeptId())
                 .claim("roles", user.getRoles())
                 .claim("perms", user.getPermissions())
+                // 只置位不置假：令牌体积小，且"没有该声明"即代表不需要改密
+                .claim("pwd", mustChangePassword ? Boolean.TRUE : null)
                 .issuedAt(Date.from(now))
                 .expiration(Date.from(now.plus(properties.getAccessTtl())))
                 .signWith(key)

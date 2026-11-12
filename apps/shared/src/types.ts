@@ -24,6 +24,10 @@ export interface LoginResult {
   nickname: string;
   accessExpiresIn: number;
   refreshExpiresIn: number;
+  /** true = 必须先修改密码（管理员重置 / 首登 / 口令过期），除改密与登出外的接口都会被 403+20302 拦下 */
+  mustChangePassword: boolean;
+  /** true = 口令已超过有效期 */
+  passwordExpired: boolean;
 }
 
 export type MaskState = 'MASKED' | 'HIDDEN';

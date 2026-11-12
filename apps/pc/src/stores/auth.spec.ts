@@ -14,6 +14,16 @@ import { useAuthStore } from './auth';
 
 const PROFILE = { userId: 1, username: 'admin', nickname: '管理员', deptId: 1, deptName: '总部' };
 
+const LOGIN_RESULT = {
+  userId: 1,
+  username: 'admin',
+  nickname: '管理员',
+  accessExpiresIn: 900,
+  refreshExpiresIn: 604800,
+  mustChangePassword: false,
+  passwordExpired: false,
+};
+
 describe('useAuthStore（登录态与权限集合）', () => {
   beforeEach(() => {
     setActivePinia(createPinia());
@@ -21,7 +31,7 @@ describe('useAuthStore（登录态与权限集合）', () => {
     api.me.mockResolvedValue(PROFILE);
     api.routes.mockResolvedValue([]);
     api.permissions.mockResolvedValue([]);
-    api.login.mockResolvedValue(undefined);
+    api.login.mockResolvedValue({ ...LOGIN_RESULT });
     api.logout.mockResolvedValue(undefined);
   });
 
@@ -36,6 +46,7 @@ describe('useAuthStore（登录态与权限集合）', () => {
     expect(auth.menuRoutes).toHaveLength(1);
     expect(auth.loaded).toBe(true);
     expect(auth.hasPermission('system:user:list')).toBe(true);
+    expect(auth.mustChangePassword).toBe(false);
   });
 
   it('hasPermission：未传权限码视为放行，传入但未授权则拒绝', async () => {
@@ -81,6 +92,27 @@ describe('useAuthStore（登录态与权限集合）', () => {
     expect(api.login).toHaveBeenCalledWith('admin', 'admin123');
     expect(api.me).toHaveBeenCalledTimes(1);
     expect(auth.hasPermission('system:user:list')).toBe(true);
+    expect(auth.mustChangePassword).toBe(false);
+  });
+
+  it('登录响应带 mustChangePassword/passwordExpired 时置位（等保 P0-1 前端引导的依据）', async () => {
+    api.login.mockResolvedValue({ ...LOGIN_RESULT, mustChangePassword: true, passwordExpired: true });
+    const auth = useAuthStore();
+
+    await auth.login('admin', 'admin123');
+
+    expect(auth.mustChangePassword).toBe(true);
+    expect(auth.passwordExpired).toBe(true);
+  });
+
+  it('仅 passwordExpired 为 true 时也视为必须改密（过期与首登都要先改密）', async () => {
+    api.login.mockResolvedValue({ ...LOGIN_RESULT, mustChangePassword: false, passwordExpired: true });
+    const auth = useAuthStore();
+
+    await auth.login('admin', 'admin123');
+
+    expect(auth.mustChangePassword).toBe(true);
+    expect(auth.passwordExpired).toBe(true);
   });
 
   it('logout 即使接口失败也必须清空本地登录态（否则前端假装已登录）', async () => {
