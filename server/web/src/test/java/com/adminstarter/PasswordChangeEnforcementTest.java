@@ -106,7 +106,8 @@ class PasswordChangeEnforcementTest extends AbstractIntegrationTest {
     @DisplayName("必须改密时访问业务接口被拦：403 + 20302（不是 401，前端据此弹改密框而不是跳登录）")
     void blocksBusinessEndpointsUntilPasswordChanged() throws Exception {
         Cookie access = login(TEMP_INITIAL_PASSWORD);
-        mockMvc.perform(get("/api/v1/auth/routes").cookie(access))
+        // 注意：不能用 /auth/routes —— 它在"能自救"白名单里（前端 bootstrap 需要），必须挑一个确实受保护的业务接口
+        mockMvc.perform(get("/api/v1/demo-tasks").param("page", "1").param("pageSize", "1").cookie(access))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.code").value(20302));
     }
@@ -146,7 +147,7 @@ class PasswordChangeEnforcementTest extends AbstractIntegrationTest {
 
         // 改密会 bump token_version，旧令牌失效；用新口令重新登录
         Cookie newAccess = login(TEMP_STRONG_PASSWORD);
-        mockMvc.perform(get("/api/v1/auth/routes").cookie(newAccess))
+        mockMvc.perform(get("/api/v1/demo-tasks").param("page", "1").param("pageSize", "1").cookie(newAccess))
                 .andExpect(status().isOk());
     }
 }
