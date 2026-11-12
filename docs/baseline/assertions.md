@@ -1,4 +1,4 @@
-# 系统基线 · 设计断言（as-built v1.47）
+# 系统基线 · 设计断言（as-built v1.48）
 
 | 项目 | 内容 |
 |---|---|
@@ -122,3 +122,4 @@
 | 96 | 仪表盘统计是**系统级聚合，不随数据权限收窄**（用户数/文件数/日志数等在各业务页是有数据权限的），因此由权限码 `system:dashboard:view` 把关、默认只授 `SUPER_ADMIN`。**把该权限授予部门管理员＝让他看到全系统聚合数**。另：无权限时接口返回 403+20301（不是空数据），前端据此隐藏统计区 | `DashboardAppService`、`DashboardController`、`V18__dashboard_permission.sql`；`CR-20261112-031` | 误以为"仪表盘和列表一样受数据权限保护"而放心授权；或误以为空数据是"系统没数据"，排查方向完全错 | 2026-11-12 |
 | 97 | 列表默认排序（统一规则）：**流水/事务类**（`created_at`）默认 **DESC 最新在前**——用户、参数、字典类型、定时任务、通知、操作日志、示例任务；**参考数据**（`sort` 列）默认 **ASC**——角色、岗位、部门、菜单、字典项。`SortSupport.isAsc(order, defaultDescending)` **默认方向必须由调用方显式声明**（老签名 `isAsc(order)` 对 null 恒为 true，正是两派默认顺序的根源）；所有分页查询必须带**同方向 `id` 次级键**（种子数据常同秒，否则翻页重复/漏条）；白名单外字段与非法方向都**静默回落**不报错 | `SortSupport`；9 个 `*RepositoryImpl`；`ListOrderingTest`、`SortSupportTest`；`CR-20261112-032` | 新增列表若照抄旧写法 `isAsc(order)` 会重现"两种默认顺序"；漏次级键会在同秒数据上翻页重复 | 2026-11-12 |
 | 98 | 参数生效方式由 `ConfigEffects` **按键前缀**判定：`app.*` → `STARTUP`（`@ConfigurationProperties` 启动期绑定，改库必须重启）、`sys.*` → `HOT`（运行期读库 + 缓存失效，改完即生效）。该判定必须与 `docs/design/config-registry.yaml` 的 `effect` 一致，由 `ConfigEffectsTest` 解析台账校验。字典缓存用**代际键**失效：**必须 `increment` 而不是 `delete`**（删除会让自增回到同值→命中旧缓存） | `ConfigEffects`、`DictAppService`、`CacheNamespaces.CODE_DICT`；`ConfigEffectsTest`、`DictConfigHotReloadTest`；`CR-20261112-033` | 台账与代码不一致会让前端对"需重启"的键显示"立即生效"；代际键写错会静默返回陈旧字典（手工点测极难发现） | 2026-11-12 |
+| 99 | 契约测试覆盖重型写接口（上传/分片/导入）的既有约束：① MockMvc `multipart` 的请求体校验器看不到 → 用"只校验响应"的校验器；② 分片 `chunkSize` 下限 **256KB**；③ 分片初始化字段是 `size` + `contentType`（**不是** `totalSize`，缺省 `size=0` 报"文件大小不能小于 0"）；④ 分片 PUT 是 **multipart 字段 `chunk`**，不是裸字节；⑤ 上传夹具**内容必须每次唯一**，否则命中秒传（`instant=true`、无 `uploadId`）；⑥ 导入数据页名 = `schema.dataSheetName()`（示例任务为「示例任务」），成功响应字段是 `imported`；⑦ OAS 3.0 的 `nullable` **不作用于 `allOf` 分支**，可为 null 的对象只能用"字段缺省"表达 | `ContractValidationWriteHeavyTest`；`docs/api/openapi.yaml`（1.1.1）；`CR-20261112-034` | 照抄这些约定会写出"永远红"或"永远绿"的假测试；把 `nullable+allOf` 当可用组合会反复卡在同一个校验错误 | 2026-11-12 |

@@ -10,7 +10,7 @@
 openapi: 3.0.3
 info:
   title: 项目基础框架 · 后台管理接口契约
-  version: 1.1.0
+  version: 1.1.1
   description: |
     本项目接口契约（手写维护，版本随接口演进递增，见 CT-VER）。
     统一响应信封见 CT-RESP-001（data 必须存在，无值时为 null）；禁止 204/空 body 见 CT-RESP-009；
@@ -2602,9 +2602,10 @@ components:
                 instant:
                   type: boolean
                 file:
-                  nullable: true
-                  allOf:
-                    - $ref: '#/components/schemas/FileRecord'
+                  # 仅秒传命中时出现；未命中时**字段缺省**（不是 null）。
+                  # 原因：OAS 3.0 的 `nullable` 与 `allOf` 的 $ref 组合表达不了"可为 null 的对象"，
+                  # 校验器仍会按 object 校验 null（2026-11-12 由分片上传契约测试发现）。
+                  $ref: '#/components/schemas/FileRecord'
     ChunkInitRequest:
       type: object
       required: [fileName, size, sha256, chunkSize]
@@ -2651,9 +2652,10 @@ components:
                   type: boolean
                   description: 命中秒传时为 true，此时 file 非空
                 file:
-                  nullable: true
-                  allOf:
-                    - $ref: '#/components/schemas/FileRecord'
+                  # 仅秒传命中时出现；未命中时**字段缺省**（不是 null）。
+                  # 原因：OAS 3.0 的 `nullable` 与 `allOf` 的 $ref 组合表达不了"可为 null 的对象"，
+                  # 校验器仍会按 object 校验 null（2026-11-12 由分片上传契约测试发现）。
+                  $ref: '#/components/schemas/FileRecord'
     FileResponse:
       allOf:
         - $ref: '#/components/schemas/Envelope'
@@ -3810,6 +3812,10 @@ components:
 # TODO(API): 补齐本项目其余接口；每新增接口必须回写错误码与字段约定，并把 x-status 从 DRAFT 推进到 APPROVED
 
 # 变更记录（CT-VER-005：版本号 / 日期 / 影响面 / 迁移方式）
+# 1.1.1 | 2026-11-12 | `ChunkSessionResponse.data.file` 语义明确为"仅秒传命中时出现，未命中时字段缺省"
+#         （原写法 `nullable + allOf` 在 OAS 3.0 下无法通过校验：nullable 不作用于 allOf 分支）。
+#         实现同步改为 null 时不序列化该字段；调用方读取方式不变（null 与缺省等价）。
+#         起因：新增「分片上传」契约测试。仅描述精度修正，状态码与业务行为未变。
 # 1.1.0 | 2026-11-12 | 新增 `GET /api/v1/dashboard/overview`（工作台统计概览，权限码 `system:dashboard:view`）
 #         与 `DashboardOverviewResponse` 等 schema。纯新增、向后兼容，无既有字段/状态码改动。
 #         口径：系统级聚合，不随数据权限收窄；trends 固定近 7 天升序补 0。
