@@ -266,6 +266,7 @@ node tools/spec-lint/cli.mjs --root "<项目根目录>"
 
 | 版本 | 日期 | 变更内容 |
 |---|---|---|
+| v1.36 | 2026-11-12 | 工具/安全库 minor 升级（`CR-20261112-022`）：`poi-ooxml 5.4.1→5.5.1`、`jjwt 0.12.5→0.13.0`、`swagger-request-validator 2.44.9→2.46.1`，分两步各跑全量验证（170 用例通过）；断言新增 #87 |
 | v1.34 | 2026-11-12 | 依赖策略细化（`CR-20261112-019`）：Maven 的 `spring-boot-starter-parent`／`mybatis-plus-*`／`springdoc-*`／`mapstruct*` **只收 patch**（实测 MyBatis-Plus 3.5.9 起 JSqlParser 独立成件，minor 升级直接编译失败）；断言新增 #84 |
 | v1.33 | 2026-11-12 | Dependabot 只收 minor/patch（`CR-20261112-018`）：主版本升级改为人工发起（先 CR/ADR，再改 §9-B 与版本号），理由写明「升级 PR 的 CI 全绿不等于可合并」；断言新增 #83 |
 | v1.32 | 2026-11-12 | 前端包体拆分（`CR-20261112-017`）：`index.js` **1,318 kB → 39 kB**（gzip 428→14.8 kB），按变更频率分 `vendor-element-plus`/`vendor-vue`/`vendor`/业务包；CI 新增「业务 chunk ≤ 400KB」门禁；明确总下载量基本不变、真正瘦身需按需引入（待 ADR）；断言新增 #82 |

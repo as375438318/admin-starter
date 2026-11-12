@@ -1,4 +1,4 @@
-# 系统基线 · 设计断言（as-built v1.35）
+# 系统基线 · 设计断言（as-built v1.36）
 
 | 项目 | 内容 |
 |---|---|
@@ -110,3 +110,4 @@
 | 84 | Maven 侧"框架核心"依赖**只收 patch**：`spring-boot-starter-parent`、`mybatis-plus-*`、`springdoc-*`、`mapstruct*` 的 minor 也视为框架升级（SB minor 连带 Spring Framework/Security 版本线；**MyBatis-Plus 3.5.9 起 JSqlParser 独立成件 `mybatis-plus-jsqlparser`**，直接升会让 `net.sf.jsqlparser.*` 编译失败） | `.github/dependabot.yml`；`CR-20261112-019`；`RoleDataPermissionHandler`（用到 jsqlparser） | 把 maven minor 当安全升级自动合 → 后端编译直接红；或升完 MP 后忘记补 `mybatis-plus-jsqlparser`，运行期数据权限拦截器失效（更危险） | 2026-11-12 |
 | 85 | CI 动作版本：`actions/checkout@v7`、`actions/setup-java@v6`、`pnpm/action-setup@v6`、`actions/setup-node@v4`、`actions/upload-artifact@v4`。**升级只接受有依据的目标版本**（Dependabot 提议或官方发布说明），不得凭印象写版本号 | `.github/workflows/ci.yml`、`e2e.yml`；`CR-20261112-020` | 猜版本号会让所有 job 卡在该步骤（"unable to resolve action"）；而 dependabot 未提议 = 当前已是最新，不要"顺手升" | 2026-11-12 |
 | 86 | 通过 API 合并"修改 `.github/workflows/*` 的 PR"需要 PAT 具备 **`Workflows: Read and write`**；否则即使检查全绿也会被拒（`refusing to allow a Personal Access Token to create or update workflow ... without workflow scope`），且 `update-branch` 同样 403。绕行：用自建分支提交同样改动再合并 | `.github/workflows/*`；`CR-20261112-021` | 遇到该报错容易误判为"权限不足/检查未过"反复重试；知道绕行方式可省一轮 | 2026-11-12 |
+| 87 | 工具/安全库版本：`poi-ooxml 5.5.1`、`jjwt 0.13.0`、`swagger-request-validator-mockmvc 2.46.1`（这三项不在 `AGENTS.md` §9-B 的锁版范围内，可独立升级；升时**分项跑全量**以便红灯定位到具体库） | `server/pom.xml`、`server/web/pom.xml`；`CR-20261112-022` | 一次升多个库后变红，无法判断是哪个库的问题；POI 影响 Excel 三部曲、jjwt 影响鉴权、校验器影响契约测试，三者都有现成测试可直接验证 | 2026-11-12 |
