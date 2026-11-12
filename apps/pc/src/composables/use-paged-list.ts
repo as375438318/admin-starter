@@ -12,8 +12,11 @@ export interface PagedState {
   total: number;
 }
 
+/** 排序方向：`undefined` 表示不传（用后端默认排序，见断言 #97） */
+export type SortOrder = 'asc' | 'desc' | undefined;
+
 export interface UsePagedListOptions<T, F extends object> {
-  /** 请求函数，入参为「筛选条件 + 分页参数」 */
+  /** 请求函数，入参为「筛选条件 + 分页参数 + 排序参数」 */
   fetcher: (params: F & PageParams) => Promise<PageData<T>>;
   /** 筛选条件初始值，同时作为重置与「是否存在筛选」的基准 */
   initialFilters: F;
@@ -38,6 +41,15 @@ export interface UsePagedListResult<T, F extends object> {
   resetFilters: () => void;
   onPageSizeChange: (size: number) => void;
   onPageChange: (current: number) => void;
+  /** 当前排序字段（后端白名单字段名）；undefined = 用后端默认排序 */
+  sort: Ref<string | undefined>;
+  /** 当前排序方向 */
+  order: Ref<'asc' | 'desc' | undefined>;
+  /**
+   * 接 `useTableColumns().onSortChange` 的排序变化：
+   * 写入 sort/order 并**回到第 1 页**再加载——排序变了还停在第 3 页，用户会看到空结果。
+   */
+  onSortChange: (sort: string | undefined, order: SortOrder) => void;
 }
 
 /**
@@ -53,6 +65,8 @@ export function usePagedList<T, F extends object>(options: UsePagedListOptions<T
   const initial = { ...options.initialFilters } as F;
   const filters = reactive({ ...options.initialFilters }) as unknown as F;
   const rows = ref<T[]>([]) as Ref<T[]>;
+  const sort = ref<string | undefined>(undefined) as Ref<string | undefined>;
+  const order = ref<'asc' | 'desc' | undefined>(undefined) as Ref<'asc' | 'desc' | undefined>;
   const loading = ref(false);
   const loadError = ref('');
   const skeletonVisible = useDelayedSkeleton(loading);
@@ -66,7 +80,13 @@ export function usePagedList<T, F extends object>(options: UsePagedListOptions<T
     loading.value = true;
     loadError.value = '';
     try {
-      const params = { ...filters, page: page.page, pageSize: page.pageSize } as F & PageParams;
+      // 只在有排序时才带上 sort/order：不传让后端走默认排序（CR-20261112-032 已统一口径）
+      const params = {
+        ...filters,
+        page: page.page,
+        pageSize: page.pageSize,
+        ...(sort.value ? { sort: sort.value, order: order.value } : {}),
+      } as F & PageParams;
       const data = await options.fetcher(params);
       rows.value = data.list;
       page.total = data.total;
@@ -105,6 +125,13 @@ export function usePagedList<T, F extends object>(options: UsePagedListOptions<T
     void load();
   }
 
+  function onSortChange(nextSort: string | undefined, nextOrder: SortOrder): void {
+    sort.value = nextSort;
+    order.value = nextOrder;
+    page.page = 1;
+    void load();
+  }
+
   return {
     page,
     filters,
@@ -118,6 +145,9 @@ export function usePagedList<T, F extends object>(options: UsePagedListOptions<T
     resetFilters,
     onPageSizeChange,
     onPageChange,
+    sort,
+    order,
+    onSortChange,
   };
 }
 
