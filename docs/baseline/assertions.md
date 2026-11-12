@@ -1,4 +1,4 @@
-# 系统基线 · 设计断言（as-built v1.40）
+# 系统基线 · 设计断言（as-built v1.41）
 
 | 项目 | 内容 |
 |---|---|
@@ -115,3 +115,4 @@
 | 89 | 口令策略（等保 P0-1）：长度 10–64、字符类 ≥3、30 项弱口令表（含 `admin123`）、不得含账号名（账号名 ≥3 位才判定）、禁 3 连相同与 4 位顺序；失败 **422 + 30202** 且 message 指明具体原因。**`password_updated_at` 为 NULL 视为已过期**（fail-closed）。管理员重置口令会把 `must_change_password` 置 1 | `PasswordPolicy`、`PasswordPolicyProperties`、`V17__password_policy.sql`；`docs/design/config-registry.yaml`（6 键）；`CR-20261112-024` | 把 NULL 当"刚改过"会让历史账号永不过期；重置后不置位则"管理员知道口令"成为长期后门 | 2026-11-12 |
 | 90 | 必须改密时服务端**真的拦**：access token 带 `pwd` 声明 → 非白名单请求 **403 + 20302**（不是 401）。白名单必须包含 `/api/v1/auth/me`、`/auth/routes`、`/auth/permissions`——**漏了这三个，改密页 bootstrap 失败会被踢回登录页，用户永远改不了密码**。E2E 首次登录会真实走一遍强制改密（`apps/pc/e2e/helpers.ts` 自适应，强口令不得含账号名） | `JwtAuthenticationFilter`（白名单 `isAllowedWhilePasswordChangeRequired`）；`CR-20261112-025` | 把 20302 当成 401 处理会让前端跳登录页而永远不改密；白名单漏 bootstrap 接口会造成"死锁" | 2026-11-12 |
 | 91 | 前端组件库：`element-plus 2.14.8`（`ADR-007` 那批之后单独补的同主版本 minor，跨 6 个小版本）。升级后业务入口 chunk 反而变小（32.46→15.48 kB）是**新版模块切分方式变化**，不是优化成果 | `apps/pc/package.json`；`AGENTS.md` 技术栈表；`CR-20261112-026` | 把 chunk 变小当成本次功劳会误导后续判断；同主版本跨多个 minor 也常有组件行为变化，需人工点重点页 | 2026-11-12 |
+| 92 | 契约测试里读响应必须 `getContentAsString(StandardCharsets.UTF_8)`：本项目响应是 `application/json`（不带 charset），MockMvc 默认按 ISO-8859-1 解码，**汉字会膨胀成 3 倍字符**（24 字 → 72 字符），回写请求体后假报 `maxLength` 违规。另：负例要"只校验响应"的校验器；契约里 **`allOf` 成员必须显式 `additionalProperties: true`**，漏了的话 `components/responses` 与路径内联 schema 会一起漏（1.0.4 补齐 13 处） | `ContractValidationTest`；`docs/api/openapi.yaml`（1.0.4）；`CR-20261112-027` | 中文夹具被解成乱码后会误判成"数据超长/实现违约"，浪费整轮排查；allOf 漏声明会让错误响应的契约校验形同虚设 | 2026-11-12 |

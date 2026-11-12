@@ -1431,3 +1431,12 @@ E2E 新增 `e2e/helpers.ts`：首次跑真的走一遍"被强制改密 → 改�
 `element-plus 2.8.8 → 2.14.8`（同主版本跨 6 个小版本），`AGENTS.md` 技术栈表同步为 `Element Plus 2.14`。三层验证全跑：干净重建构建通过、97 单测通过、起后端 E2E 7/7。
 
 产物上 `vendor-element-plus` 945 kB（gzip 285 kB），业务入口 chunk 反而从 32.46 kB 降到 15.48 kB —— 是新版对样式/组件模块切分方式变化带来的，**不是**本次刻意优化，CR 里写清避免误读。遗留：vue 3.5.45 / typescript 5.9 / axios 仍待随下次 minor 批处理。
+## 契约测试扩到写接口（2026-11-12，CR-20261112-027）
+
+契约测试 7 → **11**：新增 `POST /my-notices/read-all`、`PUT /jobs/{id}`、`PUT /jobs/{id}/status`、`PUT /jobs/{id}` 缺必填字段（负例）。夹具**从真实接口取**（`GET /jobs` 拿任务，用当前值原样回写），不在测试里手写常量——手写必然随实现漂移，"改了实现测试还过"是最危险的情况。
+
+**逼出两个真问题**：
+1. **契约缺陷**：负例的 422 响应被判 `additionalProperties` 违规，因为 `allOf` 成员未声明时校验器按"关闭"处理。1.0.2 那批只修了 `components/schemas` 下的 26 处，`components/responses` 的 `ValidationError` 与 **12 处路径内联 schema** 全漏了。已全部补齐并写脚本复扫（仍缺 0 处），契约版本 1.0.3 → **1.0.4**。
+2. **测试自身缺陷**：`MockHttpServletResponse.getContentAsString()` 用响应头声明 charset，而本项目是 `application/json`（无 charset）→ 默认 ISO-8859-1 → **每个汉字膨胀成 3 个字符**（24 字变 72），回写成请求体后超 `maxLength: 64`。第一版差点被我误判成"种子数据任务名超长"。修法：显式 `getContentAsString(StandardCharsets.UTF_8)`。
+
+结果：后端 193 用例通过（common 26 / system 149 / web 18）。
