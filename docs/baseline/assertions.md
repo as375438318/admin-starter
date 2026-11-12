@@ -1,4 +1,4 @@
-# 系统基线 · 设计断言（as-built v1.48）
+# 系统基线 · 设计断言（as-built v1.49）
 
 | 项目 | 内容 |
 |---|---|
@@ -123,3 +123,4 @@
 | 97 | 列表默认排序（统一规则）：**流水/事务类**（`created_at`）默认 **DESC 最新在前**——用户、参数、字典类型、定时任务、通知、操作日志、示例任务；**参考数据**（`sort` 列）默认 **ASC**——角色、岗位、部门、菜单、字典项。`SortSupport.isAsc(order, defaultDescending)` **默认方向必须由调用方显式声明**（老签名 `isAsc(order)` 对 null 恒为 true，正是两派默认顺序的根源）；所有分页查询必须带**同方向 `id` 次级键**（种子数据常同秒，否则翻页重复/漏条）；白名单外字段与非法方向都**静默回落**不报错 | `SortSupport`；9 个 `*RepositoryImpl`；`ListOrderingTest`、`SortSupportTest`；`CR-20261112-032` | 新增列表若照抄旧写法 `isAsc(order)` 会重现"两种默认顺序"；漏次级键会在同秒数据上翻页重复 | 2026-11-12 |
 | 98 | 参数生效方式由 `ConfigEffects` **按键前缀**判定：`app.*` → `STARTUP`（`@ConfigurationProperties` 启动期绑定，改库必须重启）、`sys.*` → `HOT`（运行期读库 + 缓存失效，改完即生效）。该判定必须与 `docs/design/config-registry.yaml` 的 `effect` 一致，由 `ConfigEffectsTest` 解析台账校验。字典缓存用**代际键**失效：**必须 `increment` 而不是 `delete`**（删除会让自增回到同值→命中旧缓存） | `ConfigEffects`、`DictAppService`、`CacheNamespaces.CODE_DICT`；`ConfigEffectsTest`、`DictConfigHotReloadTest`；`CR-20261112-033` | 台账与代码不一致会让前端对"需重启"的键显示"立即生效"；代际键写错会静默返回陈旧字典（手工点测极难发现） | 2026-11-12 |
 | 99 | 契约测试覆盖重型写接口（上传/分片/导入）的既有约束：① MockMvc `multipart` 的请求体校验器看不到 → 用"只校验响应"的校验器；② 分片 `chunkSize` 下限 **256KB**；③ 分片初始化字段是 `size` + `contentType`（**不是** `totalSize`，缺省 `size=0` 报"文件大小不能小于 0"）；④ 分片 PUT 是 **multipart 字段 `chunk`**，不是裸字节；⑤ 上传夹具**内容必须每次唯一**，否则命中秒传（`instant=true`、无 `uploadId`）；⑥ 导入数据页名 = `schema.dataSheetName()`（示例任务为「示例任务」），成功响应字段是 `imported`；⑦ OAS 3.0 的 `nullable` **不作用于 `allOf` 分支**，可为 null 的对象只能用"字段缺省"表达 | `ContractValidationWriteHeavyTest`；`docs/api/openapi.yaml`（1.1.1）；`CR-20261112-034` | 照抄这些约定会写出"永远红"或"永远绿"的假测试；把 `nullable+allOf` 当可用组合会反复卡在同一个校验错误 | 2026-11-12 |
+| 100 | 档位判定（`AGENTS.md` v1.7 起）：**跨模块行为变更**（改运行时行为、跨多模块、未命中 `PRC-APR-001`）落 **B 档**，需求条目与计划**以 CR 的影响面清单替代**；影响面清单必须列到接口／页面粒度，禁止写"已评估"。判定顺序为：APR → 跨模块行为变更 → 单模块纯新增 → 工程化/治理 → 其余微改。另：`AGENTS.md` 属只读文件，改动需人确认并记 CR | `AGENTS.md` §4.1／§4.2；`CR-20261112-035` | 遇到这类变更时误判为 A 或 D 而少写文档；或把它当 C 去要审批，白等一轮 | 2026-11-12 |

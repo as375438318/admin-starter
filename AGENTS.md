@@ -1,6 +1,6 @@
 # AGENTS.md · AI 开发执行入口
 
-> 版本：v1.6（2026-11-08）
+> 版本：v1.7（2026-11-12）
 > 本文件只做索引、路由与门禁，**不复制规范正文**。规则见 `docs/specs/` 文档，流程细节见 `docs/specs/startup-change-process.md`。
 > 路径一律使用项目内相对路径，不写本机绝对路径。
 
@@ -94,7 +94,11 @@
 - **跨模块联动本身不升档**：是否落 C 只看是否命中 `PRC-APR-001`；未命中的跨模块纯新增落 B，禁止自行升为 C 另开审批。
 - **档位不豁免 CR**：任何档位只要命中 `PRC-CR-001` 的范围，先开 CR 再动手；A 档的 CR 同样按 `PRC-CR-002` 六要素齐全，只是不写需求条目与计划。
 - C 档在取到 `PRC-APR-001` 签核前**禁止**改代码或改文档（`PRC-CR-004`）。
-- **判定顺序（MUST）**：先判是否命中 `PRC-APR-001`（命中即 C）→ 再看是否"单模块 + 纯新增且向后兼容"（是则 B）→ 再看是否属"不改运行时行为的工程化/治理改动"（是则 D）→ 其余单模块微改落 A。
+- **跨模块行为变更的归口（MUST）**：未命中 `PRC-APR-001`、但**改动运行时行为且跨多个模块**的变更（例如统一列表默认排序、调整默认分页值、改变某类响应的默认顺序）按 **B 档**交付——它不是"单模块新增"，也不是"不改运行时行为"，此前四档判据覆盖不到，明确归入 B。
+  - 必产出：`docs/audit/CR-*.md`（含**影响面清单**：逐条列出受影响的接口／页面与验证方式）、`docs/baseline/assertions.md` 回填、`docs/audit/impl-notes.md`。
+  - 文档产出按 §4.2 的 B 档执行，**但该类变更不产生新能力**，因此 `docs/requirements/` 的能力条目与 `docs/plan/` 计划**以影响面清单替代**（见 §4.2 的 B 档注记）；ADR 与契约版本号升级不需要（除非同时改了字段/状态码）。
+  - 影响面清单**禁止**写"已评估"这类结论式措辞，必须列到接口或页面粒度。
+- **判定顺序（MUST）**：先判是否命中 `PRC-APR-001`（命中即 C）→ 再看是否命中上一条"跨模块行为变更"（是则 B）→ 再看是否"单模块 + 纯新增且向后兼容"（是则 B）→ 再看是否属"不改运行时行为的工程化/治理改动"（是则 D）→ 其余单模块微改落 A。
 - **D 档护栏（MUST）**：D 档**不得**用于掩盖行为变更。一旦改动影响运行时行为（接口、校验、权限、数据、部署配置语义），必须回到 A/B/C 判定；跨模块本身仍不升档。
 
 ### 4.2 文档产出对照表（按档位）
@@ -108,6 +112,8 @@
 | **B** | **MUST（缺失时先建）**：`docs/requirements/requirement-spec.md` 的能力条目、`docs/plan/` 计划、`docs/design/data-model.md`（涉表）、`docs/design/permission-matrix.md`（涉权限码）、`docs/api/openapi.yaml` 的接口定义 | **MUST**：上列文件对应条目；重新导出 `docs/api/openapi.generated.yaml`；`docs/baseline/modules.md`（模块/主表/接口前缀/权限码前缀）；`docs/audit/impl-notes.md`。**按需**：`docs/baseline/assertions.md`、`docs/design/config-registry.yaml`（新配置项） | ADR、契约版本号升级 |
 | **C** | B 档全部 ＋ **MUST**：`docs/decisions/ADR-*.md`（决策与备选方案）、影响面分析成文（`docs/audit/` 下变更记录，六要素按 `PRC-CR-002`） | B 档全部 ＋ **MUST**：`docs/api/openapi.yaml` 版本号与变更记录、`docs/design/state-machine.md`（涉状态）、`docs/baseline/assertions.md`（结构性结论） | — |
 | **D** | 无（不写需求条目与计划；含选型决策时写 `docs/decisions/ADR-*.md`） | **MUST**：`docs/audit/impl-notes.md`；**MUST**：`docs/audit/CR-*.md`（六要素齐全，改 `AGENTS.md`／规范类文件时本条即流程要求）。**按需**：`docs/baseline/assertions.md`（出现"改错就出事"的新事实）、`docs/decisions/ADR-*.md`（涉选型） | 需求条目、计划 |
+
+> **B 档注记**：跨模块行为变更（见 §4.1「跨模块行为变更的归口」）也落 B，但不产生新能力——上表 B 行的「需求条目」与「计划」两项**以 CR 里的影响面清单替代**，其余产出照旧。
 
 ### 4.3 只读不改与文档缺失
 
@@ -259,7 +265,7 @@
 | 数据库 | MySQL 8.0（迁移工具 Flyway 9.22.3） | `ADR-005` |
 | ORM/数据访问 | MyBatis-Plus 3.5.7（MyBatis 3.5.16）+ MapStruct 1.5.5 | `ADR-005` |
 | 缓存/消息 | Redis 5.0（Spring Data Redis）；消息队列：不引入 | `ADR-005` |
-| 测试框架 | 后端：JUnit 5 + Mockito + AssertJ（`spring-boot-starter-test`）；后端集成测试走 profile `test`，连**独立库 `*_test`**（测试类含"库名必须含 test"的安全断言），CI 用 MySQL/Redis 服务容器注入连接；契约验证：swagger-request-validator 比对 `docs/api/openapi.yaml` 本体（不复制副本）；前端：Vitest 5 + `@vue/test-utils`（单元/组件）+ Playwright（E2E）；小程序自动化：**未定**（待跨端框架选型） | `ADR-005`、`ADR-006` |
+| 测试框架 | 后端：JUnit 5 + Mockito + AssertJ（`spring-boot-starter-test`）；后端集成测试走 profile `test`，连**独立库 `*_test`**（测试类含"库名必须含 test"的安全断言），CI 用 MySQL/Redis 服务容器注入连接；契约验证：swagger-request-validator 比对 `docs/api/openapi.yaml` 本体（不复制副本），覆盖公开配置/受保护读接口/**受保护写接口**（含 multipart 单文件上传、分片 init→PUT→complete 全链路、xlsx 导入成功与 422）；multipart 用例因工具无法序列化请求体而只校验响应；前端：Vitest 5 + `@vue/test-utils`（单元/组件）+ Playwright（E2E）；小程序自动化：**未定**（待跨端框架选型） | `ADR-005`、`ADR-006` |
 | 包管理器 | pnpm 11.7.0（workspace，锁文件唯一）+ Maven 3.6.3 | `ADR-005`、`ADR-003` |
 | 目录约定 | `server/{common,system,auth,web}`；`apps/{pc,mobile,shared}`；`packages/ui-tokens` | `ADR-003`、`ADR-005` |
 
