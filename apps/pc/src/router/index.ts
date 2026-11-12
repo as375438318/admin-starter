@@ -1,11 +1,15 @@
 import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router';
 import { useAuthStore } from '@/stores/auth';
 import Layout from '@/layout/index.vue';
-import LoginView from '@/views/login/index.vue';
-import DashboardView from '@/views/dashboard/index.vue';
-import MessageView from '@/views/message/index.vue';
-import ForbiddenView from '@/views/error/403.vue';
-import NotFoundView from '@/views/error/404.vue';
+// 静态路由里的视图也用懒加载：`viewModules`（import.meta.glob）会把 views 下所有页面
+// 都纳入动态引入范围，静态 import 同一个文件会让打包器判定"动态引入无效"（页面进不了独立 chunk）。
+const LoginView = () => import('@/views/login/index.vue');
+const DashboardView = () => import('@/views/dashboard/index.vue');
+const MessageView = () => import('@/views/message/index.vue');
+// 403/404 用懒加载：静态 import 会让 `import.meta.glob` 的动态引入失效（打包器报
+// INEFFECTIVE_DYNAMIC_IMPORT），且这两个页面只会在出错时用到，没必要进首屏 chunk。
+const ForbiddenView = () => import('@/views/error/403.vue');
+const NotFoundView = () => import('@/views/error/404.vue');
 
 const staticRoutes: RouteRecordRaw[] = [
   {
