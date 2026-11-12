@@ -53,7 +53,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: '17'
@@ -76,7 +76,7 @@ jobs:
           done
           echo "backend 未就绪，输出最后 100 行日志"; tail -n 100 /tmp/backend.log; exit 1
 
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v6
         with:
           version: 11.7.0
 
