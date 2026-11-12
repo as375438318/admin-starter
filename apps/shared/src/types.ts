@@ -578,3 +578,9 @@ export interface DashboardOverview {
   trends: DashboardTrendPoint[];
   taskStatus: DashboardTaskStatusCount[];
 }
+
+/** 系统参数的生效方式（由后端 ConfigEffects 按键前缀判定） */
+export interface ConfigEffectFields {
+  effect?: 'HOT' | 'STARTUP';
+  hotReloadable?: boolean;
+}

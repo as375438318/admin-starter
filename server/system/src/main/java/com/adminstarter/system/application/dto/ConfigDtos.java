@@ -43,5 +43,9 @@ public final class ConfigDtos {
         private Boolean isEnabled;
         private Instant createdAt;
         private Instant updatedAt;
+        /** 生效方式：HOT（改完立即生效）/ STARTUP（需重启）。判定见 ConfigEffects。 */
+        private String effect;
+        /** effect == HOT 的便捷布尔，便于前端直接绑定提示。 */
+        private Boolean hotReloadable;
     }
 }
