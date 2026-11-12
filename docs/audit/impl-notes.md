@@ -1381,3 +1381,16 @@ Dependabot #18 检查全绿但 API 合并被拒，两个原因：① 分支落�
 绕行：用自己的分支提交同样改动（提交者身份是本机 git 凭据而非 PAT），再 API 合并——CR-020 就是这么合的。已实测可行。
 
 **工具限制已记录**：以后若要我直接合并改 workflow 文件的 Dependabot PR，token 需要 **Workflows: Read and write**。
+## 安全与工具库 minor 升级（2026-11-12，CR-20261112-022）
+
+原 Dependabot #19 把框架升级与工具库 minor 打包，框架部分（MyBatis-Plus 3.5.18.1）会让编译失败，导致整个 PR 不可用。拆出三项独立验证后升级：
+
+| 依赖 | 变更 | 覆盖它的测试 |
+|---|---|---|
+| poi-ooxml | 5.4.1 → 5.5.1 | `ExcelStreamParserTest` / `ExcelExportWriterTest` / `ExcelTemplateWriterTest` |
+| jjwt-* | 0.12.5 → 0.13.0 | 170 用例含鉴权路径 |
+| swagger-request-validator-mockmvc | 2.44.9 → 2.46.1 | `ContractValidationTest` 7 条 |
+
+**分两步升、每步跑全量**：先 POI（Excel 三部曲直接覆盖），绿了再升 jjwt + 校验器。这样红灯能立刻定位到具体库，而不是"三个一起升、红了不知道是谁"。结果：170 用例全通过。
+
+`AGENTS.md` 的 §9-B 未收录这三个版本（该节只锁主选型），故无需改技术栈表。
