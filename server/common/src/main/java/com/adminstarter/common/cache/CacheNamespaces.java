@@ -17,6 +17,7 @@ public final class CacheNamespaces {
     public static final String CODE_AUTH_DENY = "auth-deny";
     public static final String CODE_AUTH_FAIL = "auth-fail";
     public static final String CODE_IMPORT_DEDUP = "import-dedup";
+    public static final String CODE_DICT = "dict";
 
     public static final String PUBLIC_CONFIG_KEY = "admin:publicconfig:v2";
     public static final String DATASCOPE_PREFIX = "admin:datascope:v1:";
@@ -26,6 +27,7 @@ public final class CacheNamespaces {
     public static final String AUTH_DENY_PREFIX = "admin:auth:deny:";
     public static final String AUTH_FAIL_PREFIX = "admin:auth:fail:";
     public static final String IMPORT_DEDUP_PREFIX = "admin:import:dedup:v1:";
+    public static final String DICT_PREFIX = "admin:dict:v1:";
 
     private static final List<CacheNamespace> ALL = List.of(
             new CacheNamespace(CODE_PUBLIC_CONFIG, "公开配置缓存", PUBLIC_CONFIG_KEY,
@@ -63,6 +65,11 @@ public final class CacheNamespaces {
                     "连续失败锁定 15 分钟",
                     "清除会提前解除登录失败锁定，弱化暴力破解防护，因此不提供清理。",
                     true, false),
+            new CacheNamespace(CODE_DICT, "字典项缓存", DICT_PREFIX,
+                    CacheNamespace.Mode.PREFIX,
+                    "按字典类型缓存的字典项（写操作立即失效，TTL 60 秒兜底）",
+                    "下一次字典请求回源数据库；用户可见的字典内容不变，仅多一次查询。",
+                    false, true),
             new CacheNamespace(CODE_IMPORT_DEDUP, "导入去重指纹", IMPORT_DEDUP_PREFIX,
                     CacheNamespace.Mode.PREFIX,
                     "同一用户 5 分钟内重复提交同一模块同一文件的短时去重",

@@ -14,6 +14,7 @@ interface ConfigFilters {
   isSensitive?: boolean;
 }
 
+
 interface ConfigForm {
   configKey: string;
   configValue: string;
@@ -199,6 +200,25 @@ onMounted(() => {
         </el-table-column>
         <el-table-column prop="remark" label="备注" width="180" show-overflow-tooltip>
           <template #default="{ row }">{{ row.remark || '—' }}</template>
+        </el-table-column>
+        <el-table-column label="生效方式" width="110">
+          <template #default="{ row }">
+            <!-- 这是本轮「字典参数热更新」的可见结果：改完是立即生效还是要重启，一眼能看到 -->
+            <el-tooltip
+              v-if="row.hotReloadable"
+              content="改完保存即生效，无需重启"
+              placement="top"
+            >
+              <el-tag type="success" size="small">立即生效</el-tag>
+            </el-tooltip>
+            <el-tooltip
+              v-else
+              content="由启动期配置绑定，改库后必须重启服务才生效"
+              placement="top"
+            >
+              <el-tag type="warning" size="small">需重启</el-tag>
+            </el-tooltip>
+          </template>
         </el-table-column>
         <el-table-column label="状态" width="90">
           <template #default="{ row }">

@@ -1,3 +1,7 @@
+# 生效方式（effect）的判定来源：代码侧唯一判定处为 com.adminstarter.system.application.ConfigEffects
+#   app.* 前缀 → STARTUP（@ConfigurationProperties 启动期绑定，改库必须重启）
+#   其余键    → HOT（运行期从 sys_config 读取 + 缓存失效，改完即生效）
+# 台账与代码的一致性由 ConfigEffectsTest.matchesConfigRegistry 解析本文件校验（CR-20261112-033）。
 # 配置项台账 · 本项目
 #
 # 登记口径：

@@ -1,6 +1,9 @@
 package com.adminstarter.system.application;
 
 import com.adminstarter.common.api.PageQuery;
+import com.adminstarter.common.cache.CacheService;
+import com.adminstarter.common.cache.CacheNamespaces;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.adminstarter.common.api.PageResponse;
 import com.adminstarter.common.api.PageResult;
 import com.adminstarter.common.error.BizException;
@@ -15,16 +18,33 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 public class DictAppService {
 
+    /**
+     * 字典项缓存 TTL。字典是「读多写少」的基础数据，但改动必须立刻可见：
+     * 写操作一律 {@link #evictDictCache()} 立即失效，TTL 只是兜底（例如别的实例改了库）。
+     */
+    private static final Duration CACHE_TTL = Duration.ofSeconds(60);
+    /**
+     * 「代际键」失效法：缓存键带上代际号，写操作只需删除这一个键，旧代际的缓存自然不可达。
+     *
+     * <p>为什么不用「按前缀删除」：{@code CacheService} 只有 get/put/delete，前缀删除是 Redis 专属能力
+     * （{@code CacheAdminRepository} 才有）。为了字典失效给缓存抽象加方法收益不大，代际键一次 delete 就够。</p>
+     */
+    private static final String GENERATION_KEY = CacheNamespaces.DICT_PREFIX + "generation";
+    private static final Duration GENERATION_TTL = Duration.ofDays(365);
+
     private final DictRepository dictRepository;
+    private final CacheService cacheService;
 
     public PageResponse<DictDtos.TypeResponse> pageTypes(PageQuery pageQuery, String keyword, Boolean isEnabled) {
         int page = pageQuery.resolvePage();
@@ -42,7 +62,16 @@ public class DictAppService {
     }
 
     public List<DictDtos.ItemResponse> items(Long typeId) {
-        return dictRepository.findItemsByTypeId(typeId).stream().map(this::toItemResponse).toList();
+        String key = CacheNamespaces.DICT_PREFIX + "items:" + generation() + ":" + typeId;
+        List<DictDtos.ItemResponse> cached = cacheService.get(key, new TypeReference<>() {
+        });
+        if (cached != null) {
+            return cached;
+        }
+        List<DictDtos.ItemResponse> fresh = dictRepository.findItemsByTypeId(typeId).stream()
+                .map(this::toItemResponse).toList();
+        cacheService.put(key, fresh, CACHE_TTL);
+        return fresh;
     }
 
     /**
@@ -51,6 +80,13 @@ public class DictAppService {
     public List<DictDtos.TypeBundle> bundles(List<String> types) {
         if (types == null || types.isEmpty()) {
             return List.of();
+        }
+        String cacheKey = CacheNamespaces.DICT_PREFIX + "bundles:" + generation() + ":"
+                + types.stream().sorted().collect(Collectors.joining(","));
+        List<DictDtos.TypeBundle> cached = cacheService.get(cacheKey, new TypeReference<>() {
+        });
+        if (cached != null) {
+            return cached;
         }
         List<DictItem> items = dictRepository.findItemsByTypeCodes(types);
         Map<String, List<DictItem>> groups = new LinkedHashMap<>();
@@ -68,7 +104,23 @@ public class DictAppService {
             bundle.setItems(groups.getOrDefault(type, List.of()).stream().map(this::toItemResponse).toList());
             result.add(bundle);
         }
+        cacheService.put(cacheKey, result, CACHE_TTL);
         return result;
+    }
+
+    /**
+     * 字典任何写操作后调用：保证「改完立即生效」，而不是等 TTL 过期。
+     *
+     * <p>**必须递增而不是删除**：删除计数器会让下一次 {@link #generation()} 从 0 重新开始，
+     * 生成与旧缓存**相同**的键，于是命中陈旧数据——本 CR 第一版就是删除，被集成测试直接抓到
+     * （新增字典项后 items 仍返回空列表）。递增则旧键永远不可达，最多由 TTL 回收。</p>
+     */
+    private void evictDictCache() {
+        cacheService.increment(GENERATION_KEY, GENERATION_TTL);
+    }
+
+    private long generation() {
+        return cacheService.increment(GENERATION_KEY, GENERATION_TTL);
     }
 
     @Transactional
@@ -79,6 +131,7 @@ public class DictAppService {
         DictType dictType = new DictType();
         applyType(dictType, request);
         dictRepository.insertType(dictType);
+        evictDictCache();
         return toTypeResponse(dictType);
     }
 
@@ -91,6 +144,7 @@ public class DictAppService {
         }
         applyType(dictType, request);
         dictRepository.updateType(dictType);
+        evictDictCache();
         return toTypeResponse(dictType);
     }
 
@@ -101,6 +155,7 @@ public class DictAppService {
             throw new BizException(ErrorCode.STATE_CONFLICT, "字典下存在字典项，不能删除");
         }
         dictRepository.deleteType(id);
+        evictDictCache();
     }
 
     @Transactional
@@ -109,6 +164,7 @@ public class DictAppService {
         DictItem item = new DictItem();
         applyItem(item, request);
         dictRepository.insertItem(item);
+        evictDictCache();
         return toItemResponse(item);
     }
 
@@ -121,6 +177,7 @@ public class DictAppService {
         requireType(request.getDictTypeId());
         applyItem(item, request);
         dictRepository.updateItem(item);
+        evictDictCache();
         return toItemResponse(item);
     }
 
@@ -130,6 +187,7 @@ public class DictAppService {
             throw new BizException(ErrorCode.RESOURCE_NOT_FOUND, "字典项不存在");
         }
         dictRepository.deleteItem(id);
+        evictDictCache();
     }
 
     private DictType requireType(Long id) {

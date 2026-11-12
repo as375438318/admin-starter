@@ -117,6 +117,9 @@ public class ConfigAppService {
         response.setIsEnabled(config.getIsEnabled());
         response.setCreatedAt(TimeSupport.toInstant(config.getCreatedAt()));
         response.setUpdatedAt(TimeSupport.toInstant(config.getUpdatedAt()));
+        // 生效方式由键前缀判定（单一判定处 ConfigEffects），前端据此提示"已生效/需重启"
+        response.setEffect(ConfigEffects.effectOf(config.getConfigKey()));
+        response.setHotReloadable(ConfigEffects.isHotReloadable(config.getConfigKey()));
         return response;
     }
 }
