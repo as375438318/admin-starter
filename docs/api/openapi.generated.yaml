@@ -1,6 +1,6 @@
 # 本文件由 scripts/export-openapi.ps1 从运行中的后端 /v3/api-docs.yaml 自动生成，禁止手工编辑。
 # 契约源（手写维护）：docs/api/openapi.yaml；本文件只是实现基线（as-built），用于契约差异比对。
-# 生成时间：2026-11-12 09:47:23
+# 生成时间：2026-11-12 13:56:07
 
 openapi: 3.0.1
 info:
@@ -2229,11 +2229,23 @@ paths:
               schema:
                 type: string
                 format: binary
+  /api/v1/dashboard/overview:
+    get:
+      tags:
+      - dashboard-controller
+      operationId: overview
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseOverview'
   /api/v1/cache/overview:
     get:
       tags:
       - cache-controller
-      operationId: overview
+      operationId: overview_1
       responses:
         "200":
           description: OK
@@ -3717,6 +3729,114 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/ItemResponse'
+    ApiResponseOverview:
+      type: object
+      properties:
+        code:
+          type: integer
+          format: int32
+        message:
+          type: string
+        data:
+          $ref: '#/components/schemas/Overview'
+        traceId:
+          type: string
+    Counts:
+      type: object
+      properties:
+        users:
+          type: integer
+          format: int64
+        enabledUsers:
+          type: integer
+          format: int64
+        roles:
+          type: integer
+          format: int64
+        depts:
+          type: integer
+          format: int64
+        posts:
+          type: integer
+          format: int64
+        dictTypes:
+          type: integer
+          format: int64
+        dictItems:
+          type: integer
+          format: int64
+        configs:
+          type: integer
+          format: int64
+        notices:
+          type: integer
+          format: int64
+        jobs:
+          type: integer
+          format: int64
+        enabledJobs:
+          type: integer
+          format: int64
+        activeSessions:
+          type: integer
+          format: int64
+    Overview:
+      type: object
+      properties:
+        counts:
+          $ref: '#/components/schemas/Counts'
+        storage:
+          $ref: '#/components/schemas/Storage'
+        today:
+          $ref: '#/components/schemas/Today'
+        trends:
+          type: array
+          items:
+            $ref: '#/components/schemas/TrendPoint'
+        taskStatus:
+          type: array
+          items:
+            $ref: '#/components/schemas/TaskStatusCount'
+    Storage:
+      type: object
+      properties:
+        files:
+          type: integer
+          format: int64
+        totalBytes:
+          type: integer
+          format: int64
+    TaskStatusCount:
+      type: object
+      properties:
+        status:
+          type: string
+        count:
+          type: integer
+          format: int64
+    Today:
+      type: object
+      properties:
+        loginSuccess:
+          type: integer
+          format: int64
+        loginFailure:
+          type: integer
+          format: int64
+        operations:
+          type: integer
+          format: int64
+    TrendPoint:
+      type: object
+      properties:
+        date:
+          type: string
+        logins:
+          type: integer
+          format: int64
+        operations:
+          type: integer
+          format: int64
     ApiResponseOverviewResponse:
       type: object
       properties:

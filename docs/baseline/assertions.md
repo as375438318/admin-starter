@@ -1,4 +1,4 @@
-# 系统基线 · 设计断言（as-built v1.44）
+# 系统基线 · 设计断言（as-built v1.45）
 
 | 项目 | 内容 |
 |---|---|
@@ -119,3 +119,4 @@
 | 93 | 列表排序默认是**升序**：`SortSupport.isAsc(order)` 对 null 返回 `true`，所以「不传 sort/order」= 按默认列升序（最早的在前）。后端**已支持** `?sort=createdAt&order=desc`（`PageQuery` 含两字段 → 控制器绑定 → service 传进 `NoticeQuery` → `SORTS` 白名单 `createdAt`/`title`/`id`，白名单外的值**静默回落**）。通知管理页因此显式传 desc，与收件箱（SQL 写死 desc）保持一致 | `SortSupport`；`NoticeRepositoryImpl`；`apps/pc/src/views/system/notice/index.vue`；`CR-20261112-028` | 以为"默认就是最新的在前"会把管理页顺序当成 bug 反复排查；想改全局默认又不知道影响十几个列表 | 2026-11-12 |
 | 94 | Excel 模板的下拉箭头由 `showDropDown` 控制，而该属性**语义是反的**（`true` = 隐藏箭头）：POI `setSuppressDropDownArrow(true)` 才写出 `showDropDown="false"`＝显示箭头。另：POI `DataValidation` **没有** `setPromptTitle`/`setPrompt`，只有 `createPromptBox(title, text)`；表头要"只有星号是红的"必须用 `XSSFRichTextString` 两段字体 | `ExcelTemplateWriter`；`CR-20261112-029` | 传 `false` 会让模板"看起来配了下拉但箭头被隐藏"，用户以为功能没做；猜 POI 方法名会反复编译失败 | 2026-11-12 |
 | 95 | Excel 表头**必须整行统一富文本**：普通字符串的加粗来自单元格样式、富文本的加粗来自 run 自己的字体，两套机制在 Excel 里表现不一致 → 只给部分列用富文本会出现「有的表头粗有的不粗」。改 `headerText()` 时必须对所有列 `applyFont(0, len, boldFont)` | `ExcelTemplateWriter.headerText`；`ExcelTemplateWriterTest.allHeadersAreBoldRichText`；`CR-20261112-030` | 混用两种机制会重现"表头粗细不一"，且只差一行代码，很容易被后来者"简化"掉 | 2026-11-12 |
+| 96 | 仪表盘统计是**系统级聚合，不随数据权限收窄**（用户数/文件数/日志数等在各业务页是有数据权限的），因此由权限码 `system:dashboard:view` 把关、默认只授 `SUPER_ADMIN`。**把该权限授予部门管理员＝让他看到全系统聚合数**。另：无权限时接口返回 403+20301（不是空数据），前端据此隐藏统计区 | `DashboardAppService`、`DashboardController`、`V18__dashboard_permission.sql`；`CR-20261112-031` | 误以为"仪表盘和列表一样受数据权限保护"而放心授权；或误以为空数据是"系统没数据"，排查方向完全错 | 2026-11-12 |

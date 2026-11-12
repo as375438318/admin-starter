@@ -532,3 +532,49 @@ export interface CacheCleanLog {
 }
 
 
+
+/** 工作台统计（GET /api/v1/dashboard/overview；系统级聚合，需要 system:dashboard:view） */
+export interface DashboardCounts {
+  users: number;
+  enabledUsers: number;
+  roles: number;
+  depts: number;
+  posts: number;
+  dictTypes: number;
+  dictItems: number;
+  configs: number;
+  notices: number;
+  jobs: number;
+  enabledJobs: number;
+  activeSessions: number;
+}
+
+export interface DashboardStorage {
+  files: number;
+  totalBytes: number;
+}
+
+export interface DashboardToday {
+  loginSuccess: number;
+  loginFailure: number;
+  operations: number;
+}
+
+export interface DashboardTrendPoint {
+  date: string;
+  logins: number;
+  operations: number;
+}
+
+export interface DashboardTaskStatusCount {
+  status: string;
+  count: number;
+}
+
+export interface DashboardOverview {
+  counts: DashboardCounts;
+  storage: DashboardStorage;
+  today: DashboardToday;
+  trends: DashboardTrendPoint[];
+  taskStatus: DashboardTaskStatusCount[];
+}

@@ -1,8 +1,8 @@
-# 系统能力清单（as-built v1.7）
+# 系统能力清单（as-built v1.8）
 
 | 项目 | 内容 |
 |---|---|
-| 版本 | v1.7（2026-11-11，补回填：新增「岗位·导入导出」与「示例业务·导入导出」两个接入点，缓存命名空间 7→8 补 `import-dedup`）；v1.6（2026-11-09，新增缓存管理：命名空间白名单/SCAN 分页/清理审计） |
+| 版本 | v1.8（2026-11-12，新增「工作台统计」：`GET /api/v1/dashboard/overview` + 权限码 `system:dashboard:view`，Flyway V18）；v1.7（2026-11-11，补回填：新增「岗位·导入导出」与「示例业务·导入导出」两个接入点，缓存命名空间 7→8 补 `import-dedup`）；v1.6（2026-11-09，新增缓存管理：命名空间白名单/SCAN 分页/清理审计） |
 | 读者 | AI 编码助手、后端、前端 |
 | 定位 | **as-is 能力清单**，不是需求文档 |
 | 依赖 | `docs/baseline/modules.md`、`docs/design/permission-matrix.md`、`docs/api/openapi.generated.yaml`、`docs/audit/impl-notes.md`、`docs/audit/final-report.md`、`docs/baseline/assertions.md` |
@@ -28,6 +28,7 @@
 | 10 | 示例业务 | `views/demo/task` | `/api/v1/demo-tasks` | `demo:task:` |
 | 11 | 认证 | `views/login` | `/api/v1/auth` | 无（登录态） |
 | 12 | 个人中心 | `views/profile` | `/api/v1/profile` | 无（仅需登录态） |
+| 13 | 工作台统计 | `views/dashboard` | `/api/v1/dashboard` | `system:dashboard:` |
 | 13 | 公开配置 | 无独立页面 | `/api/v1/public` | 无（免鉴权） |
 | 14 | 健康检查 | 无 | `/api/v1/health` | 无（免鉴权） |
 | 15 | 仪表盘 | `views/dashboard` | 无 | 无 |

@@ -2,7 +2,7 @@
 
 | 项目 | 内容 |
 |---|---|
-| 版本 | v1.0（竣工现状，2026-11-10） |
+| 版本 | v1.0（竣工现状，2026-11-12） |
 | 状态 | 由脚本从 `admin_starter` 库导出；人工备注单独标记 |
 | 读者 | AI 编码助手、后端、前端 |
 | 定位 | **as-is**：当前库里“谁有哪些权限码、数据范围是什么”，不是规范（to-be） |
@@ -13,7 +13,7 @@
 > 权限码事实源是 `sys_menu.permission_code`；接口鉴权口径以 `docs/api/openapi.generated.yaml` 与后端注解为准。
 
 <!-- AUTO:HEADER:START -->
-> 本文件由脚本导出于 2026-11-10，除「人工备注」外请勿手工编辑。
+> 本文件由脚本导出于 2026-11-12，除「人工备注」外请勿手工编辑。
 <!-- AUTO:HEADER:END -->
 
 ## 1. 权限码清单（来源 `sys_menu`，`deleted=0`）
@@ -85,6 +85,7 @@
 | 系统管理 | 按钮/接口 | 清理缓存 | `system:cache:clear` | 69 |
 | 系统管理 | 按钮/接口 | 导入岗位 | `system:post:import` | 72 |
 | 系统管理 | 按钮/接口 | 导出岗位 | `system:post:export` | 73 |
+| 系统管理 | 按钮/接口 | 查看仪表盘统计 | `system:dashboard:view` | 74 |
 | 示例业务 | 菜单 | 示例业务 | `demo:task:list` | 40 |
 | 示例业务 | 按钮/接口 | 新增任务 | `demo:task:create` | 41 |
 | 示例业务 | 按钮/接口 | 修改任务 | `demo:task:update` | 42 |
@@ -92,7 +93,7 @@
 | 示例业务 | 按钮/接口 | 导入任务 | `demo:task:import` | 70 |
 | 示例业务 | 按钮/接口 | 导出任务 | `demo:task:export` | 71 |
 
-共 **69** 个权限码（菜单级 14 个 / 按钮接口级 55 个）。
+共 **70** 个权限码（菜单级 14 个 / 按钮接口级 56 个）。
 
 <!-- AUTO:PERM-CODES:END -->
 
@@ -167,13 +168,14 @@
 | `system:cache:clear` | 系统管理 | 按钮/接口 | ✓ |  |  |  |  |  |  |
 | `system:post:import` | 系统管理 | 按钮/接口 | ✓ | ✓ |  |  |  |  |  |
 | `system:post:export` | 系统管理 | 按钮/接口 | ✓ | ✓ |  |  |  |  |  |
+| `system:dashboard:view` | 系统管理 | 按钮/接口 | ✓ |  |  |  |  |  |  |
 | `demo:task:list` | 示例业务 | 菜单 | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | `demo:task:create` | 示例业务 | 按钮/接口 | ✓ | ✓ |  |  |  |  |  |
 | `demo:task:update` | 示例业务 | 按钮/接口 | ✓ | ✓ |  |  |  |  |  |
 | `demo:task:delete` | 示例业务 | 按钮/接口 | ✓ | ✓ |  |  |  |  |  |
 | `demo:task:import` | 示例业务 | 按钮/接口 | ✓ | ✓ |  |  |  |  |  |
 | `demo:task:export` | 示例业务 | 按钮/接口 | ✓ | ✓ |  |  |  |  |  |
-| **合计（权限码）** |  |  | **67** | **31** | **1** | **6** | **3** | **1** | **1** |
+| **合计（权限码）** |  |  | **68** | **31** | **1** | **6** | **3** | **1** | **1** |
 
 <!-- AUTO:ROLE-MATRIX:END -->
 
@@ -183,7 +185,7 @@
 
 | 角色 id | 编码 | 名称 | 组织范围（6 档） | 归属过滤（3 档） | 自定义目标 | 关联用户数 | 授权菜单数 | 授权权限码数 |
 |---|---|---|---|---|---|---|---|---|
-| 1 | `SUPER_ADMIN` | 超级管理员 | `ALL` | `NONE` | — | 1 | 69 | 67 |
+| 1 | `SUPER_ADMIN` | 超级管理员 | `ALL` | `NONE` | — | 1 | 70 | 68 |
 | 2 | `DEPT_MANAGER` | 部门管理员 | `DEPT_AND_CHILD` | `NONE` | — | 1 | 32 | 31 |
 | 3 | `EMPLOYEE` | 普通员工 | `SELF` | `CREATOR` | — | 3 | 2 | 1 |
 | 4 | `CROSS_AUDITOR` | 跨部门审计 | `CUSTOM_DEPT` | `NONE` | DEPT×2 | 1 | 7 | 6 |
@@ -252,7 +254,7 @@
 - 授权给无权限码菜单（目录/个人中心，仅控制路由可见，属正常）：SUPER_ADMIN→系统管理、SUPER_ADMIN→个人中心、DEPT_MANAGER→系统管理、EMPLOYEE→系统管理、CROSS_AUDITOR→系统管理、CUSTOM_VIEWER→系统管理。
 - 软删除菜单仍占物理 id：45（无权限码）、44（`demo:task:e2e`）。
 - 软删除角色仍占物理 id：6（`TEST_DEPT`）、10（`E2E_TMP_ROLE`）。
-- `sys_role_menu` 物理行数：**116**；其中启用角色授权行：见上表。
+- `sys_role_menu` 物理行数：**117**；其中启用角色授权行：见上表。
 
 <!-- AUTO:INTEGRITY:END -->
 

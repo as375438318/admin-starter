@@ -58,6 +58,19 @@ test.describe('主链路冒烟', () => {
     await expect(page).toHaveURL(/\/dashboard/);
     await expect(page.locator('.sidebar-menu')).toBeVisible();
   });
+  test('工作台显示真实统计（不是占位 0）：KPI 卡片 + 近 7 天趋势', async ({ page }) => {
+    await login(page, ADMIN.username, ADMIN.password);
+    // 统计区必须有内容：接口 403 或失败时这里会渲染成提示卡而不是数字
+    await expect(page.locator('.stat-card').first()).toBeVisible({ timeout: 10_000 });
+    const userValue = await page.locator('.stat-card').first().locator('.stat-value').innerText();
+    expect(Number(userValue.replace(/[^\d]/g, ''))).toBeGreaterThan(0);
+    // 趋势固定 7 根柱子组
+    await expect(page.locator('.trend-col')).toHaveCount(7);
+    // 首尾两天：说明趋势是按时间升序补零的
+    const dates = await page.locator('.trend-date').allInnerTexts();
+    expect(dates.length).toBe(7);
+    expect([...dates].sort()).toEqual(dates);
+  });
 
   test('无功能权限的账号访问用户管理 → 不可见列表，落到状态页', async ({ page }) => {
     await login(page, EMPLOYEE.username, EMPLOYEE.password);
