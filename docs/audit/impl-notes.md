@@ -1440,3 +1440,10 @@ E2E 新增 `e2e/helpers.ts`：首次跑真的走一遍"被强制改密 → 改�
 2. **测试自身缺陷**：`MockHttpServletResponse.getContentAsString()` 用响应头声明 charset，而本项目是 `application/json`（无 charset）→ 默认 ISO-8859-1 → **每个汉字膨胀成 3 个字符**（24 字变 72），回写成请求体后超 `maxLength: 64`。第一版差点被我误判成"种子数据任务名超长"。修法：显式 `getContentAsString(StandardCharsets.UTF_8)`。
 
 结果：后端 193 用例通过（common 26 / system 149 / web 18）。
+## 通知公告列表显式降序（2026-11-12，CR-20261112-028）
+
+用户问"发布的通知怎么排序"，查下来是：`order by created_at <方向>, id DESC`，方向来自 `SortSupport.isAsc(query.getOrder())`，而**该方法对 null 返回 true** → 不传就是升序。实测对照确认：默认列表是**最早的在前**，而"我的通知"收件箱 SQL 写死降序 → 同一批通知两个入口顺序相反。
+
+核实过"后端是否需要改"：`PageQuery` 本身含 `sort/order`，控制器直接绑定，service 已传进 `NoticeQuery`，仓储有 `SORTS` 白名单（`createdAt`/`title`/`id`）→ **后端早就支持，只是前端没传**。所以本 CR 是纯前端：通知页 `fetcher` 加 `sort: 'createdAt', order: 'desc'`。
+
+**没动全局默认**：`SortSupport.isAsc(null) === true` 影响全项目所有列表，改它会把十几个页面顺序一起翻过来（C 档跨模块变更），不该夹在小修里——已写进 CR 遗留，建议单独排期。

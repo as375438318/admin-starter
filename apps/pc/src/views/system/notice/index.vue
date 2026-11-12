@@ -77,6 +77,9 @@ const {
   onPageSizeChange,
 } = usePagedList<NoticeItem, NoticeFilters>({
   initialFilters: { keyword: '', level: undefined, type: undefined, status: undefined },
+  // 显式指定排序：后端默认按 SortSupport 的语义是**升序**（未传 order 时 isAsc 返回 true），
+  // 对"通知公告"来说体验是反的 —— 管理员要看刚发的，而不是翻到最后一页。
+  // 这里显式传 createdAt + desc，不动全局默认（改全局默认会把十几个列表的顺序一起翻过来）。
   fetcher: (params) =>
     noticeApi.page({
       page: params.page,
@@ -85,6 +88,8 @@ const {
       level: params.level,
       type: params.type,
       status: params.status,
+      sort: 'createdAt',
+      order: 'desc',
     }),
 });
 

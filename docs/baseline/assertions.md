@@ -1,4 +1,4 @@
-# 系统基线 · 设计断言（as-built v1.41）
+# 系统基线 · 设计断言（as-built v1.42）
 
 | 项目 | 内容 |
 |---|---|
@@ -116,3 +116,4 @@
 | 90 | 必须改密时服务端**真的拦**：access token 带 `pwd` 声明 → 非白名单请求 **403 + 20302**（不是 401）。白名单必须包含 `/api/v1/auth/me`、`/auth/routes`、`/auth/permissions`——**漏了这三个，改密页 bootstrap 失败会被踢回登录页，用户永远改不了密码**。E2E 首次登录会真实走一遍强制改密（`apps/pc/e2e/helpers.ts` 自适应，强口令不得含账号名） | `JwtAuthenticationFilter`（白名单 `isAllowedWhilePasswordChangeRequired`）；`CR-20261112-025` | 把 20302 当成 401 处理会让前端跳登录页而永远不改密；白名单漏 bootstrap 接口会造成"死锁" | 2026-11-12 |
 | 91 | 前端组件库：`element-plus 2.14.8`（`ADR-007` 那批之后单独补的同主版本 minor，跨 6 个小版本）。升级后业务入口 chunk 反而变小（32.46→15.48 kB）是**新版模块切分方式变化**，不是优化成果 | `apps/pc/package.json`；`AGENTS.md` 技术栈表；`CR-20261112-026` | 把 chunk 变小当成本次功劳会误导后续判断；同主版本跨多个 minor 也常有组件行为变化，需人工点重点页 | 2026-11-12 |
 | 92 | 契约测试里读响应必须 `getContentAsString(StandardCharsets.UTF_8)`：本项目响应是 `application/json`（不带 charset），MockMvc 默认按 ISO-8859-1 解码，**汉字会膨胀成 3 倍字符**（24 字 → 72 字符），回写请求体后假报 `maxLength` 违规。另：负例要"只校验响应"的校验器；契约里 **`allOf` 成员必须显式 `additionalProperties: true`**，漏了的话 `components/responses` 与路径内联 schema 会一起漏（1.0.4 补齐 13 处） | `ContractValidationTest`；`docs/api/openapi.yaml`（1.0.4）；`CR-20261112-027` | 中文夹具被解成乱码后会误判成"数据超长/实现违约"，浪费整轮排查；allOf 漏声明会让错误响应的契约校验形同虚设 | 2026-11-12 |
+| 93 | 列表排序默认是**升序**：`SortSupport.isAsc(order)` 对 null 返回 `true`，所以「不传 sort/order」= 按默认列升序（最早的在前）。后端**已支持** `?sort=createdAt&order=desc`（`PageQuery` 含两字段 → 控制器绑定 → service 传进 `NoticeQuery` → `SORTS` 白名单 `createdAt`/`title`/`id`，白名单外的值**静默回落**）。通知管理页因此显式传 desc，与收件箱（SQL 写死 desc）保持一致 | `SortSupport`；`NoticeRepositoryImpl`；`apps/pc/src/views/system/notice/index.vue`；`CR-20261112-028` | 以为"默认就是最新的在前"会把管理页顺序当成 bug 反复排查；想改全局默认又不知道影响十几个列表 | 2026-11-12 |
