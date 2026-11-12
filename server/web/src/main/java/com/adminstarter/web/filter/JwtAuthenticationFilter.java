@@ -112,6 +112,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     .build();
             List<SimpleGrantedAuthority> authorities = currentUser.getPermissions().stream()
                     .map(SimpleGrantedAuthority::new).toList();
+            // 等保 P0-1：必须改密的账号只放行"改密/登出/刷新/看自己"，其余一律按未认证处理，
+            // 由 SecurityConfig 的 authenticationEntryPoint 输出 403 + 20302。
+            if (Boolean.TRUE.equals(claims.get("pwd", Boolean.class)) && !isAllowedWhilePasswordChangeRequired(request)) {
+                request.setAttribute(AUTH_ERROR_ATTRIBUTE, ErrorCode.PASSWORD_CHANGE_REQUIRED);
+                SecurityContextHolder.clearContext();
+                return;
+            }
+
             UsernamePasswordAuthenticationToken authentication =
                     new UsernamePasswordAuthenticationToken(currentUser, null, authorities);
             SecurityContextHolder.getContext().setAuthentication(authentication);
@@ -121,6 +129,36 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         } catch (RuntimeException ignored) {
             request.setAttribute(AUTH_ERROR_ATTRIBUTE, ErrorCode.UNAUTHORIZED);
         }
+    }
+
+    /**
+     * 必须改密时仍可访问的路径：改自己的密码、登出、刷新令牌、查看自己的资料、公开配置与健康检查。
+     *
+     * <p>这几个是"能自救"的最小集合：不给刷新，15 分钟 access 过期后用户会彻底无法改密；
+     * 不给看资料，前端连"我是谁"都拿不到，改密引导页没法渲染。</p>
+     */
+    private boolean isAllowedWhilePasswordChangeRequired(HttpServletRequest request) {
+        String path = request.getRequestURI();
+        String method = request.getMethod();
+        if (path == null) {
+            return false;
+        }
+        if (path.startsWith("/api/v1/public/") || path.equals("/api/v1/health")
+                || path.startsWith("/actuator/")) {
+            return true;
+        }
+        if (path.equals("/api/v1/auth/logout") || path.equals("/api/v1/auth/refresh")) {
+            return true;
+        }
+        // 前端 bootstrap 要拉这三个才能渲染出改密页；不放行会被踢回登录页，用户永远改不了密码
+        if (path.equals("/api/v1/auth/me") || path.equals("/api/v1/auth/routes")
+                || path.equals("/api/v1/auth/permissions")) {
+            return true;
+        }
+        if (path.equals("/api/v1/profile/password") && "PUT".equalsIgnoreCase(method)) {
+            return true;
+        }
+        return path.equals("/api/v1/profile") && "GET".equalsIgnoreCase(method);
     }
 
     private ErrorCode revokedReason(User user) {

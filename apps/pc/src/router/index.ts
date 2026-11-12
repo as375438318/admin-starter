@@ -134,6 +134,11 @@ router.beforeEach(async (to) => {
     }
   }
   registerDynamicRoutes();
+  // 等保 P0-1：必须改密时把用户挡在改密页，其他页面一律重定向过去。
+  // 服务端同样会拦（403 + 20302），这里只是让体验上不出现"点一下报一次错"。
+  if (auth.mustChangePassword && to.path !== '/profile') {
+    return { path: '/profile', query: { mustChange: '1' } };
+  }
   const permission = to.meta.permission as string | null | undefined;
   if (permission && !auth.hasPermission(permission)) {
     return { path: '/403' };

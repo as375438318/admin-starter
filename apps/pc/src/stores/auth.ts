@@ -8,6 +8,10 @@ export const useAuthStore = defineStore('auth', () => {
   const menuRoutes = ref<MenuRoute[]>([]);
   const permissions = ref<Set<string>>(new Set());
   const loaded = ref(false);
+  // 必须改密标记：登录响应带来；刷新页面后会丢，但下一次业务请求拿到 403+20302 时会重新置位并跳转
+  const mustChangePassword = ref(false);
+  /** 口令是否已过期（与 mustChangePassword 分开存：提示语不同） */
+  const passwordExpired = ref(false);
 
   const isLoggedIn = computed(() => profile.value !== null);
   const displayName = computed(() => profile.value?.nickname || profile.value?.username || '');
@@ -29,8 +33,14 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   async function login(username: string, password: string): Promise<void> {
-    await authApi.login(username, password);
+    const result = await authApi.login(username, password);
+    mustChangePassword.value = result.mustChangePassword === true || result.passwordExpired === true;
+    passwordExpired.value = result.passwordExpired === true;
     await bootstrap();
+  }
+
+  function setMustChangePassword(value: boolean): void {
+    mustChangePassword.value = value;
   }
 
   async function logout(): Promise<void> {
@@ -43,6 +53,8 @@ export const useAuthStore = defineStore('auth', () => {
 
   function reset(): void {
     profile.value = null;
+    mustChangePassword.value = false;
+    passwordExpired.value = false;
     menuRoutes.value = [];
     permissions.value = new Set();
     loaded.value = false;
@@ -53,6 +65,9 @@ export const useAuthStore = defineStore('auth', () => {
     menuRoutes,
     permissions,
     loaded,
+    mustChangePassword,
+    passwordExpired,
+    setMustChangePassword,
     isLoggedIn,
     displayName,
     initial,

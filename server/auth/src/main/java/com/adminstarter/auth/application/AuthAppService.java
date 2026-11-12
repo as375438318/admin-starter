@@ -65,13 +65,14 @@ public class AuthAppService {
         cacheService.delete(failKey);
         CurrentUser currentUser = buildCurrentUser(user);
         UserSession session = sessionAppService.openSession(user.getId(), user.getUsername(), ip, userAgent);
-        AuthTokens tokens = issueTokens(currentUser, versionOf(user), session.getSessionId());
-        tokens.setNickname(user.getNickname());
-        // 等保 P0-1：首登/管理员重置后必须改密；口令过期同样置位（两者都要求先改密）
+        // 等保 P0-1：首登/管理员重置后必须改密；口令过期同样置位（两者都要求先改密）。
+        // 这个标记必须写进 access token 的 pwd 声明，服务端才能在每个请求上做强制拦截。
         boolean expired = passwordPolicy.isExpired(user.getPasswordUpdatedAt(), java.time.LocalDateTime.now());
-        boolean mustChange = Boolean.TRUE.equals(user.getMustChangePassword());
+        boolean mustChange = Boolean.TRUE.equals(user.getMustChangePassword()) || expired;
+        AuthTokens tokens = issueTokens(currentUser, versionOf(user), session.getSessionId(), mustChange);
+        tokens.setNickname(user.getNickname());
         tokens.setPasswordExpired(expired);
-        tokens.setMustChangePassword(mustChange || expired);
+        tokens.setMustChangePassword(mustChange);
         recordLogin(user, user.getUsername(), ip, userAgent, true, "登录成功");
         return tokens;
     }
@@ -120,8 +121,12 @@ public class AuthAppService {
         // 旋转刷新令牌，旧令牌立即失效
         tokenStore.revokeRefresh(jti);
         CurrentUser currentUser = buildCurrentUser(user);
-        AuthTokens tokens = issueTokens(currentUser, versionOf(user), sessionId);
+        boolean expired = passwordPolicy.isExpired(user.getPasswordUpdatedAt(), java.time.LocalDateTime.now());
+        boolean mustChange = Boolean.TRUE.equals(user.getMustChangePassword()) || expired;
+        AuthTokens tokens = issueTokens(currentUser, versionOf(user), sessionId, mustChange);
         tokens.setNickname(user.getNickname());
+        tokens.setPasswordExpired(expired);
+        tokens.setMustChangePassword(mustChange);
         return tokens;
     }
 
@@ -137,7 +142,7 @@ public class AuthAppService {
         if (!Boolean.TRUE.equals(user.getIsEnabled())) {
             throw new BizException(ErrorCode.ACCOUNT_DISABLED, ErrorCode.ACCOUNT_DISABLED.getMessage());
         }
-        return issueTokens(buildCurrentUser(user), versionOf(user), sessionId);
+        return issueTokens(buildCurrentUser(user), versionOf(user), sessionId, false);
     }
 
     public void logout(String accessToken, String refreshToken) {
@@ -168,9 +173,11 @@ public class AuthAppService {
         }
     }
 
-    private AuthTokens issueTokens(CurrentUser currentUser, long tokenVersion, String sessionId) {
+    private AuthTokens issueTokens(CurrentUser currentUser, long tokenVersion, String sessionId,
+            boolean mustChangePassword) {
         String accessJti = tokenProvider.newJti();
-        String accessToken = tokenProvider.createAccessToken(currentUser, accessJti, tokenVersion, sessionId);
+        String accessToken = tokenProvider.createAccessToken(currentUser, accessJti, tokenVersion, sessionId,
+                mustChangePassword);
 
         String refreshJti = tokenProvider.newJti();
         String refreshToken = tokenProvider.createRefreshToken(currentUser.getUserId(), refreshJti, tokenVersion,

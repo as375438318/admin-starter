@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { loginAsAdmin } from './helpers';
 
 /**
  * 业务链路 E2E（ADR-006 第 2 步的补充）：通知发布、文件上传、数据导出。
@@ -8,13 +9,11 @@ import { expect, test, type Page } from '@playwright/test';
  * <p>前置：后端在 8080 运行、数据库已初始化；前端由 playwright.config 的 webServer 启动。</p>
  */
 const API = process.env.E2E_API_URL ?? 'http://127.0.0.1:8080/api/v1';
-const ADMIN = { username: 'admin', password: 'admin123' };
+
 
 async function login(page: Page): Promise<void> {
-  await page.goto('/login');
-  await page.getByPlaceholder('请输入账号').fill(ADMIN.username);
-  await page.getByPlaceholder('请输入密码').fill(ADMIN.password);
-  await page.locator('button.login-submit').click();
+  // 由助手统一处理"首次登录被强制改密"，用例本身只关心登录后的业务链路
+  await loginAsAdmin(page);
   await expect(page).toHaveURL(/\/dashboard/, { timeout: 10_000 });
 }
 

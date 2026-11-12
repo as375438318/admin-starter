@@ -10,6 +10,11 @@ import { formatDateTime } from '@/utils/datetime';
 import { scrollToFirstError } from '@/utils/form';
 import { useDelayedSkeleton } from '@/utils/skeleton';
 import TableSkeleton from '@/components/TableSkeleton.vue';
+import { useAuthStore } from '@/stores/auth';
+
+const auth = useAuthStore();
+const mustChangePassword = computed(() => auth.mustChangePassword);
+const passwordExpired = computed(() => auth.passwordExpired);
 
 const profile = ref<ProfileInfo | null>(null);
 const loading = ref(false);
@@ -249,6 +254,22 @@ onMounted(() => {
 <template>
   <div class="page-container profile-page">
     <div class="page-card profile-card">
+      <!-- 等保 P0-1：必须改密时给出阻断式提示（服务端已限制其他接口，这里说明"为什么点哪都不行"） -->
+      <el-alert
+        v-if="mustChangePassword"
+        class="table-error"
+        type="warning"
+        :closable="false"
+        show-icon
+        title="必须先修改登录密码"
+      >
+        <template #default>
+          <span v-if="passwordExpired">当前密码已超过有效期。</span>
+          <span v-else>账号处于「下次登录必须改密」状态（管理员重置过密码或首次登录）。</span>
+          在下方「修改密码」提交成功后即可正常使用其他功能。
+        </template>
+      </el-alert>
+
       <el-alert v-if="loadError" class="table-error" type="error" :closable="false" show-icon>
         <template #title>个人信息加载失败：{{ loadError }}</template>
         <el-button class="error-retry" size="small" @click="loadProfile">重试</el-button>

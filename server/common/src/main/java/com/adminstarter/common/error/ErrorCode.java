@@ -22,6 +22,7 @@ public enum ErrorCode {
     PASSWORD_CHANGED(20107, "密码已修改，请重新登录", 401),
     SESSION_KICKED(20108, "已被管理员下线，请重新登录", 401),
     FORBIDDEN(20301, "没有操作权限", 403),
+    PASSWORD_CHANGE_REQUIRED(20302, "请先修改密码后再使用其他功能", 403),
     RESOURCE_NOT_FOUND(20401, "资源不存在", 404),
     RATE_LIMITED(20501, "请求过于频繁，请稍后再试", 429),
 

@@ -1,7 +1,10 @@
 package com.adminstarter;
 
+import org.junit.jupiter.api.BeforeEach;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
 
 /**
@@ -15,4 +18,25 @@ import org.springframework.test.context.ActiveProfiles;
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 public abstract class AbstractIntegrationTest {
+
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
+
+    /**
+     * 把内置 admin 恢复成"口令已就位、不需要改密"的状态。
+     *
+     * <p>为什么必须在测试里做：`V17__password_policy.sql` 会把**所有存量账号**置为
+     * `must_change_password = 1`（它们的口令都产生于无策略时代）。这会让 admin 登录后拿到的
+     * access token 带上 `pwd` 声明，于是除"改密/登出/刷新/看自己"以外的接口全部 403 + 20302——
+     * 契约测试要验证的是**正常已登录用户**的响应，必须先把这面旗降下来。</p>
+     *
+     * <p>测试库跨次运行持久化，所以这里是幂等 UPDATE，不依赖执行顺序。
+     * 真正"必须改密"的拦截行为由 {@link PasswordChangeEnforcementTest} 用临时账号验证。</p>
+     */
+    @BeforeEach
+    void settleAdminPasswordState() {
+        jdbcTemplate.update(
+                "UPDATE sys_user SET must_change_password = 0, password_updated_at = NOW() "
+                        + "WHERE username = 'admin' AND deleted = 0");
+    }
 }
