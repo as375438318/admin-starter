@@ -252,4 +252,23 @@ class ExcelTemplateWriterTest {
                     "必填列的下拉应带输入提示框");
         }
     }
+    @Test
+    @DisplayName("所有表头都加粗且都走富文本：不能出现「有的粗有的不粗」")
+    void allHeadersAreBoldRichText() throws Exception {
+        try (XSSFWorkbook workbook = new XSSFWorkbook(new ByteArrayInputStream(template()))) {
+            Row header = workbook.getSheet("数据").getRow(0);
+            for (int column = 0; column < header.getLastCellNum(); column++) {
+                Cell cell = header.getCell(column);
+                String text = cell.getStringCellValue();
+                // 普通字符串的加粗来自单元格样式，富文本的加粗来自 run 字体；
+                // 两套机制在 Excel 里表现不一致 → 统一走富文本，避免"有的粗有的不粗"。
+                assertTrue(cell.getRichStringCellValue() instanceof XSSFRichTextString,
+                        "表头必须是富文本：" + text);
+                XSSFRichTextString rich = (XSSFRichTextString) cell.getRichStringCellValue();
+                XSSFFont firstFont = rich.getFontAtIndex(0);
+                assertNotNull(firstFont, "表头文字必须有显式字体段：" + text);
+                assertTrue(firstFont.getBold(), "表头文字必须加粗：" + text);
+            }
+        }
+    }
 }
