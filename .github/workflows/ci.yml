@@ -90,7 +90,7 @@ jobs:
         run: mvn -B -pl web -am verify
       - name: Upload surefire reports on failure
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: surefire-reports
           path: server/**/target/surefire-reports
