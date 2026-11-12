@@ -1,4 +1,4 @@
-# 系统基线 · 设计断言（as-built v1.45）
+# 系统基线 · 设计断言（as-built v1.46）
 
 | 项目 | 内容 |
 |---|---|
@@ -120,3 +120,4 @@
 | 94 | Excel 模板的下拉箭头由 `showDropDown` 控制，而该属性**语义是反的**（`true` = 隐藏箭头）：POI `setSuppressDropDownArrow(true)` 才写出 `showDropDown="false"`＝显示箭头。另：POI `DataValidation` **没有** `setPromptTitle`/`setPrompt`，只有 `createPromptBox(title, text)`；表头要"只有星号是红的"必须用 `XSSFRichTextString` 两段字体 | `ExcelTemplateWriter`；`CR-20261112-029` | 传 `false` 会让模板"看起来配了下拉但箭头被隐藏"，用户以为功能没做；猜 POI 方法名会反复编译失败 | 2026-11-12 |
 | 95 | Excel 表头**必须整行统一富文本**：普通字符串的加粗来自单元格样式、富文本的加粗来自 run 自己的字体，两套机制在 Excel 里表现不一致 → 只给部分列用富文本会出现「有的表头粗有的不粗」。改 `headerText()` 时必须对所有列 `applyFont(0, len, boldFont)` | `ExcelTemplateWriter.headerText`；`ExcelTemplateWriterTest.allHeadersAreBoldRichText`；`CR-20261112-030` | 混用两种机制会重现"表头粗细不一"，且只差一行代码，很容易被后来者"简化"掉 | 2026-11-12 |
 | 96 | 仪表盘统计是**系统级聚合，不随数据权限收窄**（用户数/文件数/日志数等在各业务页是有数据权限的），因此由权限码 `system:dashboard:view` 把关、默认只授 `SUPER_ADMIN`。**把该权限授予部门管理员＝让他看到全系统聚合数**。另：无权限时接口返回 403+20301（不是空数据），前端据此隐藏统计区 | `DashboardAppService`、`DashboardController`、`V18__dashboard_permission.sql`；`CR-20261112-031` | 误以为"仪表盘和列表一样受数据权限保护"而放心授权；或误以为空数据是"系统没数据"，排查方向完全错 | 2026-11-12 |
+| 97 | 列表默认排序（统一规则）：**流水/事务类**（`created_at`）默认 **DESC 最新在前**——用户、参数、字典类型、定时任务、通知、操作日志、示例任务；**参考数据**（`sort` 列）默认 **ASC**——角色、岗位、部门、菜单、字典项。`SortSupport.isAsc(order, defaultDescending)` **默认方向必须由调用方显式声明**（老签名 `isAsc(order)` 对 null 恒为 true，正是两派默认顺序的根源）；所有分页查询必须带**同方向 `id` 次级键**（种子数据常同秒，否则翻页重复/漏条）；白名单外字段与非法方向都**静默回落**不报错 | `SortSupport`；9 个 `*RepositoryImpl`；`ListOrderingTest`、`SortSupportTest`；`CR-20261112-032` | 新增列表若照抄旧写法 `isAsc(order)` 会重现"两种默认顺序"；漏次级键会在同秒数据上翻页重复 | 2026-11-12 |

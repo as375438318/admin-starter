@@ -41,7 +41,7 @@ public class ConfigRepositoryImpl implements ConfigRepository {
             wrapper.eq("is_sensitive", query.getIsSensitive());
         }
         String column = SortSupport.resolveColumn(SORTS, query.getSort(), "created_at");
-        wrapper.orderBy(true, SortSupport.isAsc(query.getOrder()), column);
+        SortSupport.applyOrder(wrapper, column, SortSupport.isAsc(query.getOrder(), SortSupport.NEWEST_FIRST));
         Page<ConfigDO> page = configMapper.selectPage(new Page<>(query.getPage(), query.getPageSize()), wrapper);
         return PageResult.of(page.getRecords().stream().map(converter::toDomain).toList(), page.getTotal());
     }
