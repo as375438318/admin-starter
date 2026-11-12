@@ -1367,3 +1367,10 @@ RoleDataPermissionHandler.java:[27,50] cannot find symbol: class Expression
 结论：Java 生态的"minor"不是"小改动"——Spring Boot minor 会连带 Spring Framework/Security 版本线；springdoc/mapstruct 与 Spring 强绑定。因此对 `spring-boot-starter-parent`、`mybatis-plus-*`、`springdoc-*`、`mapstruct*` 再加"忽略 minor，只收 patch"。
 
 另：Dependabot 在我们加 `ignore-major` 后**自动关闭了 7 个主版本 PR**（#5–#11），无需人工处理；#16 我关闭并写清根因。前端 minor/patch 仍按"CI 绿即合"，因为其语义相对温和。
+## CI 动作手动升级（2026-11-12，CR-20261112-020）
+
+Dependabot 的 #1（setup-java 4→6）与 #3（pnpm/action-setup 4→6）反复与 main 冲突（ci.yml 同行被 #2 改过），直接手动改两行并合并；#2（checkout 4→7）已合并。
+
+**一个自我纠正**：第一版我"顺手"把 `setup-node@v4→v6`、`upload-artifact@v4→v5` 也改了，但 **Dependabot 没提议这两个**（说明已是最新），版本号是我凭印象猜的 → 已回退。教训写进 CR：升级只接受有依据的目标版本，不凭印象写版本号。
+
+验证方式：本 PR 自身的 CI 用新动作版本跑，三条检查全绿即为实测证据。
