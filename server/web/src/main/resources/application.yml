@@ -75,6 +75,15 @@ app:
     cookie-same-site: Lax
     max-login-failures: 5
     lock-duration: 15m
+  # 口令策略（等保 P0-1）；台账见 docs/design/config-registry.yaml
+  security:
+    password:
+      min-length: 10
+      max-length: 64
+      min-character-classes: 3
+      expire-days: 90
+      forbid-repeated-chars: true
+      forbid-sequential-chars: true
   file:
     upload-dir: ./data/uploads
     allowed-extensions: jpg,jpeg,png,gif,webp,pdf,doc,docx,xls,xlsx,ppt,pptx,txt,csv,zip

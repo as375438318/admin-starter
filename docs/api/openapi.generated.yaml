@@ -1,6 +1,6 @@
 # 本文件由 scripts/export-openapi.ps1 从运行中的后端 /v3/api-docs.yaml 自动生成，禁止手工编辑。
 # 契约源（手写维护）：docs/api/openapi.yaml；本文件只是实现基线（as-built），用于契约差异比对。
-# 生成时间：2026-11-10 16:17:22
+# 生成时间：2026-11-12 09:47:23
 
 openapi: 3.0.1
 info:
@@ -3167,6 +3167,10 @@ components:
         refreshExpiresIn:
           type: integer
           format: int64
+        mustChangePassword:
+          type: boolean
+        passwordExpired:
+          type: boolean
     LoginRequest:
       required:
       - password

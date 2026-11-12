@@ -12,6 +12,7 @@ import com.adminstarter.common.security.CurrentUser;
 import com.adminstarter.common.security.DataScopeContext;
 import com.adminstarter.common.util.TimeSupport;
 import com.adminstarter.system.application.dto.LogDtos;
+import com.adminstarter.system.application.service.PasswordPolicy;
 import com.adminstarter.system.application.dto.ProfileDtos;
 import com.adminstarter.system.domain.model.LoginLog;
 import com.adminstarter.system.domain.model.User;
@@ -21,6 +22,7 @@ import com.adminstarter.system.domain.repository.LoginLogRepository;
 import com.adminstarter.system.domain.repository.MenuRepository;
 import com.adminstarter.system.domain.repository.RoleRepository;
 import com.adminstarter.system.domain.repository.UserRepository;
+import java.time.LocalDateTime;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -39,6 +41,7 @@ public class ProfileAppService {
     private final LoginLogRepository loginLogRepository;
     private final UserSessionAppService sessionAppService;
     private final PasswordEncoder passwordEncoder;
+    private final PasswordPolicy passwordPolicy;
 
     public ProfileDtos.Response profile() {
         CurrentUser current = requireCurrent();
@@ -90,7 +93,14 @@ public class ProfileAppService {
         if (!passwordEncoder.matches(request.getOldPassword(), user.getPassword())) {
             throw new BizException(ErrorCode.VALIDATION_FAILED, "原密码不正确");
         }
+        // 等保 P0-1：新口令必须过复杂度策略，且不得与旧口令相同
+        passwordPolicy.validate(request.getNewPassword(), user.getUsername());
+        if (passwordEncoder.matches(request.getNewPassword(), user.getPassword())) {
+            throw new BizException(ErrorCode.PASSWORD_TOO_WEAK, "新密码不能与原密码相同");
+        }
         user.setPassword(passwordEncoder.encode(request.getNewPassword()));
+        user.setPasswordUpdatedAt(LocalDateTime.now());
+        user.setMustChangePassword(false);
         userRepository.update(user);
         userRepository.bumpTokenVersion(user.getId(), "PASSWORD_CHANGED");
         // 账号级失效由 token_version 负责；会话表同批标记其他设备，当前会话保留（外层随后重签）

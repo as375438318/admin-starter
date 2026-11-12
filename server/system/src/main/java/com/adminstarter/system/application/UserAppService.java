@@ -11,6 +11,7 @@ import com.adminstarter.common.security.CurrentUser;
 import com.adminstarter.common.security.DataScopeContext;
 import com.adminstarter.common.util.TimeSupport;
 import com.adminstarter.system.application.dto.UserDtos;
+import com.adminstarter.system.application.service.PasswordPolicy;
 import com.adminstarter.system.domain.model.Dept;
 import com.adminstarter.system.domain.model.Role;
 import com.adminstarter.system.domain.model.User;
@@ -20,6 +21,7 @@ import com.adminstarter.system.domain.query.UserQuery;
 import com.adminstarter.system.domain.repository.DeptRepository;
 import com.adminstarter.system.domain.repository.RoleRepository;
 import com.adminstarter.system.domain.repository.UserRepository;
+import java.time.LocalDateTime;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -41,6 +43,7 @@ public class UserAppService {
     private final RoleRepository roleRepository;
     private final DeptRepository deptRepository;
     private final PasswordEncoder passwordEncoder;
+    private final PasswordPolicy passwordPolicy;
     private final DataScopeProvider dataScopeProvider;
     private final UserSessionAppService sessionAppService;
 
@@ -79,10 +82,15 @@ public class UserAppService {
         MaskedValueGuard.rejectMaskedValue("email", request.getEmail());
         MaskedValueGuard.rejectMaskedValue("phone", request.getPhone());
 
+        // 等保 P0-1：口令复杂度前置校验（失败 422 + 30202，含具体原因）
+        passwordPolicy.validate(request.getPassword(), request.getUsername());
+
         User user = new User();
         user.setUsername(request.getUsername());
         user.setNickname(request.getNickname());
         user.setPassword(passwordEncoder.encode(request.getPassword()));
+        user.setPasswordUpdatedAt(LocalDateTime.now());
+        user.setMustChangePassword(false);
         user.setDeptId(request.getDeptId());
         user.setEmail(request.getEmail());
         user.setPhone(request.getPhone());
@@ -143,7 +151,11 @@ public class UserAppService {
         if (existing == null) {
             throw new BizException(ErrorCode.RESOURCE_NOT_FOUND, "用户不存在或无权访问");
         }
+        passwordPolicy.validate(password, existing.getUsername());
         existing.setPassword(passwordEncoder.encode(password));
+        existing.setPasswordUpdatedAt(LocalDateTime.now());
+        // 管理员重置的口令只有管理员知道，用户必须自己再改一次
+        existing.setMustChangePassword(true);
         userRepository.update(existing);
         userRepository.bumpTokenVersion(id, "PASSWORD_RESET");
         // 账号级失效由 token_version 负责；会话表同批标记 PASSWORD_CHANGED

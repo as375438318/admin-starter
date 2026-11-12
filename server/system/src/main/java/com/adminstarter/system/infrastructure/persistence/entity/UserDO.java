@@ -1,6 +1,7 @@
 package com.adminstarter.system.infrastructure.persistence.entity;
 
 import com.adminstarter.system.infrastructure.persistence.DataPermissionExempt;
+import java.time.LocalDateTime;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -21,4 +22,6 @@ public class UserDO extends BaseDO {
     private Long tokenVersion;
     private String tokenRevokeReason;
     private Long createBy;
+    private LocalDateTime passwordUpdatedAt;
+    private Boolean mustChangePassword;
 }

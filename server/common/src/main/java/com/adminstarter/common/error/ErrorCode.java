@@ -26,6 +26,7 @@ public enum ErrorCode {
     RATE_LIMITED(20501, "请求过于频繁，请稍后再试", 429),
 
     VALIDATION_FAILED(30201, "参数校验失败", 422),
+    PASSWORD_TOO_WEAK(30202, "密码强度不足", 422),
 
     BUSINESS_ERROR(40001, "业务处理失败", 400),
     STATE_CONFLICT(40901, "当前状态不允许该操作", 409),
