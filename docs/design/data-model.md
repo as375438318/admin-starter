@@ -38,7 +38,7 @@
 | 17 | `sys_post` | 岗位 | 9 | 3 | 业务归属列：`dept_id`（岗位挂靠部门，**不是**数据权限受控列）；软删除：`deleted`；审计：`created_at`、`updated_at` |
 | 18 | `sys_role` | 角色：组织范围 + 归属过滤 | 11 | 2 | 软删除：`deleted`；审计：`created_at`、`updated_at` |
 | 19 | `sys_role_menu` | 角色菜单关系 | 2 | 2 | — |
-| 20 | `sys_user` | 用户（单部门；如需多部门，扩展 user_dept 关系表，见实现说明） | 14 | 3 | 数据权限列：`dept_id`、`create_by`（本表**豁免**数据权限拦截；`deptId` 仅作普通筛选参数）；软删除：`deleted`；审计：`create_by`、`created_at`、`updated_at` |
+| 20 | `sys_user` | 用户（单部门；如需多部门，扩展 user_dept 关系表，见实现说明） | 16 | 3 | 数据权限列：`dept_id`、`create_by`（本表**豁免**数据权限拦截；`deptId` 仅作普通筛选参数）；软删除：`deleted`；审计：`create_by`、`created_at`、`updated_at` |
 | 21 | `sys_user_role` | 用户角色关系 | 2 | 2 | — |
 | 22 | `sys_user_session` | 登录会话记录 | 15 | 5 | 审计：`created_at`、`updated_at` |
 
@@ -992,3 +992,17 @@
 | `uk_chunk_upload_id` | 唯一 | `upload_id` | 唯一约束落在 `upload_id`（1 列） |
 
 <!-- AUTO:IDX:sys_file_chunk_upload:END -->
+
+## 口令策略相关字段（`sys_user`，2026-11-12 新增）
+
+| 字段 | 类型 | 说明 |
+|---|---|---|
+| `password_updated_at` | DATETIME NULL | 口令最近修改时间。**为 NULL 时按"已过期"处理**（历史数据不能假设刚改过，fail-closed） |
+| `must_change_password` | TINYINT(1) NOT NULL DEFAULT 0 | 1 = 下次登录必须改密。置位场景：管理员重置口令、存量弱口令迁移（`V17__password_policy.sql` 把存量行全部置 1） |
+
+置位/清位规则：
+
+- 创建用户：`must_change_password = 0`（口令由创建者按策略输入）
+- 管理员重置口令：置 `1`（新口令只有管理员知道，用户必须自己再改）
+- 用户自助改密成功：置 `0`，同时刷新 `password_updated_at`
+- 口令超过 `app.security.password.expire-days`：登录时 `passwordExpired = true`，效果等同必须改密

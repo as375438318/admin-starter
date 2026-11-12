@@ -12,4 +12,8 @@ public class LoginResponse {
     private String nickname;
     private long accessExpiresIn;
     private long refreshExpiresIn;
+    /** true = 必须先修改密码才能使用其他功能（等保 P0-1 首登强制改密）。 */
+    private boolean mustChangePassword;
+    /** true = 口令已超过有效期。 */
+    private boolean passwordExpired;
 }

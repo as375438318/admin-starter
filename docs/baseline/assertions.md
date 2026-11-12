@@ -1,4 +1,4 @@
-# 系统基线 · 设计断言（as-built v1.37）
+# 系统基线 · 设计断言（as-built v1.38）
 
 | 项目 | 内容 |
 |---|---|
@@ -112,3 +112,4 @@
 | 86 | 通过 API 合并"修改 `.github/workflows/*` 的 PR"需要 PAT 具备 **`Workflows: Read and write`**；否则即使检查全绿也会被拒（`refusing to allow a Personal Access Token to create or update workflow ... without workflow scope`），且 `update-branch` 同样 403。绕行：用自建分支提交同样改动再合并 | `.github/workflows/*`；`CR-20261112-021` | 遇到该报错容易误判为"权限不足/检查未过"反复重试；知道绕行方式可省一轮 | 2026-11-12 |
 | 87 | 工具/安全库版本：`poi-ooxml 5.5.1`、`jjwt 0.13.0`、`swagger-request-validator-mockmvc 2.46.1`（这三项不在 `AGENTS.md` §9-B 的锁版范围内，可独立升级；升时**分项跑全量**以便红灯定位到具体库） | `server/pom.xml`、`server/web/pom.xml`；`CR-20261112-022` | 一次升多个库后变红，无法判断是哪个库的问题；POI 影响 Excel 三部曲、jjwt 影响鉴权、校验器影响契约测试，三者都有现成测试可直接验证 | 2026-11-12 |
 | 88 | 前端工具链版本：`vite 8.3.7`、`@vitejs/plugin-vue 6.0.10`、`vitest 5.1.0`、`vue-router 5.5.0`、`pinia 4.1.0`（`ADR-007`）。**`apps/pc/src/router/index.ts` 里所有视图必须懒加载**：`viewModules = import.meta.glob("../views/**/*.vue")` 已把 views 下全部页面纳入动态引入，任何对同一文件的静态 `import` 都会触发 `INEFFECTIVE_DYNAMIC_IMPORT`，该页面进不了独立 chunk | `apps/pc/src/router/index.ts`；`ADR-007`；`CR-20261112-023` | 静态 import 会让页面被打进首屏 chunk（分包失效）；旧版打包器不报此警告，只在 Vite 8 显形，容易被当成"升级引入的新问题" | 2026-11-12 |
+| 89 | 口令策略（等保 P0-1）：长度 10–64、字符类 ≥3、30 项弱口令表（含 `admin123`）、不得含账号名（账号名 ≥3 位才判定）、禁 3 连相同与 4 位顺序；失败 **422 + 30202** 且 message 指明具体原因。**`password_updated_at` 为 NULL 视为已过期**（fail-closed）。管理员重置口令会把 `must_change_password` 置 1 | `PasswordPolicy`、`PasswordPolicyProperties`、`V17__password_policy.sql`；`docs/design/config-registry.yaml`（6 键）；`CR-20261112-024` | 把 NULL 当"刚改过"会让历史账号永不过期；重置后不置位则"管理员知道口令"成为长期后门 | 2026-11-12 |

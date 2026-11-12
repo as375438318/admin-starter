@@ -104,7 +104,8 @@ public class AuthController {
 
     private LoginResponse toLoginResponse(AuthTokens tokens) {
         return new LoginResponse(tokens.getUserId(), tokens.getUsername(), tokens.getNickname(),
-                tokens.getAccessMaxAgeSeconds(), tokens.getRefreshMaxAgeSeconds());
+                tokens.getAccessMaxAgeSeconds(), tokens.getRefreshMaxAgeSeconds(),
+                tokens.isMustChangePassword(), tokens.isPasswordExpired());
     }
 
     private CurrentUser currentUser() {

@@ -11,6 +11,7 @@ import com.adminstarter.common.error.ErrorCode;
 import com.adminstarter.common.security.CurrentUser;
 import com.adminstarter.system.application.AuthUserQueryService;
 import com.adminstarter.system.application.UserSessionAppService;
+import com.adminstarter.system.application.service.PasswordPolicy;
 import com.adminstarter.system.domain.model.LoginLog;
 import com.adminstarter.system.domain.model.User;
 import com.adminstarter.system.domain.model.UserSession;
@@ -36,6 +37,7 @@ public class AuthAppService {
     private final AuthTokenStore tokenStore;
     private final CacheService cacheService;
     private final AuthProperties properties;
+    private final PasswordPolicy passwordPolicy;
 
     public AuthTokens login(LoginRequest request, String ip, String userAgent) {
         String failKey = FAIL_PREFIX + request.getUsername();
@@ -65,6 +67,11 @@ public class AuthAppService {
         UserSession session = sessionAppService.openSession(user.getId(), user.getUsername(), ip, userAgent);
         AuthTokens tokens = issueTokens(currentUser, versionOf(user), session.getSessionId());
         tokens.setNickname(user.getNickname());
+        // 等保 P0-1：首登/管理员重置后必须改密；口令过期同样置位（两者都要求先改密）
+        boolean expired = passwordPolicy.isExpired(user.getPasswordUpdatedAt(), java.time.LocalDateTime.now());
+        boolean mustChange = Boolean.TRUE.equals(user.getMustChangePassword());
+        tokens.setPasswordExpired(expired);
+        tokens.setMustChangePassword(mustChange || expired);
         recordLogin(user, user.getUsername(), ip, userAgent, true, "登录成功");
         return tokens;
     }
@@ -171,7 +178,8 @@ public class AuthAppService {
         tokenStore.saveRefresh(refreshJti, currentUser.getUserId(), Duration.ofSeconds(tokenProvider.refreshMaxAgeSeconds()));
 
         return new AuthTokens(accessToken, refreshToken, tokenProvider.accessMaxAgeSeconds(),
-                tokenProvider.refreshMaxAgeSeconds(), currentUser.getUserId(), currentUser.getUsername(), null);
+                tokenProvider.refreshMaxAgeSeconds(), currentUser.getUserId(), currentUser.getUsername(), null,
+                false, false);
     }
 
     private long versionOf(User user) {

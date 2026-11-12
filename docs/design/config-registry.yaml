@@ -53,3 +53,46 @@
   effect: HOT  # 受容器天花板 200MB 约束；multipart 上限为启动期配置，改库不可突破（CFG-AUDIT-006）
   afterChange: 参数保存时校验 1MB–200MB，成功即失效缓存；下一次上传/刷新页面生效，无需重启
   verify: 库值改 1MB 传 2MB 返回 413；改 50MB 同一文件 200；越界值保存返回 422
+# 口令策略（等保 P0-1，2026-11-12 新增）。消费点：PasswordPolicy → UserAppService（创建/重置）、
+# ProfileAppService（自助改密）、AuthAppService（登录时判定过期）。改这些值等于改安全基线，须记变更理由。
+- key: app.security.password.min-length
+  owner: docs/audit/CR-20261112-024-password-policy.md
+  consumedBy: PasswordPolicyProperties.minLength → PasswordPolicy.validate（创建用户、管理员重置、自助改密）
+  effect: STARTUP
+  afterChange: 重启
+  verify: 用 9 位口令创建用户应返回 422+30202「密码长度至少 10 位」
+
+- key: app.security.password.max-length
+  owner: docs/audit/CR-20261112-024-password-policy.md
+  consumedBy: PasswordPolicyProperties.maxLength → PasswordPolicy.validate
+  effect: STARTUP
+  afterChange: 重启
+  verify: 超长口令（>64 位）被拒，返回 30202
+
+- key: app.security.password.min-character-classes
+  owner: docs/audit/CR-20261112-024-password-policy.md
+  consumedBy: PasswordPolicyProperties.minCharacterClasses → PasswordPolicy.validate
+  effect: STARTUP
+  afterChange: 重启
+  verify: 纯小写+数字口令被拒，返回 30202「至少 3 类」
+
+- key: app.security.password.expire-days
+  owner: docs/audit/CR-20261112-024-password-policy.md
+  consumedBy: PasswordPolicyProperties.expireDays → PasswordPolicy.isExpired（AuthAppService 登录判定）
+  effect: STARTUP
+  afterChange: 重启
+  verify: 把 password_updated_at 改到 N+1 天前，登录响应 passwordExpired=true
+
+- key: app.security.password.forbid-repeated-chars
+  owner: docs/audit/CR-20261112-024-password-policy.md
+  consumedBy: PasswordPolicyProperties.forbidRepeatedChars → PasswordPolicy.validate
+  effect: STARTUP
+  afterChange: 重启
+  verify: 含 3 个连续相同字符的口令被拒（30202）
+
+- key: app.security.password.forbid-sequential-chars
+  owner: docs/audit/CR-20261112-024-password-policy.md
+  consumedBy: PasswordPolicyProperties.forbidSequentialChars → PasswordPolicy.validate
+  effect: STARTUP
+  afterChange: 重启
+  verify: 含 abcd/1234 顺序串的口令被拒（30202）
