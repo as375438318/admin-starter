@@ -91,4 +91,44 @@ describe('usePagedList（列表页统一骨架）', () => {
     await Promise.resolve();
     expect(list.hasFilter.value).toBe(false);
   });
+  it('排序：未设置时不带 sort/order（让后端走默认排序）', async () => {
+    const fetcher = vi.fn().mockResolvedValue({ list: [], total: 0 });
+    const list = usePagedList<Row, { keyword: string }>({ fetcher, initialFilters: { keyword: '' } });
+
+    await list.load();
+
+    const params = fetcher.mock.calls[0][0] as Record<string, unknown>;
+    expect(params.sort).toBeUndefined();
+    expect(params.order).toBeUndefined();
+  });
+
+  it('排序：onSortChange 写入 sort/order、回到第 1 页并重新加载', async () => {
+    const fetcher = vi.fn().mockResolvedValue({ list: [], total: 0 });
+    const list = usePagedList<Row, { keyword: string }>({ fetcher, initialFilters: { keyword: '' } });
+    list.page.page = 3;
+
+    list.onSortChange('createdAt', 'desc');
+    await Promise.resolve();
+
+    expect(list.sort.value).toBe('createdAt');
+    expect(list.order.value).toBe('desc');
+    // 排序变了还停在第 3 页会看到空结果
+    expect(list.page.page).toBe(1);
+    const params = fetcher.mock.calls[0][0] as Record<string, unknown>;
+    expect(params.sort).toBe('createdAt');
+    expect(params.order).toBe('desc');
+  });
+
+  it('排序：取消排序（undefined）不再回传 sort/order', async () => {
+    const fetcher = vi.fn().mockResolvedValue({ list: [], total: 0 });
+    const list = usePagedList<Row, { keyword: string }>({ fetcher, initialFilters: { keyword: '' } });
+    list.onSortChange('nickname', 'asc');
+    await Promise.resolve();
+    list.onSortChange(undefined, undefined);
+    await Promise.resolve();
+
+    const lastParams = fetcher.mock.calls.at(-1)![0] as Record<string, unknown>;
+    expect(lastParams.sort).toBeUndefined();
+    expect(lastParams.order).toBeUndefined();
+  });
 });

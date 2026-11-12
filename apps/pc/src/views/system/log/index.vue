@@ -6,6 +6,8 @@ import { PAGE_SIZES } from '@/constants/pagination';
 import { formatDateTime } from '@/utils/datetime';
 import TableSkeleton from '@/components/TableSkeleton.vue';
 import { usePagedList } from '@/composables/use-paged-list';
+import { useTableColumns, type ColumnDefinition } from '@/composables/use-table-columns';
+import ColumnSettings from '@/components/ColumnSettings.vue';
 
 interface LogFilters {
   keyword: string;
@@ -24,6 +26,7 @@ const {
   search,
   resetFilters,
   onPageSizeChange,
+  onSortChange,
 } = usePagedList<OperLogItem, LogFilters>({
   initialFilters: { keyword: '', range: null },
   fetcher: (params) =>
@@ -33,7 +36,29 @@ const {
       keyword: params.keyword || undefined,
       from: params.range ? toInstant(params.range[0], false) : undefined,
       to: params.range ? toInstant(params.range[1], true) : undefined,
+      sort: params.sort,
+      order: params.order,
     }),
+});
+
+/** 列定义（唯一定义处）：sortKey 取自 constants/sort-whitelist.ts 的 operLog 白名单 */
+const LOG_COLUMNS: ColumnDefinition[] = [
+  { key: 'module', label: '模块', alwaysVisible: true },
+  { key: 'action', label: '操作' },
+  { key: 'request', label: '请求', exportable: false },
+  { key: 'result', label: '结果', exportable: false },
+  { key: 'elapsedMs', label: '耗时(ms)', sortKey: 'elapsedMs' },
+  { key: 'username', label: '操作人' },
+  { key: 'deptName', label: '部门' },
+  { key: 'ip', label: 'IP' },
+  { key: 'createdAt', label: '时间', sortKey: 'createdAt' },
+  { key: 'ops', label: '操作', alwaysVisible: true, exportable: false },
+];
+
+const table = useTableColumns({
+  storageKey: 'system-log',
+  columns: LOG_COLUMNS,
+  onSort: (sort, order) => onSortChange(sort, order),
 });
 
 const detailVisible = ref(false);
@@ -84,6 +109,15 @@ onMounted(() => {
         <el-button @click="resetFilters">重置</el-button>
       </div>
       <div class="toolbar-actions">
+        <ColumnSettings
+          :columns="LOG_COLUMNS"
+          :is-visible="table.isVisible"
+          :hidden-count="table.hiddenCount.value"
+          @toggle="table.toggleColumn"
+          @show-all="table.showAllColumns"
+          @invert="table.invertColumns"
+          @reset="table.resetColumns"
+        />
         <el-button @click="load">刷新</el-button>
       </div>
     </div>
@@ -94,7 +128,12 @@ onMounted(() => {
         <el-button class="error-retry" size="small" @click="load">重试</el-button>
       </el-alert>
 
-      <el-table :data="skeletonVisible ? [] : rows" row-key="id" style="width: 100%">
+      <el-table
+        :data="skeletonVisible ? [] : rows"
+        row-key="id"
+        style="width: 100%"
+        @sort-change="table.onSortChange"
+      >
         <template #empty>
           <TableSkeleton v-if="skeletonVisible" :rows="6" />
           <div v-else-if="!loading" class="table-empty">
@@ -105,40 +144,48 @@ onMounted(() => {
             <el-button v-if="hasFilter" size="small" @click="resetFilters">清空筛选</el-button>
           </div>
         </template>
-        <el-table-column prop="module" label="模块" width="150" fixed="left" show-overflow-tooltip>
+        <el-table-column v-if="table.isVisible('module')" prop="module" label="模块" width="150" fixed="left" show-overflow-tooltip>
           <template #default="{ row }">{{ row.module || '—' }}</template>
         </el-table-column>
-        <el-table-column prop="action" label="操作" width="150" show-overflow-tooltip>
+        <el-table-column v-if="table.isVisible('action')" prop="action" label="操作" width="150" show-overflow-tooltip>
           <template #default="{ row }">{{ row.action || '—' }}</template>
         </el-table-column>
-        <el-table-column label="请求" width="240" show-overflow-tooltip>
+        <el-table-column v-if="table.isVisible('request')" prop="request" label="请求" width="240" show-overflow-tooltip>
           <template #default="{ row }">
             <span class="mono">{{ row.requestMethod }} {{ row.requestUri }}</span>
           </template>
         </el-table-column>
-        <el-table-column label="结果" width="120">
+        <el-table-column v-if="table.isVisible('result')" prop="result" label="结果" width="120">
           <template #default="{ row }">
             <el-tag :type="isSuccess(row) ? 'success' : 'danger'" size="small">
               {{ isSuccess(row) ? '成功' : `失败 ${row.resultCode}` }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="elapsedMs" label="耗时(ms)" width="100" align="right" class-name="tabular-nums">
+        <el-table-column
+          v-if="table.isVisible('elapsedMs')"
+          prop="elapsedMs"
+          label="耗时(ms)"
+          width="100"
+          align="right"
+          class-name="tabular-nums"
+          :sortable="table.sortableOf('elapsedMs')"
+        >
           <template #default="{ row }">{{ row.elapsedMs ?? '—' }}</template>
         </el-table-column>
-        <el-table-column prop="username" label="操作人" width="120" show-overflow-tooltip>
+        <el-table-column v-if="table.isVisible('username')" prop="username" label="操作人" width="120" show-overflow-tooltip>
           <template #default="{ row }">{{ row.username || '—' }}</template>
         </el-table-column>
-        <el-table-column label="部门" width="140" show-overflow-tooltip>
+        <el-table-column v-if="table.isVisible('deptName')" prop="deptName" label="部门" width="140" show-overflow-tooltip>
           <template #default="{ row }">{{ row.deptName || '—' }}</template>
         </el-table-column>
-        <el-table-column prop="ip" label="IP" width="140" show-overflow-tooltip>
+        <el-table-column v-if="table.isVisible('ip')" prop="ip" label="IP" width="140" show-overflow-tooltip>
           <template #default="{ row }">{{ row.ip || '—' }}</template>
         </el-table-column>
-        <el-table-column label="时间" width="160">
+        <el-table-column v-if="table.isVisible('createdAt')" prop="createdAt" label="时间" width="160" :sortable="table.sortableOf('createdAt')">
           <template #default="{ row }">{{ formatDateTime(row.createdAt) }}</template>
         </el-table-column>
-        <el-table-column label="操作" width="200" fixed="right">
+        <el-table-column v-if="table.isVisible('ops')" prop="ops" label="操作" width="200" fixed="right">
           <template #default="{ row }">
             <div class="row-actions">
               <el-button link type="primary" @click="openDetail(row)">详情</el-button>

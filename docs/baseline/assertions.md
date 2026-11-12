@@ -1,4 +1,4 @@
-# 系统基线 · 设计断言（as-built v1.49）
+# 系统基线 · 设计断言（as-built v1.50）
 
 | 项目 | 内容 |
 |---|---|
@@ -124,3 +124,4 @@
 | 98 | 参数生效方式由 `ConfigEffects` **按键前缀**判定：`app.*` → `STARTUP`（`@ConfigurationProperties` 启动期绑定，改库必须重启）、`sys.*` → `HOT`（运行期读库 + 缓存失效，改完即生效）。该判定必须与 `docs/design/config-registry.yaml` 的 `effect` 一致，由 `ConfigEffectsTest` 解析台账校验。字典缓存用**代际键**失效：**必须 `increment` 而不是 `delete`**（删除会让自增回到同值→命中旧缓存） | `ConfigEffects`、`DictAppService`、`CacheNamespaces.CODE_DICT`；`ConfigEffectsTest`、`DictConfigHotReloadTest`；`CR-20261112-033` | 台账与代码不一致会让前端对"需重启"的键显示"立即生效"；代际键写错会静默返回陈旧字典（手工点测极难发现） | 2026-11-12 |
 | 99 | 契约测试覆盖重型写接口（上传/分片/导入）的既有约束：① MockMvc `multipart` 的请求体校验器看不到 → 用"只校验响应"的校验器；② 分片 `chunkSize` 下限 **256KB**；③ 分片初始化字段是 `size` + `contentType`（**不是** `totalSize`，缺省 `size=0` 报"文件大小不能小于 0"）；④ 分片 PUT 是 **multipart 字段 `chunk`**，不是裸字节；⑤ 上传夹具**内容必须每次唯一**，否则命中秒传（`instant=true`、无 `uploadId`）；⑥ 导入数据页名 = `schema.dataSheetName()`（示例任务为「示例任务」），成功响应字段是 `imported`；⑦ OAS 3.0 的 `nullable` **不作用于 `allOf` 分支**，可为 null 的对象只能用"字段缺省"表达 | `ContractValidationWriteHeavyTest`；`docs/api/openapi.yaml`（1.1.1）；`CR-20261112-034` | 照抄这些约定会写出"永远红"或"永远绿"的假测试；把 `nullable+allOf` 当可用组合会反复卡在同一个校验错误 | 2026-11-12 |
 | 100 | 档位判定（`AGENTS.md` v1.7 起）：**跨模块行为变更**（改运行时行为、跨多模块、未命中 `PRC-APR-001`）落 **B 档**，需求条目与计划**以 CR 的影响面清单替代**；影响面清单必须列到接口／页面粒度，禁止写"已评估"。判定顺序为：APR → 跨模块行为变更 → 单模块纯新增 → 工程化/治理 → 其余微改。另：`AGENTS.md` 属只读文件，改动需人确认并记 CR | `AGENTS.md` §4.1／§4.2；`CR-20261112-035` | 遇到这类变更时误判为 A 或 D 而少写文档；或把它当 C 去要审批，白等一轮 | 2026-11-12 |
+| 101 | 列表排序与列显示的三条易错点：① 前端 `sortKey` **必须**是后端 `SORTS` 白名单字段（camelCase），白名单外后端**静默回落**默认列、不报错 → 表现为"点了表头没反应"，故白名单在 `apps/pc/src/constants/sort-whitelist.ts` 镜像一份并有单测断言；② 页面 fetcher 是**逐字段映射**（`xxxApi.page({page,pageSize,...})`），必须显式转发 `sort`/`order`，漏一行排序永不生效；③ 列偏好存 `localStorage`（键 `list-columns:{storageKey}`），**只存 key 不存列定义**，列定义改动后旧偏好自动失效；用户已有显式偏好时 `defaultVisible` 不再叠加 | `use-table-columns.ts`；`sort-whitelist.ts`；`use-paged-list.ts`；`CR-20261112-036` | 写错 `sortKey` 或漏转发 `sort` 时功能"看着正常"，只有断言能挡住；把列定义塞进 localStorage 会让改版后出现隐藏了不存在的列 | 2026-11-12 |

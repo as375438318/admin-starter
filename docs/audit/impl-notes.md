@@ -1528,3 +1528,12 @@ E2E 新增 `e2e/helpers.ts`：首次跑真的走一遍"被强制改密 → 改�
 `AGENTS.md` v1.6 → **v1.7**。授权：§4.3 把 `AGENTS.md` 列为只读，本 CR 即用户 2026-11-12「补掉」的确认记录。
 
 **自身犯的错**：第一版把注记插进了 `AGENTS.md` §4.1 表格中间，把 A/B/C/D 四行截成两张表（Markdown 表格中间夹 blockquote 直接断表）。已改到表后并核对四行连续。
+## 列表通用能力 P1：点表头排序 + 列显示控制（2026-11-12，CR-20261112-036，B 档）
+
+新增 `use-table-columns`（列模型：显隐/持久化/排序翻译/导出字段）+ `ColumnSettings.vue`（列设置面板）+ `constants/sort-whitelist.ts`（后端白名单镜像），`use-paged-list` 扩展 `sort/order/onSortChange`。首批接入 3 个页面：`/system/users`、`/system/logs`、`/demo/tasks`。
+
+**两条硬约束**（都是"错了不报错"型）：① `sortKey` 必须是后端 `SORTS` 白名单字段，白名单外后端静默回落 → 前端镜像一份并有单测断言；② 页面 fetcher 是逐字段映射的，必须显式转发 `sort/order`，漏一行排序永远不生效（E2E 第一次跑就是"表头有箭头、请求没参数"）。
+
+**踩的坑**：E2E 用 `/system/user` 打开是 404（真实路由是复数 `/system/users`，来自后端菜单）；单测对"旧偏好失效"的期望算错（用户已有显式偏好时 `defaultVisible` 不应叠加）。
+
+验证：前端单测 110 通过（+13）、E2E 10/10（+2）、构建通过；后端未改动。P2 铺量 13 个页面 + 3 处后端白名单；P3 导出按勾选列（契约 1.1.1 → 1.2.0）。

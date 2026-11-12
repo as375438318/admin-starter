@@ -13,6 +13,8 @@ import TableSkeleton from '@/components/TableSkeleton.vue';
 import ImportDialog from '@/components/business/ImportDialog.vue';
 import ExportTaskDrawer from '@/components/business/ExportTaskDrawer.vue';
 import { confirmDelete, usePagedList } from '@/composables/use-paged-list';
+import { useTableColumns, type ColumnDefinition } from '@/composables/use-table-columns';
+import ColumnSettings from '@/components/ColumnSettings.vue';
 import { useCrudDrawer } from '@/composables/use-crud-drawer';
 
 interface DemoTaskFilters {
@@ -51,6 +53,7 @@ const {
   search,
   resetFilters,
   onPageSizeChange,
+  onSortChange,
 } = usePagedList<DemoTaskItem, DemoTaskFilters>({
   initialFilters: { keyword: '', deptId: undefined, status: undefined },
   fetcher: (params) =>
@@ -60,6 +63,8 @@ const {
       keyword: params.keyword || undefined,
       deptId: params.deptId,
       status: params.status,
+      sort: params.sort,
+      order: params.order,
     }),
 });
 
@@ -208,6 +213,22 @@ function openImport(): void {
 
 /* ------------------------------ 导出 / 导出任务 ------------------------------ */
 
+/** 列定义（唯一定义处）：sortKey 取自 constants/sort-whitelist.ts 的 demoTask 白名单 */
+const DEMO_TASK_COLUMNS: ColumnDefinition[] = [
+  { key: 'title', label: '任务标题', sortKey: 'title', alwaysVisible: true },
+  { key: 'status', label: '状态', sortKey: 'status' },
+  { key: 'deptName', label: '归属部门' },
+  { key: 'ownerName', label: '负责人' },
+  { key: 'createdAt', label: '创建时间', sortKey: 'createdAt' },
+  { key: 'ops', label: '操作', alwaysVisible: true, exportable: false },
+];
+
+const table = useTableColumns({
+  storageKey: 'demo-task',
+  columns: DEMO_TASK_COLUMNS,
+  onSort: (sort, order) => onSortChange(sort, order),
+});
+
 const exporting = ref(false);
 const exportTasksVisible = ref(false);
 const exportTasksRef = ref<InstanceType<typeof ExportTaskDrawer>>();
@@ -279,6 +300,15 @@ function openExportTasks(): void {
         <el-button @click="resetFilters">重置</el-button>
       </div>
       <div class="toolbar-actions">
+        <ColumnSettings
+          :columns="DEMO_TASK_COLUMNS"
+          :is-visible="table.isVisible"
+          :hidden-count="table.hiddenCount.value"
+          @toggle="table.toggleColumn"
+          @show-all="table.showAllColumns"
+          @invert="table.invertColumns"
+          @reset="table.resetColumns"
+        />
         <el-button
           v-permission="'demo:task:import'"
           :loading="importDialogRef?.templateLoading"
@@ -307,7 +337,12 @@ function openExportTasks(): void {
         <el-button class="error-retry" size="small" @click="load">重试</el-button>
       </el-alert>
 
-      <el-table :data="skeletonVisible ? [] : rows" row-key="id" style="width: 100%">
+      <el-table
+        :data="skeletonVisible ? [] : rows"
+        row-key="id"
+        style="width: 100%"
+        @sort-change="table.onSortChange"
+      >
         <template #empty>
           <TableSkeleton v-if="skeletonVisible" :rows="6" />
           <div v-else-if="!loading" class="table-empty">
@@ -321,24 +356,32 @@ function openExportTasks(): void {
             </el-button>
           </div>
         </template>
-        <el-table-column prop="title" label="任务标题" min-width="240" fixed="left" show-overflow-tooltip />
-        <el-table-column label="状态" width="100">
+        <el-table-column
+          v-if="table.isVisible('title')"
+          prop="title"
+          label="任务标题"
+          min-width="240"
+          fixed="left"
+          show-overflow-tooltip
+          :sortable="table.sortableOf('title')"
+        />
+        <el-table-column v-if="table.isVisible('status')" prop="status" label="状态" width="100" :sortable="table.sortableOf('status')">
           <template #default="{ row }">
             <el-tag :type="STATUS_TYPES[row.status as DemoTaskStatus]" size="small">
               {{ STATUS_LABELS[row.status as DemoTaskStatus] }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="deptName" label="归属部门" width="160" show-overflow-tooltip>
+        <el-table-column v-if="table.isVisible('deptName')" prop="deptName" label="归属部门" width="160" show-overflow-tooltip>
           <template #default="{ row }">{{ row.deptName || '—' }}</template>
         </el-table-column>
-        <el-table-column prop="ownerName" label="负责人" width="140" show-overflow-tooltip>
+        <el-table-column v-if="table.isVisible('ownerName')" prop="ownerName" label="负责人" width="140" show-overflow-tooltip>
           <template #default="{ row }">{{ row.ownerName || '—' }}</template>
         </el-table-column>
-        <el-table-column label="创建时间" width="160">
+        <el-table-column v-if="table.isVisible('createdAt')" prop="createdAt" label="创建时间" width="160" :sortable="table.sortableOf('createdAt')">
           <template #default="{ row }">{{ formatDateTime(row.createdAt) }}</template>
         </el-table-column>
-        <el-table-column label="操作" width="160" fixed="right">
+        <el-table-column v-if="table.isVisible('ops')" prop="ops" label="操作" width="160" fixed="right">
           <template #default="{ row }">
             <div class="row-actions">
               <el-button v-permission="'demo:task:update'" link type="primary" @click="openEdit(row)">
