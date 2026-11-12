@@ -23,7 +23,7 @@ importers:
         specifier: ^1.7.9
         version: 1.21.0
       element-plus:
-        specifier: ^2.8.8
+        specifier: ^2.14.8
         version: 2.14.8(vue@3.5.45(typescript@5.9.3))
       pinia:
         specifier: ^4.1.0

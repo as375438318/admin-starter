@@ -1426,3 +1426,8 @@ Dependabot #18 检查全绿但 API 合并被拒，两个原因：① 分支落�
 3. 写操作缺 `Origin` 头命中 `20301 来源校验失败`，且 `refresh` 要带刷新令牌 Cookie 而非 access Cookie。
 
 E2E 新增 `e2e/helpers.ts`：首次跑真的走一遍"被强制改密 → 改密 → 恢复"，之后走已改密状态，两种状态都覆盖。结果：后端 189 用例、前端 97 单测、E2E 7/7 全绿。
+## Element Plus minor 升级（2026-11-12，CR-20261112-026）
+
+`element-plus 2.8.8 → 2.14.8`（同主版本跨 6 个小版本），`AGENTS.md` 技术栈表同步为 `Element Plus 2.14`。三层验证全跑：干净重建构建通过、97 单测通过、起后端 E2E 7/7。
+
+产物上 `vendor-element-plus` 945 kB（gzip 285 kB），业务入口 chunk 反而从 32.46 kB 降到 15.48 kB —— 是新版对样式/组件模块切分方式变化带来的，**不是**本次刻意优化，CR 里写清避免误读。遗留：vue 3.5.45 / typescript 5.9 / axios 仍待随下次 minor 批处理。
