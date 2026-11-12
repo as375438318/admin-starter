@@ -1510,3 +1510,12 @@ E2E 新增 `e2e/helpers.ts`：首次跑真的走一遍"被强制改密 → 改�
 **如实记录的既有缺陷**：生成的 as-is 基线里 `configKey` 出现 0 次（springdoc 对同名嵌套 DTO 去重），所以本次以集成测试为准，没有在生成物上假装覆盖。
 
 后端 211 用例（+4）、前端 97、E2E 8/8。
+## 契约测试扩到高风险写接口（2026-11-12，CR-20261112-034）
+
+新增 4 条：单文件上传、分片全链路（init → PUT chunk ×2 → complete）、导入成功、导入缺必填（422）。夹具全部现场生成——xlsx 用 POI（数据页名取自 `schema.dataSheetName()`），分片内容每次随机。
+
+**逼出一处契约缺陷**：分片初始化 `data.file` 未命中秒传时为 null，而契约写的是 `nullable: true + allOf`。OAS 3.0 的 `nullable` **不作用于 allOf 分支**，校验器仍按 object 校验 null；补 `type: object` 也没用。最终明确语义为"仅秒传命中才出现该字段，未命中字段缺省"（实现侧 `@JsonInclude(NON_NULL)`，契约改为直接 `$ref`），契约 1.1.0 → 1.1.1。
+
+**自身踩了 6 个坑**（都写进测试注释）：multipart 请求体校验器看不到（改用只校验响应的校验器）、`chunkSize` 下限 256KB、分片初始化字段是 `size`+`contentType` 而非 `totalSize`（缺省 size=0 报"文件大小不能小于 0"）、分片 PUT 是 multipart 字段 `chunk` 不是裸字节、**内容固定会命中秒传导致第二次跑失败**、导入数据页名必须是「示例任务」且成功响应字段是 `imported`。
+
+后端 215 用例（web 30）、E2E 8/8；契约 1.1.1。

@@ -266,6 +266,7 @@ node tools/spec-lint/cli.mjs --root "<项目根目录>"
 
 | 版本 | 日期 | 变更内容 |
 |---|---|---|
+| v1.48 | 2026-11-12 | 契约测试扩到高风险写接口（`CR-20261112-034`）：单文件上传、分片全链路（init→chunk→complete）、导入成功/422 共 4 条；逼出并修复契约 `ChunkSessionResponse.file` 的 `nullable+allOf` 不可用问题（改为"字段缺省"语义），契约 **1.1.0 → 1.1.1**；后端 215 用例、E2E 8/8；断言新增 #99 |
 | v1.47 | 2026-11-12 | 字典/参数热更新（`CR-20261112-033`）：字典项加缓存（新命名空间 `dict`，写操作**递增代际键**立即失效）；参数新增 `effect`/`hotReloadable`，参数页显示「立即生效/需重启」；`ConfigEffects` 与台账做防漂移校验；后端 211 用例、E2E 8/8；断言新增 #98 |
 | v1.46 | 2026-11-12 | 全项目列表排序统一（`CR-20261112-032`）：`SortSupport` 默认方向改为**显式声明**（`NEWEST_FIRST`/`BY_SORT_COLUMN`），流水类默认最新在前、参考数据按 sort 升序、统一加同方向 `id` 次级键（顺带修掉同秒数据翻页重复/漏条）；后端 207 用例、E2E 8/8；断言新增 #97；档位表记 `RULE-GAP` 一处 |
 | v1.45 | 2026-11-12 | 新增工作台统计（`CR-20261112-031`，B 档）：`GET /api/v1/dashboard/overview`（counts/storage/today/trends/taskStatus）+ 权限码 `system:dashboard:view`（Flyway V18，仅授 SUPER_ADMIN）；前端首页真实 KPI 与近 7 天趋势；契约 1.0.4 → **1.1.0**；后端 200 用例、前端 97 单测、E2E 8/8；断言新增 #96 |
