@@ -1,4 +1,4 @@
-# 系统基线 · 设计断言（as-built v1.39）
+# 系统基线 · 设计断言（as-built v1.40）
 
 | 项目 | 内容 |
 |---|---|
@@ -114,3 +114,4 @@
 | 88 | 前端工具链版本：`vite 8.3.7`、`@vitejs/plugin-vue 6.0.10`、`vitest 5.1.0`、`vue-router 5.5.0`、`pinia 4.1.0`（`ADR-007`）。**`apps/pc/src/router/index.ts` 里所有视图必须懒加载**：`viewModules = import.meta.glob("../views/**/*.vue")` 已把 views 下全部页面纳入动态引入，任何对同一文件的静态 `import` 都会触发 `INEFFECTIVE_DYNAMIC_IMPORT`，该页面进不了独立 chunk | `apps/pc/src/router/index.ts`；`ADR-007`；`CR-20261112-023` | 静态 import 会让页面被打进首屏 chunk（分包失效）；旧版打包器不报此警告，只在 Vite 8 显形，容易被当成"升级引入的新问题" | 2026-11-12 |
 | 89 | 口令策略（等保 P0-1）：长度 10–64、字符类 ≥3、30 项弱口令表（含 `admin123`）、不得含账号名（账号名 ≥3 位才判定）、禁 3 连相同与 4 位顺序；失败 **422 + 30202** 且 message 指明具体原因。**`password_updated_at` 为 NULL 视为已过期**（fail-closed）。管理员重置口令会把 `must_change_password` 置 1 | `PasswordPolicy`、`PasswordPolicyProperties`、`V17__password_policy.sql`；`docs/design/config-registry.yaml`（6 键）；`CR-20261112-024` | 把 NULL 当"刚改过"会让历史账号永不过期；重置后不置位则"管理员知道口令"成为长期后门 | 2026-11-12 |
 | 90 | 必须改密时服务端**真的拦**：access token 带 `pwd` 声明 → 非白名单请求 **403 + 20302**（不是 401）。白名单必须包含 `/api/v1/auth/me`、`/auth/routes`、`/auth/permissions`——**漏了这三个，改密页 bootstrap 失败会被踢回登录页，用户永远改不了密码**。E2E 首次登录会真实走一遍强制改密（`apps/pc/e2e/helpers.ts` 自适应，强口令不得含账号名） | `JwtAuthenticationFilter`（白名单 `isAllowedWhilePasswordChangeRequired`）；`CR-20261112-025` | 把 20302 当成 401 处理会让前端跳登录页而永远不改密；白名单漏 bootstrap 接口会造成"死锁" | 2026-11-12 |
+| 91 | 前端组件库：`element-plus 2.14.8`（`ADR-007` 那批之后单独补的同主版本 minor，跨 6 个小版本）。升级后业务入口 chunk 反而变小（32.46→15.48 kB）是**新版模块切分方式变化**，不是优化成果 | `apps/pc/package.json`；`AGENTS.md` 技术栈表；`CR-20261112-026` | 把 chunk 变小当成本次功劳会误导后续判断；同主版本跨多个 minor 也常有组件行为变化，需人工点重点页 | 2026-11-12 |

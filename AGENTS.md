@@ -255,7 +255,7 @@
 |---|---|---|
 | 语言与运行时版本 | Java 17（LTS）；Node.js ≥ 22 | `ADR-005` |
 | 后端框架 | Spring Boot 3.2.12（含 Spring Security 6、Spring Data Redis 3.2.12） | `ADR-005` |
-| 前端框架/跨端 | PC：Vue 3.5 + Vite 8 + TypeScript 5.6 + Element Plus 2.8 + Pinia 4.1 + Vue Router 5.5；跨端（H5／小程序／App）：**未定** | `ADR-005`、`ADR-007`、`ADR-003` |
+| 前端框架/跨端 | PC：Vue 3.5 + Vite 8 + TypeScript 5.6 + Element Plus 2.14 + Pinia 4.1 + Vue Router 5.5；跨端（H5／小程序／App）：**未定** | `ADR-005`、`ADR-007`、`ADR-003` |
 | 数据库 | MySQL 8.0（迁移工具 Flyway 9.22.3） | `ADR-005` |
 | ORM/数据访问 | MyBatis-Plus 3.5.7（MyBatis 3.5.16）+ MapStruct 1.5.5 | `ADR-005` |
 | 缓存/消息 | Redis 5.0（Spring Data Redis）；消息队列：不引入 | `ADR-005` |
