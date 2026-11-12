@@ -4,6 +4,9 @@ import com.atlassian.oai.validator.OpenApiInteractionValidator;
 import com.atlassian.oai.validator.mockmvc.OpenApiValidationMatchers;
 import com.atlassian.oai.validator.report.LevelResolver;
 import com.atlassian.oai.validator.report.ValidationReport;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,6 +22,7 @@ import java.nio.file.Path;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -36,6 +40,14 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class ContractValidationTest extends AbstractIntegrationTest {
 
     private static final OpenApiInteractionValidator VALIDATOR = buildValidator();
+
+    /**
+     * 只校验响应的校验器：给"故意发非法请求体"的负例用。
+     *
+     * <p>负例的整个目的就是发一个违反契约的请求体（缺必填字段），若用 {@link #VALIDATOR}，
+     * 校验器会先把**请求**标红，导致我们验证不到"服务端的 422 响应结构是否符合契约"。</p>
+     */
+    private static final OpenApiInteractionValidator VALIDATOR_RESPONSE_ONLY = buildResponseOnlyValidator();
 
     @Autowired
     private MockMvc mockMvc;
@@ -67,6 +79,17 @@ class ContractValidationTest extends AbstractIntegrationTest {
                         // 因此把"路径未定义"降级为 WARN，避免把"契约未覆盖"误报成"实现违约"。
                         .withLevel("validation.request.path.missing", ValidationReport.Level.WARN)
 
+                        .build())
+                .build();
+    }
+
+    private static OpenApiInteractionValidator buildResponseOnlyValidator() {
+        String location = locateContract().toUri().toString();
+        return OpenApiInteractionValidator.createForSpecificationUrl(location)
+                .withLevelResolver(LevelResolver.create()
+                        .withLevel("validation.request.path.missing", ValidationReport.Level.WARN)
+                        .withLevel("validation.request.body.schema", ValidationReport.Level.WARN)
+                        .withLevel("validation.request.body.unexpected", ValidationReport.Level.WARN)
                         .build())
                 .build();
     }
@@ -152,5 +175,115 @@ class ContractValidationTest extends AbstractIntegrationTest {
         mockMvc.perform(get("/api/v1/files/{id}/preview", 999999L).cookie(loginAsAdmin()))
                 .andExpect(status().isNotFound())
                 .andExpect(OpenApiValidationMatchers.openApi().isValid(VALIDATOR));
+    }
+    // ==================================================================
+    // 写接口：请求体夹具 + 响应双校验（swagger-request-validator 同时校验请求与响应）
+    //
+    // 为什么写接口更难测：读接口只要参数对就行；写接口必须先满足"业务上合法的请求体"，
+    // 否则拿到的是 422/404 而不是要验证的成功分支。夹具因此从**真实接口返回值**里取
+    // （GET /jobs、GET /jobs/{id}），而不是在测试里手写一份可能过期的常量。
+    // ==================================================================
+
+    /** 写操作必须带合法 Origin（OriginCheckFilter 的 CSRF 防护），否则先撞 20301 而不是被测分支。 */
+    private static final String ALLOWED_ORIGIN = "http://127.0.0.1:5173";
+
+    private static final ObjectMapper MAPPER = new ObjectMapper();
+
+    /**
+     * 以管理员身份取 JSON（用于构造夹具：任务列表 / 单条任务）。
+     *
+     * <p>必须显式按 UTF-8 解码：`MockHttpServletResponse.getContentAsString()` 默认用响应里声明的 charset，
+     * 而本项目响应头是 `application/json`（不带 charset）→ 默认 ISO-8859-1。中文任务名会被解成乱码，
+     * 每个汉字膨胀成 3 个字符，回写成请求体时直接超契约的 `maxLength: 64`——第一版就是这样"假报"了一个数据问题。</p>
+     */
+    private JsonNode fetchJson(Cookie access, String path) throws Exception {
+        String body = mockMvc.perform(get(path).cookie(access))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString(java.nio.charset.StandardCharsets.UTF_8);
+        return MAPPER.readTree(body);
+    }
+
+    /** 取一条已存在的任务作为"改任务"夹具；没有任务时直接失败，而不是跳过用例。 */
+    private JsonNode firstJob(Cookie access) throws Exception {
+        JsonNode list = fetchJson(access, "/api/v1/jobs").path("data").path("list");
+        assertTrue(list.isArray() && !list.isEmpty(),
+                "定时任务列表为空：PUT /jobs/{id} 的契约用例需要至少一条已存在任务作夹具");
+        return list.get(0);
+    }
+
+    /** 用任务当前值构造 JobRequest（原样回写，避免测试改动真实数据）。 */
+    private String jobRequestFrom(JsonNode job) throws Exception {
+        ObjectNode body = MAPPER.createObjectNode();
+        body.put("name", job.path("name").asText());
+        body.put("groupName", job.path("groupName").asText("DEFAULT"));
+        body.put("jobKey", job.path("jobKey").asText());
+        body.put("cronExpression", job.path("cronExpression").asText());
+        if (!job.path("description").isMissingNode()) {
+            body.put("description", job.path("description").asText());
+        }
+        return MAPPER.writeValueAsString(body);
+    }
+
+    @Test
+    @DisplayName("POST /my-notices/read-all（写接口）：响应符合契约，data.marked 为整数")
+    void readAllMyNoticesMatchesContract() throws Exception {
+        mockMvc.perform(post("/api/v1/my-notices/read-all")
+                        .header("Origin", ALLOWED_ORIGIN)
+                        .cookie(loginAsAdmin()))
+                .andExpect(status().isOk())
+                .andExpect(OpenApiValidationMatchers.openApi().isValid(VALIDATOR))
+                .andExpect(jsonPath("$.data.marked").isNumber());
+    }
+
+    @Test
+    @DisplayName("PUT /jobs/{id}（写接口）：夹具取自真实任务，请求体与响应都要符合契约")
+    void updateJobMatchesContract() throws Exception {
+        Cookie access = loginAsAdmin();
+        JsonNode job = firstJob(access);
+
+        mockMvc.perform(put("/api/v1/jobs/{id}", job.path("id").asLong())
+                        .header("Origin", ALLOWED_ORIGIN)
+                        .cookie(access)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(jobRequestFrom(job)))
+                .andExpect(status().isOk())
+                .andExpect(OpenApiValidationMatchers.openApi().isValid(VALIDATOR))
+                .andExpect(jsonPath("$.data.id").value(job.path("id").asLong()));
+    }
+
+    @Test
+    @DisplayName("PUT /jobs/{id}/status（写接口）：状态原样回写，响应符合契约")
+    void updateJobStatusMatchesContract() throws Exception {
+        Cookie access = loginAsAdmin();
+        JsonNode job = firstJob(access);
+        String currentStatus = job.path("status").asText("DISABLED");
+
+        mockMvc.perform(put("/api/v1/jobs/{id}/status", job.path("id").asLong())
+                        .header("Origin", ALLOWED_ORIGIN)
+                        .cookie(access)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"status\":\"" + currentStatus + "\"}"))
+                .andExpect(status().isOk())
+                .andExpect(OpenApiValidationMatchers.openApi().isValid(VALIDATOR))
+                .andExpect(jsonPath("$.data.status").value(currentStatus));
+    }
+
+    @Test
+    @DisplayName("PUT /jobs/{id} 缺必填 cronExpression：契约声明的 422 结构（错误信封也要对得上）")
+    void updateJobMissingRequiredFieldMatchesContract() throws Exception {
+        Cookie access = loginAsAdmin();
+        JsonNode job = firstJob(access);
+        ObjectNode body = (ObjectNode) MAPPER.readTree(jobRequestFrom(job));
+        body.remove("cronExpression");
+
+        mockMvc.perform(put("/api/v1/jobs/{id}", job.path("id").asLong())
+                        .header("Origin", ALLOWED_ORIGIN)
+                        .cookie(access)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(MAPPER.writeValueAsString(body)))
+                .andExpect(status().isUnprocessableEntity())
+                // 用"只校验响应"的校验器：请求体是我故意写坏的，验证目标是 422 的响应结构
+                .andExpect(OpenApiValidationMatchers.openApi().isValid(VALIDATOR_RESPONSE_ONLY))
+                .andExpect(jsonPath("$.code").value(30201));
     }
 }

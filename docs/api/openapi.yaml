@@ -10,7 +10,7 @@
 openapi: 3.0.3
 info:
   title: 项目基础框架 · 后台管理接口契约
-  version: 1.0.3
+  version: 1.0.4
   description: |
     本项目接口契约（手写维护，版本随接口演进递增，见 CT-VER）。
     统一响应信封见 CT-RESP-001（data 必须存在，无值时为 null）；禁止 204/空 body 见 CT-RESP-009；
@@ -1830,6 +1830,7 @@ paths:
                 allOf:
                   - $ref: '#/components/schemas/Envelope'
                   - type: object
+                    additionalProperties: true
                     properties:
                       data:
                         $ref: '#/components/schemas/ImportResult'
@@ -1892,6 +1893,7 @@ paths:
                 allOf:
                   - $ref: '#/components/schemas/Envelope'
                   - type: object
+                    additionalProperties: true
                     properties:
                       data:
                         $ref: '#/components/schemas/ExportAccepted'
@@ -1936,6 +1938,7 @@ paths:
                 allOf:
                   - $ref: '#/components/schemas/Envelope'
                   - type: object
+                    additionalProperties: true
                     properties:
                       data:
                         type: array
@@ -1970,6 +1973,7 @@ paths:
                 allOf:
                   - $ref: '#/components/schemas/Envelope'
                   - type: object
+                    additionalProperties: true
                     properties:
                       data:
                         $ref: '#/components/schemas/ExportTaskItem'
@@ -2005,6 +2009,7 @@ paths:
                 allOf:
                   - $ref: '#/components/schemas/Envelope'
                   - type: object
+                    additionalProperties: true
                     properties:
                       data:
                         $ref: '#/components/schemas/ExportTaskItem'
@@ -2111,6 +2116,7 @@ paths:
                 allOf:
                   - $ref: '#/components/schemas/Envelope'
                   - type: object
+                    additionalProperties: true
                     properties:
                       data:
                         $ref: '#/components/schemas/ImportResult'
@@ -2177,6 +2183,7 @@ paths:
                 allOf:
                   - $ref: '#/components/schemas/Envelope'
                   - type: object
+                    additionalProperties: true
                     properties:
                       data:
                         $ref: '#/components/schemas/ExportAccepted'
@@ -2205,6 +2212,7 @@ paths:
                 allOf:
                   - $ref: '#/components/schemas/Envelope'
                   - type: object
+                    additionalProperties: true
                     properties:
                       data:
                         type: array
@@ -2239,6 +2247,7 @@ paths:
                 allOf:
                   - $ref: '#/components/schemas/Envelope'
                   - type: object
+                    additionalProperties: true
                     properties:
                       data:
                         $ref: '#/components/schemas/ExportTaskItem'
@@ -2274,6 +2283,7 @@ paths:
                 allOf:
                   - $ref: '#/components/schemas/Envelope'
                   - type: object
+                    additionalProperties: true
                     properties:
                       data:
                         $ref: '#/components/schemas/ExportTaskItem'
@@ -3624,6 +3634,9 @@ components:
             allOf:
               - $ref: '#/components/schemas/Envelope'
               - type: object
+                # allOf 成员必须显式声明：缺失时契约校验器按「关闭」处理（2026-11-11 实测；
+                # 2026-11-12 扩写接口测试时发现 components/responses 下的这个漏了同一处声明）
+                additionalProperties: true
                 properties:
                   data:
                     $ref: '#/components/schemas/ErrorData'
@@ -3640,6 +3653,7 @@ components:
             allOf:
               - $ref: '#/components/schemas/Envelope'
               - type: object
+                additionalProperties: true
                 properties:
                   data:
                     $ref: '#/components/schemas/ImportErrorData'
@@ -3666,6 +3680,7 @@ components:
             allOf:
               - $ref: '#/components/schemas/Envelope'
               - type: object
+                additionalProperties: true
                 properties:
                   data:
                     type: object
@@ -3694,6 +3709,12 @@ components:
 # TODO(API): 补齐本项目其余接口；每新增接口必须回写错误码与字段约定，并把 x-status 从 DRAFT 推进到 APPROVED
 
 # 变更记录（CT-VER-005：版本号 / 日期 / 影响面 / 迁移方式）
+# 1.0.4 | 2026-11-12 | 补全 `allOf` 成员的 `additionalProperties: true`：`ValidationError` 与 12 处**内联**响应 schema
+#         （`components/schemas` 下那 26 处已于 1.0.2 修过，`components/responses` 与路径内联的这批当时漏了）。
+#         起因：扩写接口契约测试到写接口后，负例（故意缺必填字段 → 422）的响应被校验器判为
+#         `additionalProperties` 违规——因为 allOf 成员未声明时校验器按「关闭」处理。
+#         影响面：仅 schema 描述的宽松度；字段、状态码、错误码、实现行为均未变。
+#         迁移方式：无（调用方不受影响）。
 # 1.0.3 | 2026-11-11 | `FilePageResponse` 的 data 补 `page`/`pageSize`：受保护接口契约测试（真实登录后校验）
 #         发现该 schema 只声明 list/total，而实现与其它列表接口一致返回四字段。属契约漏字段，实现未改。
 #         影响面：GET /api/v1/files、GET /api/v1/files/recycle 的响应 schema 描述（字段集合与其他分页接口对齐）。
