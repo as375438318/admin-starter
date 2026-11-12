@@ -1,7 +1,12 @@
 package com.adminstarter.system.application.excel;
 
+import org.apache.poi.ss.usermodel.Cell;
+import org.apache.poi.ss.usermodel.DataValidation;
+import org.apache.poi.ss.usermodel.IndexedColors;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.xssf.usermodel.XSSFFont;
+import org.apache.poi.xssf.usermodel.XSSFRichTextString;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import com.adminstarter.system.application.excel.ReferenceDirectoryService.ReferenceContext;
 import org.junit.jupiter.api.DisplayName;
@@ -67,10 +72,46 @@ class ExcelTemplateWriterTest {
             });
 
     private byte[] template() throws Exception {
+        return templateOf(SCHEMA);
+    }
+
+    private byte[] templateOf(ExcelSchema<?> schema) throws Exception {
         ByteArrayOutputStream output = new ByteArrayOutputStream();
-        writer.write(SCHEMA, output);
+        writer.write(schema, output);
         return output.toByteArray();
     }
+
+    /** 专用 schema：含"必填的下拉列"，用来验证「必填 + 下拉 → 带输入提示」这个组合。 */
+    private static final ExcelSchema<Object> SCHEMA_WITH_REQUIRED_REF = new ExcelSchema<>() {
+        @Override
+        public String key() {
+            return "test-required-ref";
+        }
+
+        @Override
+        public String title() {
+            return "测试任务";
+        }
+
+        @Override
+        public String templateFileName() {
+            return "测试任务导入模板.xlsx";
+        }
+
+        @Override
+        public String dataSheetName() {
+            return "数据";
+        }
+
+        @Override
+        public List<ExcelField<Object>> fields() {
+            return List.of(
+                    ExcelField.builder().key("status").kind(FieldKind.ENUM).importHeader("状态")
+                            .required(true)
+                            .enums(List.of(new EnumOption("ON", "启用"), new EnumOption("OFF", "停用")))
+                            .build());
+        }
+    };
 
     private static List<String> rowValues(Sheet sheet, int rowIndex) {
         Row row = sheet.getRow(rowIndex);
@@ -152,6 +193,63 @@ class ExcelTemplateWriterTest {
             assertTrue(anyCellContains(guide, "任务标题：必填"), "每个字段都要写必填/选填");
             assertTrue(anyCellContains(guide, "级别：选填"));
             assertTrue(anyCellContains(guide, "50"), "有长度上限的字段要写出来");
+        }
+    }
+    // ------------------------------------------------------------------
+    // 可用性：星号红色、必填提示、下拉箭头（2026-11-12）
+    // 这三条都是"用户能直接感知"的点，且都曾在真实模板里失效过：
+    // - `*` 若是纯文本，用户在表头看不出哪列必填；
+    // - `showDropDown` 语义是反的（true = 隐藏箭头），传错就等于把下拉藏了；
+    // - 必填提示只写在「填写须知」页，用户填数据页时看不到。
+    // ------------------------------------------------------------------
+
+    @Test
+    @DisplayName("必填列的星号是红色：富文本分两段，只有 * 一段是红字")
+    void requiredMarkIsRed() throws Exception {
+        try (XSSFWorkbook workbook = new XSSFWorkbook(new ByteArrayInputStream(template()))) {
+            Cell header = workbook.getSheet("数据").getRow(0).getCell(0);
+            assertNotNull(header.getRichStringCellValue(),
+                    "表头必须是富文本，否则做不到「只有星号是红的」");
+
+            XSSFRichTextString rich = (XSSFRichTextString) header.getRichStringCellValue();
+            String text = rich.getString();
+            assertTrue(text.endsWith("*"), "必填列表头应以 * 结尾，实际：" + text);
+
+            int starStart = text.length() - 1;
+            XSSFFont starFont = rich.getFontAtIndex(starStart);
+            assertNotNull(starFont, "星号必须有独立的字体段");
+            assertEquals(IndexedColors.RED.getIndex(), starFont.getColor(),
+                    "星号必须是红色（用户明确要求的视觉标记）");
+        }
+    }
+
+    @Test
+    @DisplayName("必填列的表头批注以【必填】开头：提示每一行都要填")
+    void requiredColumnsHintEveryRow() throws Exception {
+        try (XSSFWorkbook workbook = new XSSFWorkbook(new ByteArrayInputStream(template()))) {
+            Sheet sheet = workbook.getSheet("数据");
+            String required = sheet.getRow(0).getCell(0).getCellComment().getString().getString();
+            assertTrue(required.contains("【必填】"), "必填列表头批注应明确标出必填，实际：" + required);
+            assertTrue(required.contains("每一行"), "提示要说清「每一行都要填」，实际：" + required);
+        }
+    }
+
+    @Test
+    @DisplayName("枚举/部门列带下拉且箭头可见：suppressDropDownArrow 必须为 true（OOXML 语义是反的）")
+    void referenceColumnsHaveVisibleDropdown() throws Exception {
+        try (XSSFWorkbook workbook = new XSSFWorkbook(new ByteArrayInputStream(templateOf(SCHEMA_WITH_REQUIRED_REF)))) {
+            Sheet data = workbook.getSheet("数据");
+            List<? extends DataValidation> validations = data.getDataValidations();
+            assertTrue(validations.size() >= 1, "枚举/部门列应有下拉数据验证");
+
+            // POI 的 getSuppressDropDownArrow 对应 OOXML 的 showDropDown；
+            // true 才是"显示箭头"（该属性语义为“抑制下拉箭头”的反向表达）。
+            assertTrue(validations.stream().allMatch(DataValidation::getSuppressDropDownArrow),
+                    "下拉箭头必须可见，否则用户不知道这一列能选");
+
+            // 必填列的下拉要带输入提示（选中单元格即显示“每行必填”）
+            assertTrue(validations.stream().anyMatch(DataValidation::getShowPromptBox),
+                    "必填列的下拉应带输入提示框");
         }
     }
 }

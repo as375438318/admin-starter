@@ -1447,3 +1447,14 @@ E2E 新增 `e2e/helpers.ts`：首次跑真的走一遍"被强制改密 → 改�
 核实过"后端是否需要改"：`PageQuery` 本身含 `sort/order`，控制器直接绑定，service 已传进 `NoticeQuery`，仓储有 `SORTS` 白名单（`createdAt`/`title`/`id`）→ **后端早就支持，只是前端没传**。所以本 CR 是纯前端：通知页 `fetcher` 加 `sort: 'createdAt', order: 'desc'`。
 
 **没动全局默认**：`SortSupport.isAsc(null) === true` 影响全项目所有列表，改它会把十几个页面顺序一起翻过来（C 档跨模块变更），不该夹在小修里——已写进 CR 遗留，建议单独排期。
+## 导入模板可用性：红星号 / 必填提示 / 下拉箭头（2026-11-12，CR-20261112-029）
+
+用户贴模板截图反馈三点，逐条查下来：
+
+1. **`*` 不红**：表头此前是纯文本 → 改富文本，`任务标题`（黑）+ `*`（红）两个 run。
+2. **"每一行都要有"看不到**：必填信息只在「填写须知」页与部分批注 → 必填列表头批注统一以 `【必填】每一行都要填写，不能留空` 开头，须知第 2 条措辞加强。
+3. **下拉没有列表**：下拉**本来就有**，但箭头被隐藏。解包真模板看到 `showDropDown="true"` —— OOXML 里这个属性语义是**反的**（true = 隐藏箭头）。原代码 `setSuppressDropDownArrow(false)` 恰好把箭头藏了。改 true 后 XML 变 `showDropDown="false"`，箭头可见。
+
+**两个踩坑**：① `showDropDown` 语义反直觉（方法名 suppress，传 true 才显示），已入断言 #94；② POI 的 `DataValidation` 没有 `setPromptTitle/setPrompt`，只有 `createPromptBox(title,text)` —— 我按直觉写两次才编译过，最后用 `javap` 查真实签名。
+
+测试新增 3 条（表头富文本红色 run、必填批注、下拉箭头+输入提示）；其中"必填+下拉"组合需要专用 schema（原 schema 无此类列，第一版断言直接失败）。后端 196 用例通过。

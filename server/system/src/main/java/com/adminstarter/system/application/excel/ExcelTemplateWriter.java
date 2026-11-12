@@ -63,14 +63,17 @@ public class ExcelTemplateWriter {
         for (int index = 0; index < fields.size(); index++) {
             ExcelField<?> field = fields.get(index);
             Cell cell = header.createCell(index);
-            cell.setCellValue(field.importHeaderWithRequiredMark());
+            // 表头用富文本：必填标记 * 单独一段并标红。纯文本做不到"只有星号是红的"，
+            // 而整列标红又会让表头失去层次——用户明确要求"* 号红色"。
+            cell.setCellValue(headerText(workbook, field));
             cell.setCellStyle(headerStyle);
             sheet.setColumnWidth(index, columnWidth(field.getImportHeader()));
-            if (field.getFormatHint() != null && !field.getFormatHint().isBlank()) {
+            String comment = headerComment(field);
+            if (comment != null) {
                 XSSFClientAnchor anchor = new XSSFClientAnchor(0, 0, 0, 0, index, 0, index + 2, 3);
-                XSSFComment comment = drawing.createCellComment(anchor);
-                comment.setString(new XSSFRichTextString(field.getImportHeader() + "：" + field.getFormatHint()));
-                cell.setCellComment(comment);
+                XSSFComment cellComment = drawing.createCellComment(anchor);
+                cellComment.setString(new XSSFRichTextString(comment));
+                cell.setCellComment(cellComment);
             }
         }
         sheet.createFreezePane(0, 1);
@@ -119,9 +122,17 @@ public class ExcelTemplateWriter {
             DataValidationConstraint constraint = validator.createFormulaListConstraint(range);
             DataValidation validation = validator.createValidation(
                     constraint, new CellRangeAddressList(1, MAX_DATA_ROW, fieldIndex, fieldIndex));
-            validation.setEmptyCellAllowed(true);
+            validation.setEmptyCellAllowed(!field.isRequired());
+            // 下拉只是引导，不拦手工输入：不弹错误框，但要**显示箭头**（否则用户根本看不到有下拉）
             validation.setShowErrorBox(false);
-            validation.setSuppressDropDownArrow(false);
+            // ⚠️ OOXML 的 showDropDown 语义是反的（true = 隐藏箭头）。POI 的 setSuppressDropDownArrow
+            // 直接落到该属性上，所以这里必须传 true —— 传 false 会让模板"看起来有下拉其实箭头被隐藏"。
+            validation.setSuppressDropDownArrow(true);
+            if (field.isRequired()) {
+                // POI 的 DataValidation 没有 setPromptTitle/setPrompt，只有 createPromptBox(title, text)
+                validation.setShowPromptBox(true);
+                validation.createPromptBox("必填列", "该列每一行都必须填写，留空会导致整批导入失败");
+            }
             dataSheet.addValidationData(validation);
             helper.setColumnWidth(column, columnWidth(field.getImportHeader()) * 2);
             column++;
@@ -170,7 +181,8 @@ public class ExcelTemplateWriter {
 
         List<String> rules = new ArrayList<>();
         rules.add("1. 只在「" + schema.dataSheetName() + "」页填写数据，首行为表头，请勿删除或改名。");
-        rules.add("2. 带 * 的列为必填；整批校验通过后才会写入，任一行有错整批不落库。");
+        rules.add("2. 表头带红色 * 的列为必填，每一行都要有值；有下拉箭头的列请优先从下拉里选。"
+                + "整批校验通过后才会写入，任一行有错整批不落库。");
         rules.add("3. 单文件不超过 50MB，数据行不超过 20000 行；只支持 .xlsx。");
         rules.add("4. 「" + REFERENCE_SHEET + "」页是下拉数据来源，已隐藏并锁定，请勿修改；"
                 + "下拉只是建议，允许手工填写，最终以导入时刻系统数据为准。");
@@ -231,6 +243,41 @@ public class ExcelTemplateWriter {
                 }
             }
         }
+    }
+
+    /** 表头富文本：可见文字 + 必填星号（红色加粗）。 */
+    private XSSFRichTextString headerText(XSSFWorkbook workbook, ExcelField<?> field) {
+        String header = field.getImportHeader();
+        if (!field.isRequired()) {
+            return new XSSFRichTextString(header);
+        }
+        Font base = workbook.createFont();
+        base.setBold(true);
+        Font required = workbook.createFont();
+        required.setBold(true);
+        required.setColor(IndexedColors.RED.getIndex());
+        XSSFRichTextString text = new XSSFRichTextString(header + "*");
+        text.applyFont(0, header.length(), base);
+        text.applyFont(header.length(), header.length() + 1, required);
+        return text;
+    }
+
+    /**
+     * 表头批注：必填列先说"每行必填"，再给格式提示。
+     * 必填信息不只写进「填写须知」页——用户填数据时看的是数据页，须在数据页就能看到。
+     */
+    private String headerComment(ExcelField<?> field) {
+        List<String> parts = new ArrayList<>();
+        if (field.isRequired()) {
+            parts.add("【必填】每一行都要填写，不能留空");
+        }
+        if (field.getFormatHint() != null && !field.getFormatHint().isBlank()) {
+            parts.add(field.getFormatHint());
+        }
+        if (parts.isEmpty()) {
+            return null;
+        }
+        return field.getImportHeader() + "：" + String.join("；", parts);
     }
 
     private CellStyle headerStyle(XSSFWorkbook workbook) {
