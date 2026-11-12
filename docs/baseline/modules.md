@@ -1,15 +1,15 @@
-# 系统基线 · 模块索引（as-built v1.10）
+# 系统基线 · 模块索引（as-built v1.11）
 
 | 项目 | 内容 |
 |---|---|
-| 版本 | v1.10（2026-11-10，新增「岗位 · 导入导出」接线，Flyway V16）；v1.9（2026-11-10，新增「示例业务 · 导入导出」模块与 `sys_export_task`，Flyway V15）；v1.8 删除 `packages/platform`、`packages/contracts` 空壳；v1.7 前端共享包迁至 `apps/shared`、新增 composables 分层；v1.6 新增缓存管理 |
+| 版本 | v1.11（2026-11-12，新增「工作台统计」模块：`/api/v1/dashboard`、权限码 `system:dashboard:view`、Flyway V18；无新表）；v1.10（2026-11-10，新增「岗位 · 导入导出」接线，Flyway V16）；v1.9（2026-11-10，新增「示例业务 · 导入导出」模块与 `sys_export_task`，Flyway V15）；v1.8 删除 `packages/platform`、`packages/contracts` 空壳；v1.7 前端共享包迁至 `apps/shared`、新增 composables 分层；v1.6 新增缓存管理 |
 | 状态 | 已按本仓库实际代码与数据库核对 |
 | 读者 | AI 编码助手、后端、前端 |
 | 定位 | **as-is**：系统现在“在哪”，不是规范（to-be）；不写业务细节 |
 | 依赖 | `AGENTS.md` §6 第 0 步（读基线）与第 8 步（回填基线） |
 
 > 接口清单不写在这里：接口事实源是导出的实现基线 `docs/api/openapi.generated.yaml`，手写契约源是 `docs/api/openapi.yaml`；本表只写接口前缀。
-> 表数量：业务表 **23 张**（V1 建 14 张 + V3 建 1 张 `biz_demo_task` + V10 建 3 张通知表 + V11 建 2 张定时任务表 + V12 建 1 张会话表 + V13 建 1 张分片会话表 `sys_file_chunk_upload` + V15 建 1 张导出任务表 `sys_export_task`），另有 `flyway_schema_history` 1 张；V2/V4/V5/V6/V7/V8/V9 只改数据或结构，无新建表（V7 增加的是生成列与唯一索引/索引调整，不新增表）。V8 只新增 4 行权限菜单与授权；V9 只加 `sys_user` 两列；V10 新增 3 张通知表与 5 枚权限码；V11 新增 `sys_job`、`sys_job_log` 与 7 枚权限码；V12 新增 `sys_user_session` 与 3 枚权限码（菜单挂在系统管理下）；V13 给 `sys_file` 加 `sha256/deleted/deleted_at/deleted_by` 与 2 个索引、新建 `sys_file_chunk_upload`、新增 2 枚文件权限码并种入 `file-orphan-cleanup` 任务；V14 只新增「缓存管理」菜单与 2 枚权限码（`system:cache:list`、`system:cache:clear`，仅授 `SUPER_ADMIN`），无新表；V15 新增 `sys_export_task`、2 枚权限码（`demo:task:import`、`demo:task:export`，授 `SUPER_ADMIN`/`DEPT_MANAGER`）与 `export-file-cleanup` 任务；V16 只新增 2 枚岗位导入/导出权限码（`system:post:import`、`system:post:export`，按 `system:post:list` 菜单挂按钮，授 `SUPER_ADMIN`/`DEPT_MANAGER`），无新表。Flyway 当前版本为 **V16**。
+> 表数量：业务表 **23 张**（V1 建 14 张 + V3 建 1 张 `biz_demo_task` + V10 建 3 张通知表 + V11 建 2 张定时任务表 + V12 建 1 张会话表 + V13 建 1 张分片会话表 `sys_file_chunk_upload` + V15 建 1 张导出任务表 `sys_export_task`），另有 `flyway_schema_history` 1 张；V2/V4/V5/V6/V7/V8/V9 只改数据或结构，无新建表（V7 增加的是生成列与唯一索引/索引调整，不新增表）。V8 只新增 4 行权限菜单与授权；V9 只加 `sys_user` 两列；V10 新增 3 张通知表与 5 枚权限码；V11 新增 `sys_job`、`sys_job_log` 与 7 枚权限码；V12 新增 `sys_user_session` 与 3 枚权限码（菜单挂在系统管理下）；V13 给 `sys_file` 加 `sha256/deleted/deleted_at/deleted_by` 与 2 个索引、新建 `sys_file_chunk_upload`、新增 2 枚文件权限码并种入 `file-orphan-cleanup` 任务；V14 只新增「缓存管理」菜单与 2 枚权限码（`system:cache:list`、`system:cache:clear`，仅授 `SUPER_ADMIN`），无新表；V15 新增 `sys_export_task`、2 枚权限码（`demo:task:import`、`demo:task:export`，授 `SUPER_ADMIN`/`DEPT_MANAGER`）与 `export-file-cleanup` 任务；V16 只新增 2 枚岗位导入/导出权限码（`system:post:import`、`system:post:export`，按 `system:post:list` 菜单挂按钮，授 `SUPER_ADMIN`/`DEPT_MANAGER`），无新表；V17 给 `sys_user` 加口令策略两列（`password_updated_at`、`must_change_password`）并新增 6 个配置键；V18 只新增 1 枚权限码 `system:dashboard:view` 并授 `SUPER_ADMIN`，无新表。Flyway 当前版本为 **V18**。
 > 后端分层：系统域 Service/Repository 在 `com.adminstarter.system`，Controller 统一在 `com.adminstarter.web.controller`；认证在 `com.adminstarter.auth`；前端在 `apps/pc`（共享包在 `apps/shared`）。
 
 ## 1. 模块索引
@@ -25,6 +25,7 @@
 | 系统管理 · 参数 | `com.adminstarter.system` | `apps/pc/src/views/system/config` | `sys_config` | `/api/v1/configs` | `system:config:` |
 | 系统管理 · 操作日志 | `com.adminstarter.system` | `apps/pc/src/views/system/log` | `sys_oper_log` | `/api/v1/oper-logs` | `system:log:` |
 | 系统管理 · 文件 | `com.adminstarter.system`（存储抽象在 `domain.storage`，本地实现在 `infrastructure.storage`） | `apps/pc/src/views/system/file` | `sys_file`（另有 `sys_file_chunk_upload`） | `/api/v1/files` | `system:file:` |
+| 系统管理 · 工作台统计 | `com.adminstarter.system`（`DashboardAppService`、`DashboardMapper`） | `apps/pc/src/views/dashboard` | 无（只读聚合既有表） | `/api/v1/dashboard` | `system:dashboard:` |
 | 系统管理 · 通知公告 | `com.adminstarter.system` | `apps/pc/src/views/system/notice`、`apps/pc/src/views/message` | `sys_notice`（另有 `sys_notice_scope`、`sys_notice_recipient`） | `/api/v1/notices`、`/api/v1/my-notices` | `system:notice:` |
 | 系统管理 · 定时任务 | `com.adminstarter.system`（`application.job` 调度、`infrastructure.job` 持久化） | `apps/pc/src/views/system/job` | `sys_job`（另有 `sys_job_log`） | `/api/v1/jobs`、`/api/v1/job-logs` | `system:job:` |
 | 系统管理 · 会话 | `com.adminstarter.system`（会话域）；`com.adminstarter.auth`（登录签发/校验挂钩）；Controller 在 `com.adminstarter.web` | `apps/pc/src/views/system/session`、`apps/pc/src/views/profile`（登录设备） | `sys_user_session` | `/api/v1/sessions`、`/api/v1/auth/sessions` | `system:session:` |
@@ -36,7 +37,6 @@
 | 个人中心 | `com.adminstarter.system` | `apps/pc/src/views/profile` | `sys_user` | `/api/v1/profile` | 无（仅需登录态） |
 | 公开配置（免鉴权） | `com.adminstarter.system` | 无（启动注入，无独立页面） | `sys_config` | `/api/v1/public` | 无 |
 | 健康检查 | `com.adminstarter.web` | 无 | 无 | `/api/v1/health` | 无 |
-| 仪表盘（纯前端） | 无 | `apps/pc/src/views/dashboard` | 无 | 无 | 无 |
 | 基础层 · common | `com.adminstarter.common` | 无 | 无 | 无 | 无 |
 | 基础层 · web | `com.adminstarter.web` | 无 | 无 | `/api/v1/**`（统一出口与鉴权） | 无 |
 | 横切 · 字段级脱敏 | `com.adminstarter.common.masking`（注解/三态/掩码/回传守卫）、`com.adminstarter.web.config.masking`（响应序列化） | 无 | 无（作用于响应 DTO 字段） | 无 | `system:user:`（字段码 `...:phone:` / `...:email:`） |
