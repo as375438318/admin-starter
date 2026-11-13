@@ -280,3 +280,12 @@
 - [x] 数据范围每角色一行，写明多角色并集与归属最宽松档（MUST, STATIC）
 - [x] 例外项单列：`sys_user` 豁免、公开 5 字段、受控/豁免分类（MUST, STATIC）
 - [x] 文件头写明“库变了要重跑”并给出脚本（MUST, STATIC）
+
+## 附：权限回归用例（自动生成，勿手改）
+
+本表的「权限码 × 角色」列被 `tools/permission-matrix/cli.mjs` 解析，与 Controller 的 `@PreAuthorize` 对账后生成
+`server/web/src/test/resources/permission-matrix.json`，由 `PermissionMatrixTest` 数据驱动执行。
+
+- 改了本表或改了 `@PreAuthorize`，都要重跑 `node tools/permission-matrix/cli.mjs`（CI 用 `--check` 阻断不一致）；
+- 新增权限码但本表没登记 → 生成器报警告、CI 红；
+- 字段级脱敏权限（`system:user:phone:view` 等）不在接口级，生成器归入 `skipped`，由脱敏单测覆盖。
