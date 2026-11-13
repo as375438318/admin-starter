@@ -1,9 +1,9 @@
 # 用途：后端运行中时，从 springdoc 导出真实实现的 OpenAPI 基线。
 # 用法：pwsh -ExecutionPolicy Bypass -File scripts/export-openapi.ps1（PowerShell 7+，Windows PowerShell 5.1 读取 UTF-8 中文会解析失败）
-#      可选参数：-BaseUrl http://127.0.0.1:8080 -Username admin -Password admin123 -OutFile docs/api/openapi.generated.yaml
+#      可选参数：-BaseUrl http://127.0.0.1:8082 -Username admin -Password admin123 -OutFile docs/api/openapi.generated.yaml
 # 说明：本脚本只读后端 /v3/api-docs.yaml，不修改任何业务数据；生成文件禁止手工编辑。
 param(
-    [string]$BaseUrl = 'http://127.0.0.1:8080',
+    [string]$BaseUrl = 'http://127.0.0.1:8082',
     [string]$Username = 'admin',
     [string]$Password = 'admin123',
     [string]$OutFile = ''

@@ -266,6 +266,7 @@ node tools/spec-lint/cli.mjs --root "<项目根目录>"
 
 | 版本 | 日期 | 变更内容 |
 |---|---|---|
+| v1.51 | 2026-11-13 | 后端端口改 **8082**（`CR-20261113-037`）：`application.yml`、Vite 代理、E2E 默认基址、导出脚本、文档同步；契约 1.1.1 → 1.1.2（仅 `servers` 元数据）。顺带修掉真实陷阱：`vue-tsc -b` 生成的 `vite.config.js` 会**覆盖** `vite.config.ts`（Vite 解析 `.js` 优先），已把编译产物重定向到 `node_modules/.tmp`；断言新增 #102 |
 | v1.50 | 2026-11-12 | 列表通用能力 P1（`CR-20261112-036`，B 档）：新增 `use-table-columns` + `ColumnSettings` + 排序白名单镜像，`use-paged-list` 支持 `sort/order`；用户/操作日志/示例任务三页接入「点表头排序 + 列勾选」，偏好存 localStorage；前端单测 110、E2E 10/10；设计见 `docs/design/list-sort-and-export-fields.md`；断言新增 #101 |
 | v1.49 | 2026-11-12 | 补 `AGENTS.md` 两处治理缺口（`CR-20261112-035`，D 档）：① §4.1 新增「跨模块行为变更的归口」（落 B，需求条目/计划以影响面清单替代），关闭 `CR-20261112-032` 标的 `RULE-GAP`；② §9-B 契约验证口径补到读+写+重型写接口；`AGENTS.md` **v1.6 → v1.7**；断言新增 #100 |
 | v1.48 | 2026-11-12 | 契约测试扩到高风险写接口（`CR-20261112-034`）：单文件上传、分片全链路（init→chunk→complete）、导入成功/422 共 4 条；逼出并修复契约 `ChunkSessionResponse.file` 的 `nullable+allOf` 不可用问题（改为"字段缺省"语义），契约 **1.1.0 → 1.1.1**；后端 215 用例、E2E 8/8；断言新增 #99 |

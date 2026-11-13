@@ -10,7 +10,7 @@
 openapi: 3.0.3
 info:
   title: 项目基础框架 · 后台管理接口契约
-  version: 1.1.1
+  version: 1.1.2
   description: |
     本项目接口契约（手写维护，版本随接口演进递增，见 CT-VER）。
     统一响应信封见 CT-RESP-001（data 必须存在，无值时为 null）；禁止 204/空 body 见 CT-RESP-009；
@@ -18,7 +18,7 @@ info:
     时间格式见 CT-FMT-001，金额用字符串见 CT-FMT-003；令牌协议载体见 CT-AUTH-001。
     未在本文件列出的接口以 docs/api/openapi.generated.yaml 为实现基线。
 servers:
-  - url: http://127.0.0.1:8080
+  - url: http://127.0.0.1:8082
     description: 本地开发
   # TODO(OPS): 预发/生产域名与反向代理前缀待部署环境确定后补充；补齐前本契约不得作为对外交付件。
 
@@ -3812,6 +3812,8 @@ components:
 # TODO(API): 补齐本项目其余接口；每新增接口必须回写错误码与字段约定，并把 x-status 从 DRAFT 推进到 APPROVED
 
 # 变更记录（CT-VER-005：版本号 / 日期 / 影响面 / 迁移方式）
+# 1.1.2 | 2026-11-13 | `servers` 基址 8080 → 8082（本机 8080 已被其他程序占用）。仅元数据，路径/字段/
+#         状态码/校验规则均未变，契约测试行为不受影响。
 # 1.1.1 | 2026-11-12 | `ChunkSessionResponse.data.file` 语义明确为"仅秒传命中时出现，未命中时字段缺省"
 #         （原写法 `nullable + allOf` 在 OAS 3.0 下无法通过校验：nullable 不作用于 allOf 分支）。
 #         实现同步改为 null 时不序列化该字段；调用方读取方式不变（null 与缺省等价）。

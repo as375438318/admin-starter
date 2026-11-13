@@ -1537,3 +1537,12 @@ E2E 新增 `e2e/helpers.ts`：首次跑真的走一遍"被强制改密 → 改�
 **踩的坑**：E2E 用 `/system/user` 打开是 404（真实路由是复数 `/system/users`，来自后端菜单）；单测对"旧偏好失效"的期望算错（用户已有显式偏好时 `defaultVisible` 不应叠加）。
 
 验证：前端单测 110 通过（+13）、E2E 10/10（+2）、构建通过；后端未改动。P2 铺量 13 个页面 + 3 处后端白名单；P3 导出按勾选列（契约 1.1.1 → 1.2.0）。
+## 后端端口改 8082 + 修掉 vite 配置被编译残留覆盖（2026-11-13，CR-20261113-037，B 档）
+
+本机 8080 被其他 java 程序占用，后端端口改 **8082**：`application.yml`、Vite `/api` 代理、3 个 E2E spec 默认基址、`export-openapi.ps1 -BaseUrl`、`local-dev.md`/`self-test-guide.md`、契约 `servers`（1.1.1 → 1.1.2，仅元数据）一并更新，并重新导出 `openapi.generated.yaml`。未给 `server.port` 引环境变量（那要新增配置键并进 `config-registry.yaml`，属另一件事）。
+
+**顺带修掉一个真实陷阱**：改完 `vite.config.ts` 的代理目标后前端仍连 8080。原因是 `apps/pc` 下有 `vue-tsc -b` 生成的 `vite.config.js`/`.d.ts`（被 `.gitignore` 覆盖，`git status` 看不见），而 **Vite 配置解析里 `.js` 优先于 `.ts`** —— 真配置被静默忽略，且每次 `pnpm build` 又生成回来。处置：删残留 + `tsconfig.node.json` 的产物重定向到 `node_modules/.tmp/tsconfig-node`（保留 `composite`）。验证：`pnpm build` 通过且不再在配置旁生成 `.js`。已登记断言 #102。
+
+另：项目依赖的 Redis（Windows 服务 `redisstarter`）此前被停，启动前已重新拉起，否则后端起不来。
+
+验证：8082 健康 200；经 5173 代理登录 `code=0`；前端构建通过；spec-lint error 0 / warning 49。

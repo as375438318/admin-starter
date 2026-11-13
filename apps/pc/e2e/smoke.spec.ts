@@ -5,7 +5,7 @@ import { loginAsAdmin, loginAsEmployee } from './helpers';
  * 主链路冒烟（ADR-006 的第 2 步）：只保 3–5 条，覆盖此前靠人工 CDP 验证的场景。
  * 前置：后端在 8080 运行、数据库已初始化（Flyway 自动），前端由 playwright.config 的 webServer 启动。
  */
-const API = process.env.E2E_API_URL ?? 'http://127.0.0.1:8080/api/v1';
+const API = process.env.E2E_API_URL ?? 'http://127.0.0.1:8082/api/v1';
 const ADMIN = { username: 'admin', password: 'admin123' };
 /** 无 system:user:list 的普通员工账号，用于权限与数据范围用例 */
 const EMPLOYEE = { username: 'dev1', password: 'admin123' };
