@@ -1,4 +1,4 @@
-# 系统基线 · 设计断言（as-built v1.52）
+# 系统基线 · 设计断言（as-built v1.53）
 
 | 项目 | 内容 |
 |---|---|
@@ -128,3 +128,4 @@
 | 102 | **改 `vite.config.ts` 不生效时，先查同目录有没有 `vite.config.js`**：`vue-tsc -b` 会按 `tsconfig.node.json` 把 `vite.config.ts` 编译成同目录 `.js`/`.d.ts`（已被 `.gitignore` 覆盖、`git status` 看不见），而 Vite 的配置解析 **`.js` 优先于 `.ts`** → 真配置被静默忽略、改了没反应。已把产物重定向到 `node_modules/.tmp/tsconfig-node`；另：本机后端端口为 **8082**（8080 常被其他程序占用） | `apps/pc/tsconfig.node.json`；`apps/pc/vite.config.ts`；`server/web/src/main/resources/application.yml`；`CR-20261113-037` | 排查这类问题会往"缓存/Vite 版本/浏览器"方向白耗时间；改端口只改 `.ts` 会以为"改错了" | 2026-11-13 || 103 | 后端排序白名单用 `Map.of(...)`（不可变 Map）实现时，**`get(null)` 会抛 NPE**：而"不传 `sort`"是最常见请求 → 列表直接 500。必须写成 `sort == null ? null : SORTS.get(sort)` | `FileRepositoryImpl`、`ExportTaskRepositoryImpl`；`CR-20261113-039` | 新增白名单的仓储照抄"直接 get"就会在默认列表页 500，且只在日志里看到空指针 | 2026-11-13 |
 | 103 | 后端排序白名单用 `Map.of(...)`（不可变 Map）实现时，**`get(null)` 会抛 NPE**：而「不传 `sort`」是最常见请求 → 列表直接 500。必须写成 `sort == null ? null : SORTS.get(sort)` | `FileRepositoryImpl`、`ExportTaskRepositoryImpl`；`CR-20261113-039` | 新增白名单的仓储照抄「直接 get」就会在默认列表页 500，且日志里只有空指针 | 2026-11-13 |
 | 104 | 导出列裁剪（`fields`）的三条不变式：① **只能减少列**（未知 key → 400 + 10001）；② **顺序以 schema 为准**，不按参数顺序；③ **不能绕过字段级脱敏**（裁剪发生在 `visibleColumns` 脱敏过滤**之后**）。异步导出把 `fields` 存进 `sys_export_task.query_params` 快照 | `ExcelExportWriter.resolveColumns`；`ExportFieldsTest`；`CR-20261113-038` | 把裁剪放到脱敏之前，等于给了一个"用 fields 把敏感列要回来"的提权入口 | 2026-11-13 |
+| 105 | 菜单 `icon` 字段必须是 **`@element-plus/icons-vue` 里已注册的图标名**（`main.ts` 全局注册的同一集合）：拼错时 `&lt;component :is="…"&gt;` **不报错、只渲染空白**，表现为"侧边栏图标没了"。编辑入口已改为可视化选择器 `IconPicker`（`apps/pc/src/components/IconPicker.vue`），直接改库或接口传值时仍须守住这条 | `IconPicker.vue`；`apps/pc/src/layout/SideMenu.vue`；`main.ts` | 手输图标名拼错后要花很久才发现是"名字不存在"而不是"样式或权限问题" | 2026-11-13 |
