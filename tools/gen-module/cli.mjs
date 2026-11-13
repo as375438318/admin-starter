@@ -659,8 +659,18 @@ function responseLines() {
 
 function nextMigrationVersion() {
   const dir = path.join(ROOT, migrationDir);
-  const versions = fs
-    .readdirSync(dir)
+  const names = fs.readdirSync(dir);
+  // 幂等：同一张表已经生成过迁移就复用它的版本号。
+  // 否则重复执行会产出 V20/V21/V22 三份同表迁移，Flyway 直接 "Found more than one migration with version N"
+  // 启动失败（断言 #110）。
+  const existing = names.find((name) => name.endsWith(`__${spec.table}.sql`));
+  if (existing) {
+    const matched = /^V(\d+)__/.exec(existing);
+    if (matched) {
+      return Number(matched[1]);
+    }
+  }
+  const versions = names
     .map((name) => /^V(\d+)__/.exec(name))
     .filter(Boolean)
     .map((match) => Number(match[1]));
@@ -761,12 +771,16 @@ function viewTemplate() {
     "  { key: 'ops', label: '操作', alwaysVisible: true, exportable: false },",
   ].join('\n');
 
+  // 无显式宽度的列会被 el-table 平均分配，整张表看起来"散"、表头像是居中的；
+  // 首列给 min-width 让名称类字段可伸展，其余固定宽度（与既有页面口径一致）
+  const widthOf = (field) => (field === items[0] ? 'min-width="200"' : 'width="140"');
+
   const tableColumns = items
     .map((field) => {
       if (field.type === 'boolean') {
-        return `        <el-table-column v-if="table.isVisible('${field.name}')" prop="${field.name}" label="${field.label}" width="100">
+        return `        <el-table-column v-if="table.isVisible('${field.name}')" prop="${field.name}" label="${field.label}" width="90">
           <template #default="{ row }">
-            <el-tag :type="row.${field.name} ? 'success' : 'info'" disable-transitions>
+            <el-tag :type="row.${field.name} ? 'success' : 'info'" size="small" disable-transitions>
               {{ row.${field.name} ? '启用' : '停用' }}
             </el-tag>
           </template>
@@ -777,6 +791,7 @@ function viewTemplate() {
           v-if="table.isVisible('${field.name}')"
           prop="${field.name}"
           label="${field.label}"
+          ${widthOf(field)}
           show-overflow-tooltip${sortable}
         />`;
     })
@@ -971,6 +986,15 @@ ${formItems}
     </el-drawer>
   </div>
 </template>
+
+<style scoped>
+/* 列表页通用类（page-toolbar / toolbar-filters / row-actions / table-empty / table-pagination）
+   在 src/styles/index.css 里是唯一定义来源，页面里只补宽度这类页面级规则。
+   漏掉 .filter-keyword 的宽度 → el-input 撑满一行，查询/重置会被挤到第二行。 */
+.filter-keyword {
+  width: 240px;
+}
+</style>
 `;
 }
 

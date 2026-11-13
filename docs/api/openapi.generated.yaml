@@ -1,6 +1,6 @@
 # 本文件由 scripts/export-openapi.ps1 从运行中的后端 /v3/api-docs.yaml 自动生成，禁止手工编辑。
 # 契约源（手写维护）：docs/api/openapi.yaml；本文件只是实现基线（as-built），用于契约差异比对。
-# 生成时间：2026-11-13 16:55:08
+# 生成时间：2026-11-13 17:36:54
 
 openapi: 3.0.1
 info:
@@ -2352,6 +2352,49 @@ paths:
             '*/*':
               schema:
                 $ref: '#/components/schemas/ApiResponseOverview'
+  /api/v1/change-audits:
+    get:
+      tags:
+      - change-audit-controller
+      operationId: page_12
+      parameters:
+      - name: pageQuery
+        in: query
+        required: true
+        schema:
+          $ref: '#/components/schemas/PageQuery'
+      - name: targetType
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: targetKey
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: operator
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: action
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: keyword
+        in: query
+        required: false
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponsePageResponseResponse'
   /api/v1/cache/overview:
     get:
       tags:

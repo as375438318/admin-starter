@@ -2,7 +2,7 @@
 
 | 项目 | 内容 |
 |---|---|
-| 版本 | v1.12（2026-11-13，新增「客户档案」模块：`/api/v1/demo/customers`、权限码 `demo:customer:`、Flyway V20、表 `demo_customer`；该模块由 `tools/gen-module` 生成，作为生成器活样例）；v1.11（2026-11-12，新增「工作台统计」模块：`/api/v1/dashboard`、权限码 `system:dashboard:view`、Flyway V18；无新表）；v1.10（2026-11-10，新增「岗位 · 导入导出」接线，Flyway V16）；v1.9（2026-11-10，新增「示例业务 · 导入导出」模块与 `sys_export_task`，Flyway V15）；v1.8 删除 `packages/platform`、`packages/contracts` 空壳；v1.7 前端共享包迁至 `apps/shared`、新增 composables 分层；v1.6 新增缓存管理 |
+| 版本 | v1.13（2026-11-13，新增「变更审计」模块：`/api/v1/change-audits`、权限码 `system:audit:list`、Flyway V21、表 `sys_change_audit`；覆盖面参数/字典/菜单/角色授权）；v1.12（2026-11-13，新增「客户档案」模块：`/api/v1/demo/customers`、权限码 `demo:customer:`、Flyway V20、表 `demo_customer`；该模块由 `tools/gen-module` 生成，作为生成器活样例）；v1.11（2026-11-12，新增「工作台统计」模块：`/api/v1/dashboard`、权限码 `system:dashboard:view`、Flyway V18；无新表）；v1.10（2026-11-10，新增「岗位 · 导入导出」接线，Flyway V16）；v1.9（2026-11-10，新增「示例业务 · 导入导出」模块与 `sys_export_task`，Flyway V15）；v1.8 删除 `packages/platform`、`packages/contracts` 空壳；v1.7 前端共享包迁至 `apps/shared`、新增 composables 分层；v1.6 新增缓存管理 |
 | 状态 | 已按本仓库实际代码与数据库核对 |
 | 读者 | AI 编码助手、后端、前端 |
 | 定位 | **as-is**：系统现在“在哪”，不是规范（to-be）；不写业务细节 |
@@ -31,6 +31,7 @@
 | 系统管理 · 会话 | `com.adminstarter.system`（会话域）；`com.adminstarter.auth`（登录签发/校验挂钩）；Controller 在 `com.adminstarter.web` | `apps/pc/src/views/system/session`、`apps/pc/src/views/profile`（登录设备） | `sys_user_session` | `/api/v1/sessions`、`/api/v1/auth/sessions` | `system:session:` |
 | 系统管理 · 缓存 | `com.adminstarter.system`（应用服务/Redis 网关）；命名空间白名单在 `com.adminstarter.common.cache`；Controller 在 `com.adminstarter.web` | `apps/pc/src/views/system/cache` | 无（Redis 运行态；审计写 `sys_oper_log`） | `/api/v1/cache` | `system:cache:` |
 | 示例业务 | `com.adminstarter.system` | `apps/pc/src/views/demo/task` | `biz_demo_task` | `/api/v1/demo-tasks` | `demo:task:` |
+| 变更审计（配置面） | `com.adminstarter.system`（`application/audit`） | `apps/pc/src/views/system/audit` | `sys_change_audit` | `/api/v1/change-audits` | `system:audit:` |
 | 客户档案（生成器样例） | `com.adminstarter.system` | `apps/pc/src/views/demo/customer` | `demo_customer` | `/api/v1/demo/customers` | `demo:customer:` |
 | 示例业务 · 导入导出（通用框架） | `com.adminstarter.system`（通用实现在 `application/excel`、`application/export`；示例接线在 `application/excel/demo`） | `apps/pc/src/views/demo/task`（导入对话框/导出任务抽屉） | `sys_export_task`（临时文件不进 `sys_file`） | `/api/v1/demo-tasks`（`/import-template`、`/import`、`/export`、`/export-tasks`） | `demo:task:`（`import` 含模板下载、`export` 独立） |
 | 系统管理 · 岗位 · 导入导出（通用框架第二接入点） | `com.adminstarter.system`（框架在 `application/excel`、`application/export`；岗位接线在 `application/excel/post`） | `apps/pc/src/views/system/post`（导入对话框/导出任务抽屉） | `sys_export_task`（临时文件不进 `sys_file`） | `/api/v1/posts`（`/import-template`、`/import`、`/export`、`/export-tasks`） | `system:post:`（`import` 含模板下载、`export` 独立） |

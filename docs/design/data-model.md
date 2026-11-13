@@ -21,6 +21,7 @@
 |---|---|---|---|---|---|
 | 1 | `biz_demo_task` | 示例业务任务（数据权限参考实现） | 9 | 4 | 数据权限：`dept_id`（组织范围）、`create_by`（SELF/CUSTOM_USER）、`owner_id`（OWNER）；软删除：`deleted`；审计：`create_by`、`created_at`、`updated_at` |
 | 2 | `demo_customer` | 客户档案（生成器样例） | 6 | 0 | 软删除：`deleted`；审计：`created_at`、`updated_at`；无数据权限（生成器不猜业务，见 `docs/design/module-generator.md` §7） |
+| 3 | `sys_change_audit` | 配置面变更审计（参数/字典/菜单/角色授权） | 13 | 0 | 只追加：`updated_at` = `created_at`、`deleted` = 0；索引 `(target_type,target_key,created_at)`、`(created_at)`；敏感对象快照整体打码 |
 | 2 | `role_scope_target` | 角色自定义数据范围目标 | 4 | 2 | — |
 | 3 | `sys_config` | 系统参数 | 10 | 2 | 软删除：`deleted`；审计：`created_at`、`updated_at` |
 | 4 | `sys_dept` | 部门 | 13 | 3 | 软删除：`deleted`；审计：`created_at`、`updated_at` |

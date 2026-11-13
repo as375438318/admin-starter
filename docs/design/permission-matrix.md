@@ -170,6 +170,7 @@
 | `system:post:export` | 系统管理 | 按钮/接口 | ✓ | ✓ |  |  |  |  |  |
 | `system:dashboard:view` | 系统管理 | 按钮/接口 | ✓ |  |  |  |  |  |  |
 | `demo:task:list` | 示例业务 | 菜单 | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| `system:audit:list` | 变更审计（配置面） | 菜单 | ✓ | ✗ | ✗ | ✓ | ✗ | ✗ | ✗ |
 | `demo:customer:list` | 客户档案（生成器样例） | 菜单 | ✓ | ✓ | ✗ | ✗ | ✗ | ✗ | ✗ |
 | `demo:customer:create` | 客户档案 | 按钮/接口 | ✓ | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ |
 | `demo:customer:update` | 客户档案 | 按钮/接口 | ✓ | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ |

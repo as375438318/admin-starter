@@ -3,6 +3,7 @@ package com.adminstarter.system.application;
 import com.adminstarter.common.error.BizException;
 import com.adminstarter.common.error.ErrorCode;
 import com.adminstarter.common.util.TimeSupport;
+import com.adminstarter.system.application.audit.ChangeAuditRecorder;
 import com.adminstarter.system.application.dto.MenuDtos;
 import com.adminstarter.system.domain.enums.MenuType;
 import com.adminstarter.system.domain.model.Menu;
@@ -24,6 +25,7 @@ public class MenuAppService {
 
     private final MenuRepository menuRepository;
     private final RoleRepository roleRepository;
+    private final ChangeAuditRecorder changeAuditRecorder;
 
     public List<MenuDtos.Response> tree() {
         List<Menu> menus = menuRepository.findAll();
@@ -51,6 +53,8 @@ public class MenuAppService {
         Menu menu = new Menu();
         apply(menu, request);
         menuRepository.insert(menu);
+        changeAuditRecorder.recordCreated(ChangeAuditRecorder.TYPE_MENU, menuKey(menu), menu.getName(),
+                menuSnapshot(menu), false);
         return toResponse(menu);
     }
 
@@ -61,8 +65,11 @@ public class MenuAppService {
             throw new BizException(ErrorCode.RESOURCE_NOT_FOUND, "菜单不存在");
         }
         validateParent(request.getParentId(), id);
+        Map<String, Object> before = menuSnapshot(menu);
         apply(menu, request);
         menuRepository.update(menu);
+        changeAuditRecorder.recordUpdated(ChangeAuditRecorder.TYPE_MENU, menuKey(menu), menu.getName(),
+                before, menuSnapshot(menu), false);
         return toResponse(menu);
     }
 
@@ -79,6 +86,33 @@ public class MenuAppService {
             throw new BizException(ErrorCode.STATE_CONFLICT, "菜单已分配给角色，不能删除");
         }
         menuRepository.deleteById(id);
+        changeAuditRecorder.recordDeleted(ChangeAuditRecorder.TYPE_MENU, menuKey(menu), menu.getName(),
+                menuSnapshot(menu), false);
+    }
+
+    /** 菜单业务键：有 path 用 path，按钮节点（无 path）用权限码，都没有则退回 id */
+    private String menuKey(Menu menu) {
+        if (menu.getPath() != null && !menu.getPath().isBlank()) {
+            return menu.getPath();
+        }
+        if (menu.getPermissionCode() != null && !menu.getPermissionCode().isBlank()) {
+            return menu.getPermissionCode();
+        }
+        return "id:" + menu.getId();
+    }
+
+    private Map<String, Object> menuSnapshot(Menu menu) {
+        Map<String, Object> snapshot = new LinkedHashMap<>();
+        snapshot.put("name", menu.getName());
+        snapshot.put("menuType", menu.getMenuType() == null ? null : menu.getMenuType().name());
+        snapshot.put("path", menu.getPath());
+        snapshot.put("component", menu.getComponent());
+        snapshot.put("permissionCode", menu.getPermissionCode());
+        snapshot.put("icon", menu.getIcon());
+        snapshot.put("sort", menu.getSort());
+        snapshot.put("isVisible", menu.getIsVisible());
+        snapshot.put("isEnabled", menu.getIsEnabled());
+        return snapshot;
     }
 
     private void validateParent(Long parentId, Long selfId) {

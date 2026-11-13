@@ -158,6 +158,7 @@ onMounted(() => {
           v-if="table.isVisible('name')"
           prop="name"
           label="客户名称"
+          min-width="200"
           show-overflow-tooltip
           :sortable="table.sortableOf('name')"
         />
@@ -165,6 +166,7 @@ onMounted(() => {
           v-if="table.isVisible('level')"
           prop="level"
           label="客户等级"
+          width="140"
           show-overflow-tooltip
           :sortable="table.sortableOf('level')"
         />
@@ -172,17 +174,19 @@ onMounted(() => {
           v-if="table.isVisible('contact')"
           prop="contact"
           label="联系人"
+          width="140"
           show-overflow-tooltip
         />
         <el-table-column
           v-if="table.isVisible('phone')"
           prop="phone"
           label="联系电话"
+          width="140"
           show-overflow-tooltip
         />
-        <el-table-column v-if="table.isVisible('isEnabled')" prop="isEnabled" label="状态" width="100">
+        <el-table-column v-if="table.isVisible('isEnabled')" prop="isEnabled" label="状态" width="90">
           <template #default="{ row }">
-            <el-tag :type="row.isEnabled ? 'success' : 'info'" disable-transitions>
+            <el-tag :type="row.isEnabled ? 'success' : 'info'" size="small" disable-transitions>
               {{ row.isEnabled ? '启用' : '停用' }}
             </el-tag>
           </template>
@@ -191,6 +195,7 @@ onMounted(() => {
           v-if="table.isVisible('remark')"
           prop="remark"
           label="备注"
+          width="140"
           show-overflow-tooltip
         />
         <el-table-column v-if="table.isVisible('createdAt')" prop="createdAt" label="创建时间" width="170" :sortable="table.sortableOf('createdAt')">
@@ -247,3 +252,12 @@ onMounted(() => {
     </el-drawer>
   </div>
 </template>
+
+<style scoped>
+/* 列表页通用类（page-toolbar / toolbar-filters / row-actions / table-empty / table-pagination）
+   在 src/styles/index.css 里是唯一定义来源，页面里只补宽度这类页面级规则。
+   漏掉 .filter-keyword 的宽度 → el-input 撑满一行，查询/重置会被挤到第二行。 */
+.filter-keyword {
+  width: 240px;
+}
+</style>
