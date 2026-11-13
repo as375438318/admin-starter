@@ -1,0 +1,21 @@
+{
+  "key": "customer",
+  "name": "客户档案",
+  "table": "demo_customer",
+  "path": "/demo/customers",
+  "viewDir": "demo/customer",
+  "apiFile": "demoCustomer",
+  "parentMenuPath": null,
+  "menuSort": 12,
+  "icon": "Avatar",
+  "permissionPrefix": "demo:customer",
+  "logModule": "客户档案",
+  "fields": [
+    { "name": "name", "label": "客户名称", "type": "string", "length": 100, "required": true, "keyword": true, "sortable": true },
+    { "name": "level", "label": "客户等级", "type": "string", "length": 16, "sortable": true },
+    { "name": "contact", "label": "联系人", "type": "string", "length": 64, "keyword": true },
+    { "name": "phone", "label": "联系电话", "type": "string", "length": 32 },
+    { "name": "isEnabled", "label": "状态", "type": "boolean" },
+    { "name": "remark", "label": "备注", "type": "string", "length": 255 }
+  ]
+}

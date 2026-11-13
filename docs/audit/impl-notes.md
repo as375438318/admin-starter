@@ -1575,3 +1575,14 @@ E2E 新增 `e2e/helpers.ts`：首次跑真的走一遍"被强制改密 → 改�
 修法：V19 新增**隐藏的 C 型页面菜单**「工作台」承载该按钮权限（`permission_code` 必须为 NULL，否则普通用户打开首页就 403），F 节点挪到它下面；容器菜单授给所有角色（不带权限码，不构成提权，但避免授权树"子授父未授"的悬空态）。前端动态路由补**按 path 去重**（原来只按 name 去重，而菜单路由名是 `Menu{id}`，拦不住固定路由），固定路由优先。
 
 验证：Flyway 19 应用成功、SQL 复核层级正确、后端 221 用例 BUILD SUCCESS（V19 同时应用到测试库）、前端单测 116、E2E 11/11、截图确认侧边栏未新增「工作台」。断言 #106。
+## 模块生成器（2026-11-13，CR-20261114-041，B 档）
+
+`tools/gen-module/cli.mjs`（Node，与 `tools/spec-lint` 同形态）：读一份 JSON 描述 → 生成领域/持久化/应用/接口/迁移/前端 api+页面/契约片段共 14 个文件。定位是**开发期脚手架**：产物进仓库、走 PR + CI，不做运行时菜单式生成（那样服务器要写源码目录，还绕过 review 与门禁）。
+
+用生成器真的拉了一个「客户档案」模块作为活样例（表 `demo_customer`、菜单 76 + 三个按钮、权限码 `demo:customer:*`、5 个接口、Flyway V20、前端页面），并加了 E2E 出厂验收（菜单可见→列表→新增→关键词搜索→删除，数据自清理）。
+
+生成器把既有约束固化进模板：仓库实现统一用 `SortSupport.resolveColumn`（避免 `Map.of` 的 `get(null)` NPE，断言 #103）、按钮权限挂在 C 型页面菜单下（断言 #106）、列定义与后端导出 schema 对齐。
+
+过程中修掉 5 个自造问题：`keyword` 包装器生成了断链的 `w.like(a).or()\n like(b)`；DTO 用 `Instant` 而领域模型是 `LocalDateTime`，漏了 `TimeSupport.toInstant` 转换；契约片段插进 `openapi.yaml` 时丢换行把两行粘成一行（18 个契约测试同时红）；`CustomerPageResponse.list` 误引用 `CustomerSaveRequest`；E2E 删除确认框文案是「删除」不是「确定」。
+
+验证：后端 221 用例 BUILD SUCCESS（V20 同时应用到测试库）、前端 116 单测 + 构建通过、E2E 12/12、运行时 CRUD 冒烟全通（含白名单外 sort 静默回落）、spec-lint error 0 / warning 49。

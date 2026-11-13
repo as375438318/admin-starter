@@ -1,0 +1,61 @@
+# 客户档案模块契约片段（生成物，需人工合并进 docs/api/openapi.yaml 后再导出 as-is）
+# 合并后记得：契约版本 +0.1、变更记录一条、跑 scripts/export-openapi.ps1
+paths:
+  /demo/customers:
+    get:
+      x-status: IMPLEMENTED
+      tags: [customer]
+      summary: 客户档案分页
+      operationId: customerPage
+      parameters:
+        - name: keyword
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: sort
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: order
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [asc, desc]
+      responses:
+        '200':
+          description: 成功
+    post:
+      x-status: IMPLEMENTED
+      tags: [customer]
+      summary: 新增客户档案
+      operationId: customerCreate
+      responses:
+        '200':
+          description: 成功
+
+components:
+  schemas:
+    CustomerResponse:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+        - type: object
+          additionalProperties: true
+          properties:
+            data:
+              type: object
+              properties:
+                name:
+                  type: string
+                level:
+                  type: string
+                contact:
+                  type: string
+                phone:
+                  type: string
+                isEnabled:
+                  type: boolean
+                remark:
+                  type: string
