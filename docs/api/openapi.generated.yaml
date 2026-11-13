@@ -1,6 +1,6 @@
 # 本文件由 scripts/export-openapi.ps1 从运行中的后端 /v3/api-docs.yaml 自动生成，禁止手工编辑。
 # 契约源（手写维护）：docs/api/openapi.yaml；本文件只是实现基线（as-built），用于契约差异比对。
-# 生成时间：2026-11-13 15:05:38
+# 生成时间：2026-11-13 16:55:08
 
 openapi: 3.0.1
 info:
@@ -622,10 +622,10 @@ paths:
             '*/*':
               schema:
                 $ref: '#/components/schemas/ApiResponseVoid'
-  /api/v1/demo-tasks/{id}:
+  /api/v1/demo/customers/{id}:
     get:
       tags:
-      - demo-task-controller
+      - customer-controller
       operationId: get_2
       parameters:
       - name: id
@@ -643,7 +643,7 @@ paths:
                 $ref: '#/components/schemas/ApiResponseResponse'
     put:
       tags:
-      - demo-task-controller
+      - customer-controller
       operationId: update_7
       parameters:
       - name: id
@@ -667,7 +667,7 @@ paths:
                 $ref: '#/components/schemas/ApiResponseResponse'
     delete:
       tags:
-      - demo-task-controller
+      - customer-controller
       operationId: delete_8
       parameters:
       - name: id
@@ -683,10 +683,10 @@ paths:
             '*/*':
               schema:
                 $ref: '#/components/schemas/ApiResponseVoid'
-  /api/v1/configs/{id}:
+  /api/v1/demo-tasks/{id}:
     get:
       tags:
-      - config-controller
+      - demo-task-controller
       operationId: get_3
       parameters:
       - name: id
@@ -704,7 +704,7 @@ paths:
                 $ref: '#/components/schemas/ApiResponseResponse'
     put:
       tags:
-      - config-controller
+      - demo-task-controller
       operationId: update_8
       parameters:
       - name: id
@@ -728,8 +728,69 @@ paths:
                 $ref: '#/components/schemas/ApiResponseResponse'
     delete:
       tags:
-      - config-controller
+      - demo-task-controller
       operationId: delete_9
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseVoid'
+  /api/v1/configs/{id}:
+    get:
+      tags:
+      - config-controller
+      operationId: get_4
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseResponse'
+    put:
+      tags:
+      - config-controller
+      operationId: update_9
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SaveRequest'
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseResponse'
+    delete:
+      tags:
+      - config-controller
+      operationId: delete_10
       parameters:
       - name: id
         in: path
@@ -1336,11 +1397,51 @@ paths:
             '*/*':
               schema:
                 $ref: '#/components/schemas/ApiResponseResponse'
+  /api/v1/demo/customers:
+    get:
+      tags:
+      - customer-controller
+      operationId: page_9
+      parameters:
+      - name: pageQuery
+        in: query
+        required: true
+        schema:
+          $ref: '#/components/schemas/PageQuery'
+      - name: keyword
+        in: query
+        required: false
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponsePageResponseResponse'
+    post:
+      tags:
+      - customer-controller
+      operationId: create_6
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SaveRequest'
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseResponse'
   /api/v1/demo-tasks:
     get:
       tags:
       - demo-task-controller
-      operationId: page_9
+      operationId: page_10
       parameters:
       - name: pageQuery
         in: query
@@ -1373,7 +1474,7 @@ paths:
     post:
       tags:
       - demo-task-controller
-      operationId: create_6
+      operationId: create_7
       requestBody:
         content:
           application/json:
@@ -1433,7 +1534,7 @@ paths:
     get:
       tags:
       - config-controller
-      operationId: page_10
+      operationId: page_11
       parameters:
       - name: pageQuery
         in: query
@@ -1460,7 +1561,7 @@ paths:
     post:
       tags:
       - config-controller
-      operationId: create_7
+      operationId: create_8
       requestBody:
         content:
           application/json:

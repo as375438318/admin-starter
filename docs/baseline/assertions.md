@@ -1,4 +1,4 @@
-# 系统基线 · 设计断言（as-built v1.54）
+# 系统基线 · 设计断言（as-built v1.55）
 
 | 项目 | 内容 |
 |---|---|
@@ -130,3 +130,5 @@
 | 104 | 导出列裁剪（`fields`）的三条不变式：① **只能减少列**（未知 key → 400 + 10001）；② **顺序以 schema 为准**，不按参数顺序；③ **不能绕过字段级脱敏**（裁剪发生在 `visibleColumns` 脱敏过滤**之后**）。异步导出把 `fields` 存进 `sys_export_task.query_params` 快照 | `ExcelExportWriter.resolveColumns`；`ExportFieldsTest`；`CR-20261113-038` | 把裁剪放到脱敏之前，等于给了一个"用 fields 把敏感列要回来"的提权入口 | 2026-11-13 |
 | 105 | 菜单 `icon` 字段必须是 **`@element-plus/icons-vue` 里已注册的图标名**（`main.ts` 全局注册的同一集合）：拼错时 `&lt;component :is="…"&gt;` **不报错、只渲染空白**，表现为"侧边栏图标没了"。编辑入口已改为可视化选择器 `IconPicker`（`apps/pc/src/components/IconPicker.vue`），直接改库或接口传值时仍须守住这条 | `IconPicker.vue`；`apps/pc/src/layout/SideMenu.vue`；`main.ts` | 手输图标名拼错后要花很久才发现是"名字不存在"而不是"样式或权限问题" | 2026-11-13 |
 | 106 | 「固定路由页面」的权限码要靠**隐藏的页面级菜单**承载，禁止挂到目录（M）下：工作台是固定路由 `/dashboard`，其 `system:dashboard:view` 由隐藏 C 菜单「工作台」（`is_visible=0`、**`permission_code` 必须 NULL**）承载；给容器菜单配权限码会让普通用户打开首页直接 403。前端动态路由除按 name 去重外**必须再按 path 去重**（固定路由优先），否则菜单路由会覆盖固定路由 | `V19__fix_dashboard_menu_hierarchy.sql`；`apps/pc/src/router/index.ts`；`CR-20261113-040` | 挂目录下会出现"按钮挂在目录"的孤儿节点（菜单管理与授权树同时畸形）；漏 path 去重会出现两条 `/dashboard` 且后注册者胜出 | 2026-11-13 |
+| 107 | 模块生成器（`tools/gen-module`）的三条红线：① **一次性生成、之后手改，不做双向同步**（`--check` 故意不进 CI，接了会逼人"为绿灯不手改"）；② **生成物与手写代码受同一套门禁**（契约测试/spec-lint/单测/E2E 不区分来源）——它是脚手架不是后门，禁止做成运行时菜单式生成（服务器写源码目录＝准 RCE，且绕过 review）；③ **不猜业务**：输入没声明的（数据权限、导入导出、脱敏）一律不生成 | `tools/gen-module/cli.mjs`；`docs/design/module-generator.md`；`CR-20261114-041` | 生成"看起来完整但语义错"的模块比不生成更贵；运行时生成会让生成物永久脱离治理 | 2026-11-13 |
+| 108 | 生成器模板腐化只有一条可靠信号：**用真实模块跑一遍**。改了 `cli.mjs` 的模板必须跑「生成 → `mvn verify` → `pnpm build` → E2E」；仓库里 `customer` 模块就是活样例，`apps/pc/e2e/generated-module.spec.ts` 是它的出厂验收（菜单可见/列表可开/新增/搜索/删除，数据自清理）。另：改 `docs/api/openapi.yaml` 后**必须先做一次 YAML 解析**再跑契约测试——片段插入时丢换行会把两行粘成一行，报错信息只显示"Unable to load API spec" | `tools/gen-module/`；`apps/pc/e2e/generated-module.spec.ts`；`CR-20261114-041` | 模板腐化的表现是"生成出来的代码编译不过"，半年后没人敢用；YAML 粘连会让 18 个契约测试同时红，而错误信息不指向真因 | 2026-11-13 |
