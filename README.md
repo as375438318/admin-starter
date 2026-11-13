@@ -266,6 +266,7 @@ node tools/spec-lint/cli.mjs --root "<项目根目录>"
 
 | 版本 | 日期 | 变更内容 |
 |---|---|---|
+| v1.58 | 2026-11-13 | 可交付性三件套（`CR-20261114-044`）：`docker-compose.yml`（MySQL/Redis/后端/前端 nginx，只有 web 对外发布端口）+ `deploy/Dockerfile.web` + `deploy/nginx.conf`；actuator 暴露 `health/readiness`、`health/liveness`、`prometheus`（带 `application` 标签）；优雅停机 30s 相位超时 + 容器 `init: true`；`scripts/smoke-deployment.ps1` 部署冒烟；CI 新增「部署产物校验」job；断言 #112/#113 |
 | v1.57 | 2026-11-13 | 新增**通用导出中心**（`CR-20261114-043`）：`GET /api/v1/exports/{moduleKey}` + `/exports/modules`，按模块查表鉴权（`@exportGuard`），已注册 customer / demo-task / post，同步/异步自动切换、导出列白名单透传；生成器模板同步支持导出（生成即有导出按钮）；另更正上一轮"重复迁移导致 main 起不来"的误判（版本号并未重复）；后端 233 用例、前端 116 单测、E2E 13/13；断言新增 #111 |
 | v1.56 | 2026-11-13 | 新增**配置面变更审计**（`CR-20261114-042`）：`sys_change_audit`（V21）+ 只读接口 `GET /api/v1/change-audits` + 审计页，覆盖参数/字典/菜单/角色授权，敏感值两侧打码；顺带修掉 PR #41 误合入的重复迁移（V21/V22 demo_customer）并让生成器迁移幂等；后端 229 用例、前端 116 单测、E2E 13/13；断言新增 #109/#110 |
 | v1.55 | 2026-11-13 | 新增**模块生成器** `tools/gen-module`（`CR-20261114-041`）：JSON 描述 → 14 个文件（领域/持久化/应用/接口/迁移/前端/契约片段），并用它真的拉出「客户档案」活样例（Flyway V20、4 个权限码、5 个接口、契约 1.3.0）；后端 221 用例、前端 116 单测、E2E 12/12；断言新增 #107/#108 |

@@ -2,7 +2,7 @@
 
 | 项目 | 内容 |
 |---|---|
-| 版本 | v1.14（2026-11-13，新增「通用导出中心」：`/api/v1/exports/{moduleKey}`、`/api/v1/exports/modules`，Flyway V22 补 `demo:customer:export`；已注册 customer / demo-task / post）；v1.13（2026-11-13，新增「变更审计」模块：`/api/v1/change-audits`、权限码 `system:audit:list`、Flyway V21、表 `sys_change_audit`；覆盖面参数/字典/菜单/角色授权）；v1.12（2026-11-13，新增「客户档案」模块：`/api/v1/demo/customers`、权限码 `demo:customer:`、Flyway V20、表 `demo_customer`；该模块由 `tools/gen-module` 生成，作为生成器活样例）；v1.11（2026-11-12，新增「工作台统计」模块：`/api/v1/dashboard`、权限码 `system:dashboard:view`、Flyway V18；无新表）；v1.10（2026-11-10，新增「岗位 · 导入导出」接线，Flyway V16）；v1.9（2026-11-10，新增「示例业务 · 导入导出」模块与 `sys_export_task`，Flyway V15）；v1.8 删除 `packages/platform`、`packages/contracts` 空壳；v1.7 前端共享包迁至 `apps/shared`、新增 composables 分层；v1.6 新增缓存管理 |
+| 版本 | v1.15（2026-11-13，新增「部署产物」：`docker-compose.yml`、`deploy/Dockerfile.web`、`deploy/nginx.conf`、`scripts/smoke-deployment.ps1`，actuator 暴露 prometheus/readiness/liveness）；v1.14（2026-11-13，新增「通用导出中心」：`/api/v1/exports/{moduleKey}`、`/api/v1/exports/modules`，Flyway V22 补 `demo:customer:export`；已注册 customer / demo-task / post）；v1.13（2026-11-13，新增「变更审计」模块：`/api/v1/change-audits`、权限码 `system:audit:list`、Flyway V21、表 `sys_change_audit`；覆盖面参数/字典/菜单/角色授权）；v1.12（2026-11-13，新增「客户档案」模块：`/api/v1/demo/customers`、权限码 `demo:customer:`、Flyway V20、表 `demo_customer`；该模块由 `tools/gen-module` 生成，作为生成器活样例）；v1.11（2026-11-12，新增「工作台统计」模块：`/api/v1/dashboard`、权限码 `system:dashboard:view`、Flyway V18；无新表）；v1.10（2026-11-10，新增「岗位 · 导入导出」接线，Flyway V16）；v1.9（2026-11-10，新增「示例业务 · 导入导出」模块与 `sys_export_task`，Flyway V15）；v1.8 删除 `packages/platform`、`packages/contracts` 空壳；v1.7 前端共享包迁至 `apps/shared`、新增 composables 分层；v1.6 新增缓存管理 |
 | 状态 | 已按本仓库实际代码与数据库核对 |
 | 读者 | AI 编码助手、后端、前端 |
 | 定位 | **as-is**：系统现在“在哪”，不是规范（to-be）；不写业务细节 |
@@ -31,6 +31,7 @@
 | 系统管理 · 会话 | `com.adminstarter.system`（会话域）；`com.adminstarter.auth`（登录签发/校验挂钩）；Controller 在 `com.adminstarter.web` | `apps/pc/src/views/system/session`、`apps/pc/src/views/profile`（登录设备） | `sys_user_session` | `/api/v1/sessions`、`/api/v1/auth/sessions` | `system:session:` |
 | 系统管理 · 缓存 | `com.adminstarter.system`（应用服务/Redis 网关）；命名空间白名单在 `com.adminstarter.common.cache`；Controller 在 `com.adminstarter.web` | `apps/pc/src/views/system/cache` | 无（Redis 运行态；审计写 `sys_oper_log`） | `/api/v1/cache` | `system:cache:` |
 | 示例业务 | `com.adminstarter.system` | `apps/pc/src/views/demo/task` | `biz_demo_task` | `/api/v1/demo-tasks` | `demo:task:` |
+| 部署产物（compose/nginx/镜像） | —（`deploy/`、根 `Dockerfile`、`docker-compose.yml`） | `deploy/nginx.conf` 托管 `apps/pc/dist` | `mysql-data` / `redis-data` / `uploads`（卷） | `/actuator/**`（health、prometheus） | — |
 | 通用导出中心 | `com.adminstarter.system`（`application/export`） | `apps/pc/src/api/export.ts`（各列表页导出按钮） | `sys_export_task`（异步任务，复用） | `/api/v1/exports` | 按模块：`demo:customer:export`、`demo:task:export`、`system:post:export` |
 | 变更审计（配置面） | `com.adminstarter.system`（`application/audit`） | `apps/pc/src/views/system/audit` | `sys_change_audit` | `/api/v1/change-audits` | `system:audit:` |
 | 客户档案（生成器样例） | `com.adminstarter.system` | `apps/pc/src/views/demo/customer` | `demo_customer` | `/api/v1/demo/customers` | `demo:customer:` |

@@ -1612,3 +1612,15 @@ E2E 新增 `e2e/helpers.ts`：首次跑真的走一遍"被强制改密 → 改�
 生成器模板同步支持导出：生成的页面直接带「导出」按钮，走通用入口并透传列白名单与排序。踩的坑：模板里嵌套模板字符串（`ElMessage.success(\`…\`)`）时必须转义反引号与 `${}`，否则 cli.mjs 自己先语法错；另外 `sort/order` 是 `usePagedList` 的顶层 ref，不在 `page` 对象里。
 
 验证：后端 233 用例（新增 ExportCenterTest 4 条：模块清单、xlsx 文件流、按模块鉴权 403、未知列 400）、前端 116 单测 + 构建、E2E 13/13、运行时冒烟三个模块可导出且无权限角色 403、契约 1.4.0 → 1.5.0。
+
+## 可交付性三件套（2026-11-13，CR-20261114-044，B 档）
+
+一键起全栈：`docker-compose.yml`（MySQL 8 / Redis 7 / 后端 jar / 前端 nginx）+ `deploy/Dockerfile.web` + `deploy/nginx.conf` + `.env.example` + `.dockerignore`。**只有 web 发布端口**，后端/MySQL/Redis 只在内网——因为 `/actuator/prometheus` 无鉴权，必须靠网络隔离兜底。
+
+观测：actuator 暴露 `prometheus`，启用 `health/readiness`（含 DB/Redis）与 `health/liveness`（不含外部依赖），`show-details: when-authorized`；metric 统一带 `application="admin-starter"` 标签；新增 `micrometer-registry-prometheus` 依赖。停机：`spring.lifecycle.timeout-per-shutdown-phase: 30s` + 容器 `init: true`。
+
+CI 加「部署产物校验」job：`docker compose --env-file .env.example config -q` + 前端镜像 build 阶段校验。
+
+踩的坑：① `/actuator/prometheus` 在 **Spring 测试上下文**里不注册（诊断确认 `webEndpointDiscoverer -> [health, info]`、无 `PrometheusMeterRegistry` bean），但真实进程正常——所以改成用 `scripts/smoke-deployment.ps1` 对真实例验，**不写 mock 假测试**，原因未查明已记入断言 #112；② 本机没装 Docker，compose 只做了 YAML 结构校验 + CI config 校验，**没做过实际 `up`**，这点写在 docs/design/deployment.md §7。
+
+验证：后端 232 用例（system 164 / web 42，ActuatorEndpointsTest 2 条：探针、health 不泄露详情）、前端 116 单测、E2E 13/13、`smoke-deployment.ps1` 对本地实例全绿（prometheus 40.6 KB）、compose YAML 解析通过、spec-lint error 0 / warning 49。

@@ -1,23 +1,13 @@
-# 构建上下文瘦身：镜像只需要 server/ 与 pom.xml
+# 构建上下文排除：镜像里不需要的东西（否则每次构建都要上传几百 MB）
 .git
-.gitignore
-.gitattributes
 .github
 node_modules
 **/node_modules
+apps/pc/dist
 **/target
-**/dist
 docs
-apps
-packages
-scripts
-tools
-data
-server/data
-**/data
-*.md
-!server/**/pom.xml
-.nvmrc
-.editorconfig
-**/.env
-**/application-local.yml
+.trae-html-share-packages
+*.log
+.env
+.env.*
+!.env.example

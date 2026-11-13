@@ -130,3 +130,16 @@ jobs:
           console.log('业务入口 chunk 最大体积：' + max + ' 字节（上限 ' + 400 * 1024 + '）');
           if (max > 400 * 1024) { console.error('业务 chunk 超过 400KB：请检查是否把大依赖静态引入主包'); process.exit(1); }
           "
+
+  # 部署产物校验（P1-1）：compose 与 Dockerfile 的静态问题不该等到上线才发现。
+  # 这里只做 “能不能解析” 级别的校验——真正的容器起停留给部署环境。
+  compose-config:
+    name: 部署产物校验
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: docker compose config
+        # 用 .env.example 提供必填变量；-q 只校验不输出
+        run: docker compose --env-file .env.example config -q
+      - name: 校验前端镜像可构建（不推送）
+        run: docker build -f deploy/Dockerfile.web --target build -t admin-starter-web:ci .
