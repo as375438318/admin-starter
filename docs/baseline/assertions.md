@@ -1,4 +1,4 @@
-# 系统基线 · 设计断言（as-built v1.56）
+# 系统基线 · 设计断言（as-built v1.57）
 
 | 项目 | 内容 |
 |---|---|
@@ -133,4 +133,5 @@
 | 107 | 模块生成器（`tools/gen-module`）的三条红线：① **一次性生成、之后手改，不做双向同步**（`--check` 故意不进 CI，接了会逼人"为绿灯不手改"）；② **生成物与手写代码受同一套门禁**（契约测试/spec-lint/单测/E2E 不区分来源）——它是脚手架不是后门，禁止做成运行时菜单式生成（服务器写源码目录＝准 RCE，且绕过 review）；③ **不猜业务**：输入没声明的（数据权限、导入导出、脱敏）一律不生成 | `tools/gen-module/cli.mjs`；`docs/design/module-generator.md`；`CR-20261114-041` | 生成"看起来完整但语义错"的模块比不生成更贵；运行时生成会让生成物永久脱离治理 | 2026-11-13 |
 | 108 | 生成器模板腐化只有一条可靠信号：**用真实模块跑一遍**。改了 `cli.mjs` 的模板必须跑「生成 → `mvn verify` → `pnpm build` → E2E」；仓库里 `customer` 模块就是活样例，`apps/pc/e2e/generated-module.spec.ts` 是它的出厂验收（菜单可见/列表可开/新增/搜索/删除，数据自清理）。另：改 `docs/api/openapi.yaml` 后**必须先做一次 YAML 解析**再跑契约测试——片段插入时丢换行会把两行粘成一行，报错信息只显示"Unable to load API spec" | `tools/gen-module/`；`apps/pc/e2e/generated-module.spec.ts`；`CR-20261114-041` | 模板腐化的表现是"生成出来的代码编译不过"，半年后没人敢用；YAML 粘连会让 18 个契约测试同时红，而错误信息不指向真因 | 2026-11-13 |
 | 109 | 配置面变更留痕（`sys_change_audit`）的三条口径：① **只记变化字段**（整行快照会把差异埋掉）、无变化不写；② **敏感对象 before 与 after 都打码**——只掩新值等于把明文搬进旧值列；③ **写失败吞异常但同事务**：留痕不能把业务搞挂，也不能出现"业务没成但留了痕"。另：**审计不开放 HTTP 写入口**，写入只能由业务事务内的 `ChangeAuditRecorder` 产生 | `ChangeAuditRecorder`；`ChangeAuditController`；`CR-20261114-042` | 少记/多记会让轨迹失真；漏掩旧值等于密钥明文存两份；开放写入口等于审计可被改 | 2026-11-13 |
-| 110 | 模块生成器必须**迁移幂等**：同一张表重复生成时复用已有 `V{n}__{table}.sql` 的版本号，禁止"当前最大版本+1"。否则 `--force` 重跑会产出 `V21/V22` 同表迁移，Flyway 报 `Found more than one migration with version N` 直接启动失败。另：删改迁移后 `target/classes/db/migration` 里的陈旧副本仍在 classpath 上，必须 `mvn clean` 才真正生效 | `tools/gen-module/cli.mjs`；`CR-20261114-042` §5 | 这类错误的表现是"后端整体起不来"，且日志只指向 Flyway，很容易怀疑到数据库本身 | 2026-11-13 |
+| 110 | 模块生成器必须**迁移幂等**：同一张表重复生成时复用已有 `V{n}__{table}.sql` 的版本号，禁止"当前最大版本+1"——重复运行会产出多份内容相同的迁移，白白占掉版本号，让**下一条**新迁移极易与它们撞号（本项目就撞过一次：加 `V21__change_audit` 时目录里已有 `V21__demo_customer`，Flyway 报 `Found more than one migration with version 21` 起不来）。注意区分：**同版本号的两个文件**才是致命错误，版本号不同（哪怕内容相同）Flyway 照常接受。另：删改迁移后 `target/classes/db/migration` 的陈旧副本仍在 classpath，必须 `mvn clean` | `tools/gen-module/cli.mjs`；`CR-20261114-042` §5 | 撞号的症状是"后端整体起不来"、日志只指向 Flyway，很容易误判成"已合并的分支坏了"（这次就误判过） | 2026-11-13 |
+| 111 | 通用导出中心（`GET /api/v1/exports/{moduleKey}`）的三条约束：① **权限按模块查表校验**（`@exportGuard.allowed(#moduleKey)` → 模块声明的权限码），通用入口**不得**因为"走统一 URL"就放宽成登录即可导出；② **未知模块返回 403 而不是 404/500**——不提供"模块是否存在"的探测面；③ 新增一个可导出模块＝注册一个 `ExportModule` bean（键/中文名/权限码/plan），**不改入口与公共流程**；重复键在启动期直接失败 | `ExportModule`、`ExportModuleRegistry`、`ExportGuard`、`ExportController`；`CR-20261114-043` | 通用入口最容易被写成"登录即可导出"，等于给所有列表开了批量外带口子；未知模块若回 404 会泄露模块清单 | 2026-11-13 |

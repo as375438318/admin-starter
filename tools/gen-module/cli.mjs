@@ -819,6 +819,8 @@ function viewTemplate() {
 import { onMounted, reactive, ref } from 'vue';
 import { ElMessage, type FormRules } from 'element-plus';
 import { ${camel}Api, type ${Cap}Item, type ${Cap}SavePayload } from '@/api/${spec.apiFile ?? camel}';
+import { ApiError, saveBlob } from '@/api/http';
+import { exportModule } from '@/api/export';
 import { confirmDelete, usePagedList } from '@/composables/use-paged-list';
 import { useTableColumns, type ColumnDefinition } from '@/composables/use-table-columns';
 import ColumnSettings from '@/components/ColumnSettings.vue';
@@ -829,8 +831,8 @@ interface Filters {
   keyword: string;
 }
 
-const { page, filters, rows, loading, loadError, skeletonVisible, hasFilter, load, search, resetFilters,
-  onPageSizeChange, onPageChange, onSortChange } =
+const { page, filters, rows, loading, loadError, skeletonVisible, hasFilter, sort, order,
+  load, search, resetFilters, onPageSizeChange, onPageChange, onSortChange } =
   usePagedList<${Cap}Item, Filters>({
     initialFilters: { keyword: '' },
     fetcher: (params) => ${camel}Api.page({
@@ -856,6 +858,7 @@ const table = useTableColumns({
 const drawerVisible = ref(false);
 const saving = ref(false);
 const editingId = ref<number | null>(null);
+const exporting = ref(false);
 const formRef = ref<{ validate: () => Promise<void> }>();
 const form = reactive<${Cap}SavePayload>({
 ${formDefaults}
@@ -895,6 +898,38 @@ async function save(): Promise<void> {
   }
 }
 
+/** 导出：走通用导出中心（一个入口服务所有已注册模块），列白名单取「列设置」的勾选结果 */
+async function exportList(): Promise<void> {
+  if (exporting.value) {
+    return;
+  }
+  if (table.exportFields.value.length === 0) {
+    ElMessage.warning('至少保留一列可导出字段（在「列设置」里勾选）');
+    return;
+  }
+  exporting.value = true;
+  try {
+    const result = await exportModule('${spec.key}', {
+      keyword: filters.keyword || undefined,
+      sort: sort.value || undefined,
+      order: order.value || undefined,
+      fields: table.exportFields.value.join(','),
+    });
+    if (result.kind === 'file') {
+      saveBlob(result.blob, result.fileName ?? '${spec.name}.xlsx');
+      ElMessage.success('导出完成');
+    } else {
+      ElMessage.success(\`数据量较大（\${result.data.totalRows} 行），已转入后台导出，可在「导出任务」中查看\`);
+    }
+  } catch (error) {
+    if (error instanceof ApiError) {
+      ElMessage.error(error.message);
+    }
+  } finally {
+    exporting.value = false;
+  }
+}
+
 async function remove(row: ${Cap}Item): Promise<void> {
   const confirmed = await confirmDelete({
     title: '删除${spec.name}',
@@ -931,6 +966,7 @@ onMounted(() => {
           @invert="table.invertColumns"
           @reset="table.resetColumns"
         />
+        <el-button v-permission="'${permission}:export'" :loading="exporting" @click="exportList">导出</el-button>
         <el-button v-permission="'${permission}:create'" type="primary" @click="openCreate">新增${spec.name}</el-button>
       </div>
     </div>

@@ -10,7 +10,7 @@
 openapi: 3.0.3
 info:
   title: 项目基础框架 · 后台管理接口契约
-  version: 1.4.0
+  version: 1.5.0
   description: |
     本项目接口契约（手写维护，版本随接口演进递增，见 CT-VER）。
     统一响应信封见 CT-RESP-001（data 必须存在，无值时为 null）；禁止 204/空 body 见 CT-RESP-009；
@@ -1915,6 +1915,107 @@ paths:
         '500':
           $ref: '#/components/responses/SystemError'
 
+  /api/v1/exports/modules:
+    get:
+      x-status: IMPLEMENTED
+      tags: [system]
+      summary: 已注册的导出模块
+      description: |
+        返回通用导出中心已注册的模块（键、中文名、所需权限码）。前端据此决定是否显示导出按钮；
+        排障时也用它确认某模块有没有接进来。登录即可读。
+      operationId: listExportModules
+      responses:
+        '200':
+          description: 成功
+          headers:
+            X-Trace-Id:
+              $ref: '#/components/headers/XTraceId'
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: integer
+                  message:
+                    type: string
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        key:
+                          type: string
+                        name:
+                          type: string
+                        permission:
+                          type: string
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /api/v1/exports/{moduleKey}:
+    get:
+      x-status: IMPLEMENTED
+      tags: [system]
+      summary: 按模块导出
+      description: |
+        通用导出入口：一个 URL 服务所有已注册模块。权限码由模块声明并经服务端查表校验，
+        不因为走统一入口而放宽。同步（不超过 2000 行）直接返回 xlsx；超过阈值按既有异步导出基建落任务，
+        返回 202 加 JSON（含 taskId），由前端区分。
+        fields 为导出列白名单（逗号分隔），未知列返回 400/10001；其余参数按模块自定义筛选。
+      operationId: exportModule
+      parameters:
+        - name: moduleKey
+          in: path
+          required: true
+          schema:
+            type: string
+          description: 模块键，如 customer / demo-task / post
+        - name: fields
+          in: query
+          required: false
+          schema:
+            type: string
+          description: 导出列白名单（逗号分隔）；不传导出全部可导出列
+        - name: keyword
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: sort
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: order
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [asc, desc]
+      responses:
+        '200':
+          description: 同步导出成功，返回 xlsx 文件流
+          headers:
+            Content-Disposition:
+              schema:
+                type: string
+          content:
+            application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+              schema:
+                type: string
+                format: binary
+        '202':
+          description: 数据量超过同步阈值，已受理为异步导出任务
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
   /api/v1/change-audits:
     get:
       x-status: IMPLEMENTED
@@ -4227,6 +4328,9 @@ components:
 # TODO(API): 补齐本项目其余接口；每新增接口必须回写错误码与字段约定，并把 x-status 从 DRAFT 推进到 APPROVED
 
 # 变更记录（CT-VER-005：版本号 / 日期 / 影响面 / 迁移方式）
+# 1.5.0 | 2026-11-13 | 新增「通用导出中心」两个只读入口：GET /api/v1/exports/modules（已注册模块清单）、
+#         GET /api/v1/exports/{moduleKey}（按模块导出，权限码由模块声明，经 exportGuard 校验；
+#         同步返回 xlsx、异步返回 202 + taskId）。CR-20261114-043。纯新增、向后兼容。
 # 1.4.0 | 2026-11-13 | 新增配置面变更审计只读接口 GET /api/v1/change-audits（权限码 system:audit:list，
 #         新表 sys_change_audit，Flyway V21；CR-20261114-042）。纯新增、向后兼容。
 # 1.3.0 | 2026-11-13 | 新增「客户档案」模块 5 个接口（list/get/create/update/delete，权限码

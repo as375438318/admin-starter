@@ -1,6 +1,6 @@
 # 本文件由 scripts/export-openapi.ps1 从运行中的后端 /v3/api-docs.yaml 自动生成，禁止手工编辑。
 # 契约源（手写维护）：docs/api/openapi.yaml；本文件只是实现基线（as-built），用于契约差异比对。
-# 生成时间：2026-11-13 17:36:54
+# 生成时间：2026-11-13 18:34:48
 
 openapi: 3.0.1
 info:
@@ -2173,6 +2173,38 @@ paths:
             '*/*':
               schema:
                 $ref: '#/components/schemas/ApiResponseVoid'
+  /api/v1/exports/{moduleKey}:
+    get:
+      tags:
+      - export-controller
+      operationId: export_1
+      parameters:
+      - name: moduleKey
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: object
+  /api/v1/exports/modules:
+    get:
+      tags:
+      - export-controller
+      operationId: modules
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: object
+                additionalProperties:
+                  type: object
   /api/v1/dicts/types/{id}/items:
     get:
       tags:
@@ -2243,7 +2275,7 @@ paths:
     get:
       tags:
       - demo-task-controller
-      operationId: export_1
+      operationId: export_2
       parameters:
       - name: keyword
         in: query
