@@ -41,6 +41,10 @@ jobs:
       # 零第三方依赖，直接用仓库自带的 Node 脚本；退出码 1 = 存在 error，直接失败
       - name: Run spec-lint
         run: node tools/spec-lint/cli.mjs
+      # 权限回归用例与实现的一致性：矩阵或 @PreAuthorize 改了却没重新生成 → 这里红
+      # （用例 JSON 由 tools/permission-matrix/cli.mjs 从 Controller 抽取，禁止手改）
+      - name: 权限矩阵用例一致性
+        run: node tools/permission-matrix/cli.mjs --check
 
   backend:
     name: 后端编译与集成测试（JDK 17）

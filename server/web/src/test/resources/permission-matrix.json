@@ -1,0 +1,1321 @@
+{
+  "generatedBy": "tools/permission-matrix/cli.mjs",
+  "note": "自动生成，禁止手改。矩阵或 @PreAuthorize 变更后重新生成；CI 用 --check 校验一致性。",
+  "roles": [
+    "SUPER_ADMIN",
+    "DEPT_MANAGER",
+    "EMPLOYEE",
+    "CROSS_AUDITOR",
+    "CUSTOM_VIEWER",
+    "DEMO_DEPT",
+    "DEMO_OWNER"
+  ],
+  "platformRoles": {
+    "SUPER_ADMIN": "admin",
+    "DEPT_MANAGER": "deptmgr",
+    "EMPLOYEE": "dev1",
+    "CROSS_AUDITOR": "auditor",
+    "CUSTOM_VIEWER": "viewer",
+    "DEMO_DEPT": "demo_dept",
+    "DEMO_OWNER": "demo_owner"
+  },
+  "cases": [
+    {
+      "kind": "read",
+      "code": "system:user:list",
+      "module": "系统管理",
+      "type": "菜单",
+      "method": "GET",
+      "path": "/api/v1/users",
+      "exact": true,
+      "allowed": {
+        "SUPER_ADMIN": true,
+        "DEPT_MANAGER": true,
+        "EMPLOYEE": false,
+        "CROSS_AUDITOR": true,
+        "CUSTOM_VIEWER": true,
+        "DEMO_DEPT": false,
+        "DEMO_OWNER": false
+      }
+    },
+    {
+      "kind": "read",
+      "code": "system:role:list",
+      "module": "系统管理",
+      "type": "菜单",
+      "method": "GET",
+      "path": "/api/v1/roles",
+      "exact": true,
+      "allowed": {
+        "SUPER_ADMIN": true,
+        "DEPT_MANAGER": true,
+        "EMPLOYEE": false,
+        "CROSS_AUDITOR": true,
+        "CUSTOM_VIEWER": false,
+        "DEMO_DEPT": false,
+        "DEMO_OWNER": false
+      }
+    },
+    {
+      "kind": "read",
+      "code": "system:menu:list",
+      "module": "系统管理",
+      "type": "菜单",
+      "method": "GET",
+      "path": "/api/v1/menus",
+      "exact": false,
+      "allowed": {
+        "SUPER_ADMIN": true,
+        "DEPT_MANAGER": false,
+        "EMPLOYEE": false,
+        "CROSS_AUDITOR": false,
+        "CUSTOM_VIEWER": false,
+        "DEMO_DEPT": false,
+        "DEMO_OWNER": false
+      }
+    },
+    {
+      "kind": "read",
+      "code": "system:dept:list",
+      "module": "系统管理",
+      "type": "菜单",
+      "method": "GET",
+      "path": "/api/v1/depts",
+      "exact": true,
+      "allowed": {
+        "SUPER_ADMIN": true,
+        "DEPT_MANAGER": true,
+        "EMPLOYEE": false,
+        "CROSS_AUDITOR": true,
+        "CUSTOM_VIEWER": false,
+        "DEMO_DEPT": false,
+        "DEMO_OWNER": false
+      }
+    },
+    {
+      "kind": "read",
+      "code": "system:post:list",
+      "module": "系统管理",
+      "type": "菜单",
+      "method": "GET",
+      "path": "/api/v1/posts",
+      "exact": true,
+      "allowed": {
+        "SUPER_ADMIN": true,
+        "DEPT_MANAGER": true,
+        "EMPLOYEE": false,
+        "CROSS_AUDITOR": true,
+        "CUSTOM_VIEWER": false,
+        "DEMO_DEPT": false,
+        "DEMO_OWNER": false
+      }
+    },
+    {
+      "kind": "read",
+      "code": "system:dict:list",
+      "module": "系统管理",
+      "type": "菜单",
+      "method": "GET",
+      "path": "/api/v1/dicts/types",
+      "exact": true,
+      "allowed": {
+        "SUPER_ADMIN": true,
+        "DEPT_MANAGER": false,
+        "EMPLOYEE": false,
+        "CROSS_AUDITOR": false,
+        "CUSTOM_VIEWER": false,
+        "DEMO_DEPT": false,
+        "DEMO_OWNER": false
+      }
+    },
+    {
+      "kind": "read",
+      "code": "system:config:list",
+      "module": "系统管理",
+      "type": "菜单",
+      "method": "GET",
+      "path": "/api/v1/configs",
+      "exact": true,
+      "allowed": {
+        "SUPER_ADMIN": true,
+        "DEPT_MANAGER": false,
+        "EMPLOYEE": false,
+        "CROSS_AUDITOR": false,
+        "CUSTOM_VIEWER": false,
+        "DEMO_DEPT": false,
+        "DEMO_OWNER": false
+      }
+    },
+    {
+      "kind": "read",
+      "code": "system:log:list",
+      "module": "系统管理",
+      "type": "菜单",
+      "method": "GET",
+      "path": "/api/v1/oper-logs",
+      "exact": true,
+      "allowed": {
+        "SUPER_ADMIN": true,
+        "DEPT_MANAGER": false,
+        "EMPLOYEE": false,
+        "CROSS_AUDITOR": true,
+        "CUSTOM_VIEWER": true,
+        "DEMO_DEPT": false,
+        "DEMO_OWNER": false
+      }
+    },
+    {
+      "kind": "read",
+      "code": "system:file:list",
+      "module": "系统管理",
+      "type": "菜单",
+      "method": "GET",
+      "path": "/api/v1/files",
+      "exact": true,
+      "allowed": {
+        "SUPER_ADMIN": true,
+        "DEPT_MANAGER": false,
+        "EMPLOYEE": false,
+        "CROSS_AUDITOR": false,
+        "CUSTOM_VIEWER": false,
+        "DEMO_DEPT": false,
+        "DEMO_OWNER": false
+      }
+    },
+    {
+      "kind": "create",
+      "code": "system:user:create",
+      "module": "系统管理",
+      "type": "按钮/接口",
+      "method": "POST",
+      "path": "/api/v1/users",
+      "exact": true,
+      "allowed": {
+        "SUPER_ADMIN": true,
+        "DEPT_MANAGER": true,
+        "EMPLOYEE": false,
+        "CROSS_AUDITOR": false,
+        "CUSTOM_VIEWER": false,
+        "DEMO_DEPT": false,
+        "DEMO_OWNER": false
+      }
+    },
+    {
+      "kind": "mutate-missing-target",
+      "code": "system:user:update",
+      "module": "系统管理",
+      "type": "按钮/接口",
+      "method": "PUT",
+      "path": "/api/v1/users/999999",
+      "exact": true,
+      "allowed": {
+        "SUPER_ADMIN": true,
+        "DEPT_MANAGER": true,
+        "EMPLOYEE": false,
+        "CROSS_AUDITOR": false,
+        "CUSTOM_VIEWER": false,
+        "DEMO_DEPT": false,
+        "DEMO_OWNER": false
+      }
+    },
+    {
+      "kind": "mutate-missing-target",
+      "code": "system:user:delete",
+      "module": "系统管理",
+      "type": "按钮/接口",
+      "method": "DELETE",
+      "path": "/api/v1/users/999999",
+      "exact": true,
+      "allowed": {
+        "SUPER_ADMIN": true,
+        "DEPT_MANAGER": true,
+        "EMPLOYEE": false,
+        "CROSS_AUDITOR": false,
+        "CUSTOM_VIEWER": false,
+        "DEMO_DEPT": false,
+        "DEMO_OWNER": false
+      }
+    },
+    {
+      "kind": "mutate-missing-target",
+      "code": "system:user:reset",
+      "module": "系统管理",
+      "type": "按钮/接口",
+      "method": "PUT",
+      "path": "/api/v1/users/999999/password",
+      "exact": true,
+      "allowed": {
+        "SUPER_ADMIN": true,
+        "DEPT_MANAGER": true,
+        "EMPLOYEE": false,
+        "CROSS_AUDITOR": false,
+        "CUSTOM_VIEWER": false,
+        "DEMO_DEPT": false,
+        "DEMO_OWNER": false
+      }
+    },
+    {
+      "kind": "mutate-missing-target",
+      "code": "system:user:status",
+      "module": "系统管理",
+      "type": "按钮/接口",
+      "method": "PUT",
+      "path": "/api/v1/users/999999/status",
+      "exact": true,
+      "allowed": {
+        "SUPER_ADMIN": true,
+        "DEPT_MANAGER": true,
+        "EMPLOYEE": false,
+        "CROSS_AUDITOR": false,
+        "CUSTOM_VIEWER": false,
+        "DEMO_DEPT": false,
+        "DEMO_OWNER": false
+      }
+    },
+    {
+      "kind": "mutate-missing-target",
+      "code": "system:user:assign",
+      "module": "系统管理",
+      "type": "按钮/接口",
+      "method": "PUT",
+      "path": "/api/v1/users/999999/roles",
+      "exact": true,
+      "allowed": {
+        "SUPER_ADMIN": true,
+        "DEPT_MANAGER": false,
+        "EMPLOYEE": false,
+        "CROSS_AUDITOR": false,
+        "CUSTOM_VIEWER": false,
+        "DEMO_DEPT": false,
+        "DEMO_OWNER": false
+      }
+    },
+    {
+      "kind": "create",
+      "code": "system:role:create",
+      "module": "系统管理",
+      "type": "按钮/接口",
+      "method": "POST",
+      "path": "/api/v1/roles",
+      "exact": true,
+      "allowed": {
+        "SUPER_ADMIN": true,
+        "DEPT_MANAGER": true,
+        "EMPLOYEE": false,
+        "CROSS_AUDITOR": false,
+        "CUSTOM_VIEWER": false,
+        "DEMO_DEPT": false,
+        "DEMO_OWNER": false
+      }
+    },
+    {
+      "kind": "mutate-missing-target",
+      "code": "system:role:update",
+      "module": "系统管理",
+      "type": "按钮/接口",
+      "method": "PUT",
+      "path": "/api/v1/roles/999999",
+      "exact": true,
+      "allowed": {
+        "SUPER_ADMIN": true,
+        "DEPT_MANAGER": true,
+        "EMPLOYEE": false,
+        "CROSS_AUDITOR": false,
+        "CUSTOM_VIEWER": false,
+        "DEMO_DEPT": false,
+        "DEMO_OWNER": false
+      }
+    },
+    {
+      "kind": "mutate-missing-target",
+      "code": "system:role:delete",
+      "module": "系统管理",
+      "type": "按钮/接口",
+      "method": "DELETE",
+      "path": "/api/v1/roles/999999",
+      "exact": true,
+      "allowed": {
+        "SUPER_ADMIN": true,
+        "DEPT_MANAGER": true,
+        "EMPLOYEE": false,
+        "CROSS_AUDITOR": false,
+        "CUSTOM_VIEWER": false,
+        "DEMO_DEPT": false,
+        "DEMO_OWNER": false
+      }
+    },
+    {
+      "kind": "mutate-missing-target",
+      "code": "system:role:menu",
+      "module": "系统管理",
+      "type": "按钮/接口",
+      "method": "PUT",
+      "path": "/api/v1/roles/999999/menus",
+      "exact": true,
+      "allowed": {
+        "SUPER_ADMIN": true,
+        "DEPT_MANAGER": false,
+        "EMPLOYEE": false,
+        "CROSS_AUDITOR": false,
+        "CUSTOM_VIEWER": false,
+        "DEMO_DEPT": false,
+        "DEMO_OWNER": false
+      }
+    },
+    {
+      "kind": "mutate-missing-target",
+      "code": "system:role:scope",
+      "module": "系统管理",
+      "type": "按钮/接口",
+      "method": "PUT",
+      "path": "/api/v1/roles/999999/data-scope",
+      "exact": true,
+      "allowed": {
+        "SUPER_ADMIN": true,
+        "DEPT_MANAGER": false,
+        "EMPLOYEE": false,
+        "CROSS_AUDITOR": false,
+        "CUSTOM_VIEWER": false,
+        "DEMO_DEPT": false,
+        "DEMO_OWNER": false
+      }
+    },
+    {
+      "kind": "create",
+      "code": "system:menu:create",
+      "module": "系统管理",
+      "type": "按钮/接口",
+      "method": "POST",
+      "path": "/api/v1/menus",
+      "exact": true,
+      "allowed": {
+        "SUPER_ADMIN": true,
+        "DEPT_MANAGER": false,
+        "EMPLOYEE": false,
+        "CROSS_AUDITOR": false,
+        "CUSTOM_VIEWER": false,
+        "DEMO_DEPT": false,
+        "DEMO_OWNER": false
+      }
+    },
+    {
+      "kind": "mutate-missing-target",
+      "code": "system:menu:update",
+      "module": "系统管理",
+      "type": "按钮/接口",
+      "method": "PUT",
+      "path": "/api/v1/menus/999999",
+      "exact": true,
+      "allowed": {
+        "SUPER_ADMIN": true,
+        "DEPT_MANAGER": false,
+        "EMPLOYEE": false,
+        "CROSS_AUDITOR": false,
+        "CUSTOM_VIEWER": false,
+        "DEMO_DEPT": false,
+        "DEMO_OWNER": false
+      }
+    },
+    {
+      "kind": "mutate-missing-target",
+      "code": "system:menu:delete",
+      "module": "系统管理",
+      "type": "按钮/接口",
+      "method": "DELETE",
+      "path": "/api/v1/menus/999999",
+      "exact": true,
+      "allowed": {
+        "SUPER_ADMIN": true,
+        "DEPT_MANAGER": false,
+        "EMPLOYEE": false,
+        "CROSS_AUDITOR": false,
+        "CUSTOM_VIEWER": false,
+        "DEMO_DEPT": false,
+        "DEMO_OWNER": false
+      }
+    },
+    {
+      "kind": "create",
+      "code": "system:dept:create",
+      "module": "系统管理",
+      "type": "按钮/接口",
+      "method": "POST",
+      "path": "/api/v1/depts",
+      "exact": true,
+      "allowed": {
+        "SUPER_ADMIN": true,
+        "DEPT_MANAGER": true,
+        "EMPLOYEE": false,
+        "CROSS_AUDITOR": false,
+        "CUSTOM_VIEWER": false,
+        "DEMO_DEPT": false,
+        "DEMO_OWNER": false
+      }
+    },
+    {
+      "kind": "mutate-missing-target",
+      "code": "system:dept:update",
+      "module": "系统管理",
+      "type": "按钮/接口",
+      "method": "PUT",
+      "path": "/api/v1/depts/999999",
+      "exact": true,
+      "allowed": {
+        "SUPER_ADMIN": true,
+        "DEPT_MANAGER": true,
+        "EMPLOYEE": false,
+        "CROSS_AUDITOR": false,
+        "CUSTOM_VIEWER": false,
+        "DEMO_DEPT": false,
+        "DEMO_OWNER": false
+      }
+    },
+    {
+      "kind": "mutate-missing-target",
+      "code": "system:dept:delete",
+      "module": "系统管理",
+      "type": "按钮/接口",
+      "method": "DELETE",
+      "path": "/api/v1/depts/999999",
+      "exact": true,
+      "allowed": {
+        "SUPER_ADMIN": true,
+        "DEPT_MANAGER": true,
+        "EMPLOYEE": false,
+        "CROSS_AUDITOR": false,
+        "CUSTOM_VIEWER": false,
+        "DEMO_DEPT": false,
+        "DEMO_OWNER": false
+      }
+    },
+    {
+      "kind": "create",
+      "code": "system:post:create",
+      "module": "系统管理",
+      "type": "按钮/接口",
+      "method": "POST",
+      "path": "/api/v1/posts",
+      "exact": true,
+      "allowed": {
+        "SUPER_ADMIN": true,
+        "DEPT_MANAGER": true,
+        "EMPLOYEE": false,
+        "CROSS_AUDITOR": false,
+        "CUSTOM_VIEWER": false,
+        "DEMO_DEPT": false,
+        "DEMO_OWNER": false
+      }
+    },
+    {
+      "kind": "mutate-missing-target",
+      "code": "system:post:update",
+      "module": "系统管理",
+      "type": "按钮/接口",
+      "method": "PUT",
+      "path": "/api/v1/posts/999999",
+      "exact": true,
+      "allowed": {
+        "SUPER_ADMIN": true,
+        "DEPT_MANAGER": true,
+        "EMPLOYEE": false,
+        "CROSS_AUDITOR": false,
+        "CUSTOM_VIEWER": false,
+        "DEMO_DEPT": false,
+        "DEMO_OWNER": false
+      }
+    },
+    {
+      "kind": "mutate-missing-target",
+      "code": "system:post:delete",
+      "module": "系统管理",
+      "type": "按钮/接口",
+      "method": "DELETE",
+      "path": "/api/v1/posts/999999",
+      "exact": true,
+      "allowed": {
+        "SUPER_ADMIN": true,
+        "DEPT_MANAGER": true,
+        "EMPLOYEE": false,
+        "CROSS_AUDITOR": false,
+        "CUSTOM_VIEWER": false,
+        "DEMO_DEPT": false,
+        "DEMO_OWNER": false
+      }
+    },
+    {
+      "kind": "create",
+      "code": "system:dict:create",
+      "module": "系统管理",
+      "type": "按钮/接口",
+      "method": "POST",
+      "path": "/api/v1/dicts/types",
+      "exact": true,
+      "allowed": {
+        "SUPER_ADMIN": true,
+        "DEPT_MANAGER": false,
+        "EMPLOYEE": false,
+        "CROSS_AUDITOR": false,
+        "CUSTOM_VIEWER": false,
+        "DEMO_DEPT": false,
+        "DEMO_OWNER": false
+      }
+    },
+    {
+      "kind": "mutate-missing-target",
+      "code": "system:dict:update",
+      "module": "系统管理",
+      "type": "按钮/接口",
+      "method": "PUT",
+      "path": "/api/v1/dicts/types/999999",
+      "exact": true,
+      "allowed": {
+        "SUPER_ADMIN": true,
+        "DEPT_MANAGER": false,
+        "EMPLOYEE": false,
+        "CROSS_AUDITOR": false,
+        "CUSTOM_VIEWER": false,
+        "DEMO_DEPT": false,
+        "DEMO_OWNER": false
+      }
+    },
+    {
+      "kind": "mutate-missing-target",
+      "code": "system:dict:delete",
+      "module": "系统管理",
+      "type": "按钮/接口",
+      "method": "DELETE",
+      "path": "/api/v1/dicts/types/999999",
+      "exact": true,
+      "allowed": {
+        "SUPER_ADMIN": true,
+        "DEPT_MANAGER": false,
+        "EMPLOYEE": false,
+        "CROSS_AUDITOR": false,
+        "CUSTOM_VIEWER": false,
+        "DEMO_DEPT": false,
+        "DEMO_OWNER": false
+      }
+    },
+    {
+      "kind": "create",
+      "code": "system:config:create",
+      "module": "系统管理",
+      "type": "按钮/接口",
+      "method": "POST",
+      "path": "/api/v1/configs",
+      "exact": true,
+      "allowed": {
+        "SUPER_ADMIN": true,
+        "DEPT_MANAGER": false,
+        "EMPLOYEE": false,
+        "CROSS_AUDITOR": false,
+        "CUSTOM_VIEWER": false,
+        "DEMO_DEPT": false,
+        "DEMO_OWNER": false
+      }
+    },
+    {
+      "kind": "mutate-missing-target",
+      "code": "system:config:update",
+      "module": "系统管理",
+      "type": "按钮/接口",
+      "method": "PUT",
+      "path": "/api/v1/configs/999999",
+      "exact": true,
+      "allowed": {
+        "SUPER_ADMIN": true,
+        "DEPT_MANAGER": false,
+        "EMPLOYEE": false,
+        "CROSS_AUDITOR": false,
+        "CUSTOM_VIEWER": false,
+        "DEMO_DEPT": false,
+        "DEMO_OWNER": false
+      }
+    },
+    {
+      "kind": "mutate-missing-target",
+      "code": "system:config:delete",
+      "module": "系统管理",
+      "type": "按钮/接口",
+      "method": "DELETE",
+      "path": "/api/v1/configs/999999",
+      "exact": true,
+      "allowed": {
+        "SUPER_ADMIN": true,
+        "DEPT_MANAGER": false,
+        "EMPLOYEE": false,
+        "CROSS_AUDITOR": false,
+        "CUSTOM_VIEWER": false,
+        "DEMO_DEPT": false,
+        "DEMO_OWNER": false
+      }
+    },
+    {
+      "kind": "read",
+      "code": "system:file:upload",
+      "module": "系统管理",
+      "type": "按钮/接口",
+      "method": "GET",
+      "path": "/api/v1/files/chunk-sessions/999999",
+      "exact": true,
+      "allowed": {
+        "SUPER_ADMIN": true,
+        "DEPT_MANAGER": false,
+        "EMPLOYEE": false,
+        "CROSS_AUDITOR": false,
+        "CUSTOM_VIEWER": false,
+        "DEMO_DEPT": false,
+        "DEMO_OWNER": false
+      }
+    },
+    {
+      "kind": "read",
+      "code": "system:file:download",
+      "module": "系统管理",
+      "type": "按钮/接口",
+      "method": "GET",
+      "path": "/api/v1/files/999999/download",
+      "exact": true,
+      "allowed": {
+        "SUPER_ADMIN": true,
+        "DEPT_MANAGER": false,
+        "EMPLOYEE": false,
+        "CROSS_AUDITOR": false,
+        "CUSTOM_VIEWER": false,
+        "DEMO_DEPT": false,
+        "DEMO_OWNER": false
+      }
+    },
+    {
+      "kind": "mutate-missing-target",
+      "code": "system:file:delete",
+      "module": "系统管理",
+      "type": "按钮/接口",
+      "method": "DELETE",
+      "path": "/api/v1/files/999999",
+      "exact": true,
+      "allowed": {
+        "SUPER_ADMIN": true,
+        "DEPT_MANAGER": false,
+        "EMPLOYEE": false,
+        "CROSS_AUDITOR": false,
+        "CUSTOM_VIEWER": false,
+        "DEMO_DEPT": false,
+        "DEMO_OWNER": false
+      }
+    },
+    {
+      "kind": "read",
+      "code": "system:notice:list",
+      "module": "系统管理",
+      "type": "菜单",
+      "method": "GET",
+      "path": "/api/v1/notices",
+      "exact": true,
+      "allowed": {
+        "SUPER_ADMIN": true,
+        "DEPT_MANAGER": true,
+        "EMPLOYEE": false,
+        "CROSS_AUDITOR": false,
+        "CUSTOM_VIEWER": false,
+        "DEMO_DEPT": false,
+        "DEMO_OWNER": false
+      }
+    },
+    {
+      "kind": "create",
+      "code": "system:notice:create",
+      "module": "系统管理",
+      "type": "按钮/接口",
+      "method": "POST",
+      "path": "/api/v1/notices",
+      "exact": true,
+      "allowed": {
+        "SUPER_ADMIN": true,
+        "DEPT_MANAGER": true,
+        "EMPLOYEE": false,
+        "CROSS_AUDITOR": false,
+        "CUSTOM_VIEWER": false,
+        "DEMO_DEPT": false,
+        "DEMO_OWNER": false
+      }
+    },
+    {
+      "kind": "mutate-missing-target",
+      "code": "system:notice:revoke",
+      "module": "系统管理",
+      "type": "按钮/接口",
+      "method": "POST",
+      "path": "/api/v1/notices/999999/revoke",
+      "exact": true,
+      "allowed": {
+        "SUPER_ADMIN": true,
+        "DEPT_MANAGER": false,
+        "EMPLOYEE": false,
+        "CROSS_AUDITOR": false,
+        "CUSTOM_VIEWER": false,
+        "DEMO_DEPT": false,
+        "DEMO_OWNER": false
+      }
+    },
+    {
+      "kind": "mutate-missing-target",
+      "code": "system:notice:delete",
+      "module": "系统管理",
+      "type": "按钮/接口",
+      "method": "DELETE",
+      "path": "/api/v1/notices/999999",
+      "exact": true,
+      "allowed": {
+        "SUPER_ADMIN": true,
+        "DEPT_MANAGER": false,
+        "EMPLOYEE": false,
+        "CROSS_AUDITOR": false,
+        "CUSTOM_VIEWER": false,
+        "DEMO_DEPT": false,
+        "DEMO_OWNER": false
+      }
+    },
+    {
+      "kind": "read",
+      "code": "system:notice:read-stats",
+      "module": "系统管理",
+      "type": "按钮/接口",
+      "method": "GET",
+      "path": "/api/v1/notices/999999/readers",
+      "exact": true,
+      "allowed": {
+        "SUPER_ADMIN": true,
+        "DEPT_MANAGER": true,
+        "EMPLOYEE": false,
+        "CROSS_AUDITOR": false,
+        "CUSTOM_VIEWER": false,
+        "DEMO_DEPT": false,
+        "DEMO_OWNER": false
+      }
+    },
+    {
+      "kind": "read",
+      "code": "system:job:list",
+      "module": "系统管理",
+      "type": "菜单",
+      "method": "GET",
+      "path": "/api/v1/jobs",
+      "exact": true,
+      "allowed": {
+        "SUPER_ADMIN": true,
+        "DEPT_MANAGER": false,
+        "EMPLOYEE": false,
+        "CROSS_AUDITOR": false,
+        "CUSTOM_VIEWER": false,
+        "DEMO_DEPT": false,
+        "DEMO_OWNER": false
+      }
+    },
+    {
+      "kind": "create",
+      "code": "system:job:create",
+      "module": "系统管理",
+      "type": "按钮/接口",
+      "method": "POST",
+      "path": "/api/v1/jobs",
+      "exact": true,
+      "allowed": {
+        "SUPER_ADMIN": true,
+        "DEPT_MANAGER": false,
+        "EMPLOYEE": false,
+        "CROSS_AUDITOR": false,
+        "CUSTOM_VIEWER": false,
+        "DEMO_DEPT": false,
+        "DEMO_OWNER": false
+      }
+    },
+    {
+      "kind": "mutate-missing-target",
+      "code": "system:job:update",
+      "module": "系统管理",
+      "type": "按钮/接口",
+      "method": "PUT",
+      "path": "/api/v1/jobs/999999",
+      "exact": true,
+      "allowed": {
+        "SUPER_ADMIN": true,
+        "DEPT_MANAGER": false,
+        "EMPLOYEE": false,
+        "CROSS_AUDITOR": false,
+        "CUSTOM_VIEWER": false,
+        "DEMO_DEPT": false,
+        "DEMO_OWNER": false
+      }
+    },
+    {
+      "kind": "mutate-missing-target",
+      "code": "system:job:delete",
+      "module": "系统管理",
+      "type": "按钮/接口",
+      "method": "DELETE",
+      "path": "/api/v1/jobs/999999",
+      "exact": true,
+      "allowed": {
+        "SUPER_ADMIN": true,
+        "DEPT_MANAGER": false,
+        "EMPLOYEE": false,
+        "CROSS_AUDITOR": false,
+        "CUSTOM_VIEWER": false,
+        "DEMO_DEPT": false,
+        "DEMO_OWNER": false
+      }
+    },
+    {
+      "kind": "mutate-missing-target",
+      "code": "system:job:status",
+      "module": "系统管理",
+      "type": "按钮/接口",
+      "method": "PUT",
+      "path": "/api/v1/jobs/999999/status",
+      "exact": true,
+      "allowed": {
+        "SUPER_ADMIN": true,
+        "DEPT_MANAGER": false,
+        "EMPLOYEE": false,
+        "CROSS_AUDITOR": false,
+        "CUSTOM_VIEWER": false,
+        "DEMO_DEPT": false,
+        "DEMO_OWNER": false
+      }
+    },
+    {
+      "kind": "mutate-missing-target",
+      "code": "system:job:run",
+      "module": "系统管理",
+      "type": "按钮/接口",
+      "method": "POST",
+      "path": "/api/v1/jobs/999999/run",
+      "exact": true,
+      "allowed": {
+        "SUPER_ADMIN": true,
+        "DEPT_MANAGER": false,
+        "EMPLOYEE": false,
+        "CROSS_AUDITOR": false,
+        "CUSTOM_VIEWER": false,
+        "DEMO_DEPT": false,
+        "DEMO_OWNER": false
+      }
+    },
+    {
+      "kind": "read",
+      "code": "system:job:log",
+      "module": "系统管理",
+      "type": "按钮/接口",
+      "method": "GET",
+      "path": "/api/v1/job-logs",
+      "exact": true,
+      "allowed": {
+        "SUPER_ADMIN": true,
+        "DEPT_MANAGER": false,
+        "EMPLOYEE": false,
+        "CROSS_AUDITOR": false,
+        "CUSTOM_VIEWER": false,
+        "DEMO_DEPT": false,
+        "DEMO_OWNER": false
+      }
+    },
+    {
+      "kind": "read",
+      "code": "system:session:list",
+      "module": "系统管理",
+      "type": "菜单",
+      "method": "GET",
+      "path": "/api/v1/sessions",
+      "exact": true,
+      "allowed": {
+        "SUPER_ADMIN": true,
+        "DEPT_MANAGER": false,
+        "EMPLOYEE": false,
+        "CROSS_AUDITOR": false,
+        "CUSTOM_VIEWER": false,
+        "DEMO_DEPT": false,
+        "DEMO_OWNER": false
+      }
+    },
+    {
+      "kind": "mutate-missing-target",
+      "code": "system:session:kick",
+      "module": "系统管理",
+      "type": "按钮/接口",
+      "method": "DELETE",
+      "path": "/api/v1/sessions/user/999999",
+      "exact": true,
+      "allowed": {
+        "SUPER_ADMIN": true,
+        "DEPT_MANAGER": false,
+        "EMPLOYEE": false,
+        "CROSS_AUDITOR": false,
+        "CUSTOM_VIEWER": false,
+        "DEMO_DEPT": false,
+        "DEMO_OWNER": false
+      }
+    },
+    {
+      "kind": "create",
+      "code": "system:session:clean",
+      "module": "系统管理",
+      "type": "按钮/接口",
+      "method": "DELETE",
+      "path": "/api/v1/sessions/invalidated",
+      "exact": true,
+      "allowed": {
+        "SUPER_ADMIN": true,
+        "DEPT_MANAGER": false,
+        "EMPLOYEE": false,
+        "CROSS_AUDITOR": false,
+        "CUSTOM_VIEWER": false,
+        "DEMO_DEPT": false,
+        "DEMO_OWNER": false
+      }
+    },
+    {
+      "kind": "mutate-missing-target",
+      "code": "system:file:restore",
+      "module": "系统管理",
+      "type": "按钮/接口",
+      "method": "POST",
+      "path": "/api/v1/files/999999/restore",
+      "exact": true,
+      "allowed": {
+        "SUPER_ADMIN": true,
+        "DEPT_MANAGER": false,
+        "EMPLOYEE": false,
+        "CROSS_AUDITOR": false,
+        "CUSTOM_VIEWER": false,
+        "DEMO_DEPT": false,
+        "DEMO_OWNER": false
+      }
+    },
+    {
+      "kind": "mutate-missing-target",
+      "code": "system:file:purge",
+      "module": "系统管理",
+      "type": "按钮/接口",
+      "method": "DELETE",
+      "path": "/api/v1/files/recycle/999999",
+      "exact": true,
+      "allowed": {
+        "SUPER_ADMIN": true,
+        "DEPT_MANAGER": false,
+        "EMPLOYEE": false,
+        "CROSS_AUDITOR": false,
+        "CUSTOM_VIEWER": false,
+        "DEMO_DEPT": false,
+        "DEMO_OWNER": false
+      }
+    },
+    {
+      "kind": "read",
+      "code": "system:cache:list",
+      "module": "系统管理",
+      "type": "菜单",
+      "method": "GET",
+      "path": "/api/v1/cache/overview",
+      "exact": true,
+      "allowed": {
+        "SUPER_ADMIN": true,
+        "DEPT_MANAGER": false,
+        "EMPLOYEE": false,
+        "CROSS_AUDITOR": false,
+        "CUSTOM_VIEWER": false,
+        "DEMO_DEPT": false,
+        "DEMO_OWNER": false
+      }
+    },
+    {
+      "kind": "create",
+      "code": "system:cache:clear",
+      "module": "系统管理",
+      "type": "按钮/接口",
+      "method": "DELETE",
+      "path": "/api/v1/cache/keys",
+      "exact": true,
+      "allowed": {
+        "SUPER_ADMIN": true,
+        "DEPT_MANAGER": false,
+        "EMPLOYEE": false,
+        "CROSS_AUDITOR": false,
+        "CUSTOM_VIEWER": false,
+        "DEMO_DEPT": false,
+        "DEMO_OWNER": false
+      }
+    },
+    {
+      "kind": "read",
+      "code": "system:post:import",
+      "module": "系统管理",
+      "type": "按钮/接口",
+      "method": "GET",
+      "path": "/api/v1/posts/import-template",
+      "exact": true,
+      "allowed": {
+        "SUPER_ADMIN": true,
+        "DEPT_MANAGER": true,
+        "EMPLOYEE": false,
+        "CROSS_AUDITOR": false,
+        "CUSTOM_VIEWER": false,
+        "DEMO_DEPT": false,
+        "DEMO_OWNER": false
+      }
+    },
+    {
+      "kind": "read",
+      "code": "system:post:export",
+      "module": "系统管理",
+      "type": "按钮/接口",
+      "method": "GET",
+      "path": "/api/v1/posts/export",
+      "exact": true,
+      "allowed": {
+        "SUPER_ADMIN": true,
+        "DEPT_MANAGER": true,
+        "EMPLOYEE": false,
+        "CROSS_AUDITOR": false,
+        "CUSTOM_VIEWER": false,
+        "DEMO_DEPT": false,
+        "DEMO_OWNER": false
+      }
+    },
+    {
+      "kind": "read",
+      "code": "system:dashboard:view",
+      "module": "系统管理",
+      "type": "按钮/接口",
+      "method": "GET",
+      "path": "/api/v1/dashboard/overview",
+      "exact": true,
+      "allowed": {
+        "SUPER_ADMIN": true,
+        "DEPT_MANAGER": false,
+        "EMPLOYEE": false,
+        "CROSS_AUDITOR": false,
+        "CUSTOM_VIEWER": false,
+        "DEMO_DEPT": false,
+        "DEMO_OWNER": false
+      }
+    },
+    {
+      "kind": "read",
+      "code": "demo:task:list",
+      "module": "示例业务",
+      "type": "菜单",
+      "method": "GET",
+      "path": "/api/v1/demo-tasks",
+      "exact": true,
+      "allowed": {
+        "SUPER_ADMIN": true,
+        "DEPT_MANAGER": true,
+        "EMPLOYEE": true,
+        "CROSS_AUDITOR": true,
+        "CUSTOM_VIEWER": true,
+        "DEMO_DEPT": true,
+        "DEMO_OWNER": true
+      }
+    },
+    {
+      "kind": "read",
+      "code": "system:audit:list",
+      "module": "变更审计（配置面）",
+      "type": "菜单",
+      "method": "GET",
+      "path": "/api/v1/change-audits",
+      "exact": true,
+      "allowed": {
+        "SUPER_ADMIN": true,
+        "DEPT_MANAGER": false,
+        "EMPLOYEE": false,
+        "CROSS_AUDITOR": true,
+        "CUSTOM_VIEWER": false,
+        "DEMO_DEPT": false,
+        "DEMO_OWNER": false
+      }
+    },
+    {
+      "kind": "read",
+      "code": "demo:customer:list",
+      "module": "客户档案（生成器样例）",
+      "type": "菜单",
+      "method": "GET",
+      "path": "/api/v1/demo/customers",
+      "exact": true,
+      "allowed": {
+        "SUPER_ADMIN": true,
+        "DEPT_MANAGER": true,
+        "EMPLOYEE": false,
+        "CROSS_AUDITOR": false,
+        "CUSTOM_VIEWER": false,
+        "DEMO_DEPT": false,
+        "DEMO_OWNER": false
+      }
+    },
+    {
+      "kind": "create",
+      "code": "demo:customer:create",
+      "module": "客户档案",
+      "type": "按钮/接口",
+      "method": "POST",
+      "path": "/api/v1/demo/customers",
+      "exact": true,
+      "allowed": {
+        "SUPER_ADMIN": true,
+        "DEPT_MANAGER": false,
+        "EMPLOYEE": false,
+        "CROSS_AUDITOR": false,
+        "CUSTOM_VIEWER": false,
+        "DEMO_DEPT": false,
+        "DEMO_OWNER": false
+      }
+    },
+    {
+      "kind": "mutate-missing-target",
+      "code": "demo:customer:update",
+      "module": "客户档案",
+      "type": "按钮/接口",
+      "method": "PUT",
+      "path": "/api/v1/demo/customers/999999",
+      "exact": true,
+      "allowed": {
+        "SUPER_ADMIN": true,
+        "DEPT_MANAGER": false,
+        "EMPLOYEE": false,
+        "CROSS_AUDITOR": false,
+        "CUSTOM_VIEWER": false,
+        "DEMO_DEPT": false,
+        "DEMO_OWNER": false
+      }
+    },
+    {
+      "kind": "mutate-missing-target",
+      "code": "demo:customer:delete",
+      "module": "客户档案",
+      "type": "按钮/接口",
+      "method": "DELETE",
+      "path": "/api/v1/demo/customers/999999",
+      "exact": true,
+      "allowed": {
+        "SUPER_ADMIN": true,
+        "DEPT_MANAGER": false,
+        "EMPLOYEE": false,
+        "CROSS_AUDITOR": false,
+        "CUSTOM_VIEWER": false,
+        "DEMO_DEPT": false,
+        "DEMO_OWNER": false
+      }
+    },
+    {
+      "kind": "create",
+      "code": "demo:task:create",
+      "module": "示例业务",
+      "type": "按钮/接口",
+      "method": "POST",
+      "path": "/api/v1/demo-tasks",
+      "exact": true,
+      "allowed": {
+        "SUPER_ADMIN": true,
+        "DEPT_MANAGER": true,
+        "EMPLOYEE": false,
+        "CROSS_AUDITOR": false,
+        "CUSTOM_VIEWER": false,
+        "DEMO_DEPT": false,
+        "DEMO_OWNER": false
+      }
+    },
+    {
+      "kind": "mutate-missing-target",
+      "code": "demo:task:update",
+      "module": "示例业务",
+      "type": "按钮/接口",
+      "method": "PUT",
+      "path": "/api/v1/demo-tasks/999999",
+      "exact": true,
+      "allowed": {
+        "SUPER_ADMIN": true,
+        "DEPT_MANAGER": true,
+        "EMPLOYEE": false,
+        "CROSS_AUDITOR": false,
+        "CUSTOM_VIEWER": false,
+        "DEMO_DEPT": false,
+        "DEMO_OWNER": false
+      }
+    },
+    {
+      "kind": "mutate-missing-target",
+      "code": "demo:task:delete",
+      "module": "示例业务",
+      "type": "按钮/接口",
+      "method": "DELETE",
+      "path": "/api/v1/demo-tasks/999999",
+      "exact": true,
+      "allowed": {
+        "SUPER_ADMIN": true,
+        "DEPT_MANAGER": true,
+        "EMPLOYEE": false,
+        "CROSS_AUDITOR": false,
+        "CUSTOM_VIEWER": false,
+        "DEMO_DEPT": false,
+        "DEMO_OWNER": false
+      }
+    },
+    {
+      "kind": "read",
+      "code": "demo:task:import",
+      "module": "示例业务",
+      "type": "按钮/接口",
+      "method": "GET",
+      "path": "/api/v1/demo-tasks/import-template",
+      "exact": true,
+      "allowed": {
+        "SUPER_ADMIN": true,
+        "DEPT_MANAGER": true,
+        "EMPLOYEE": false,
+        "CROSS_AUDITOR": false,
+        "CUSTOM_VIEWER": false,
+        "DEMO_DEPT": false,
+        "DEMO_OWNER": false
+      }
+    },
+    {
+      "kind": "read",
+      "code": "demo:task:export",
+      "module": "示例业务",
+      "type": "按钮/接口",
+      "method": "GET",
+      "path": "/api/v1/demo-tasks/export",
+      "exact": true,
+      "allowed": {
+        "SUPER_ADMIN": true,
+        "DEPT_MANAGER": true,
+        "EMPLOYEE": false,
+        "CROSS_AUDITOR": false,
+        "CUSTOM_VIEWER": false,
+        "DEMO_DEPT": false,
+        "DEMO_OWNER": false
+      }
+    }
+  ],
+  "skipped": [
+    {
+      "code": "system:user:phone:view",
+      "reason": "字段级脱敏权限，由 MaskResolverTest / MaskedValueGuardTest 覆盖"
+    },
+    {
+      "code": "system:user:phone:mask",
+      "reason": "字段级脱敏权限，由 MaskResolverTest / MaskedValueGuardTest 覆盖"
+    },
+    {
+      "code": "system:user:email:view",
+      "reason": "字段级脱敏权限，由 MaskResolverTest / MaskedValueGuardTest 覆盖"
+    },
+    {
+      "code": "system:user:email:mask",
+      "reason": "字段级脱敏权限，由 MaskResolverTest / MaskedValueGuardTest 覆盖"
+    }
+  ],
+  "warnings": []
+}

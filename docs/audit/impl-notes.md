@@ -1624,3 +1624,16 @@ CI 加「部署产物校验」job：`docker compose --env-file .env.example conf
 踩的坑：① `/actuator/prometheus` 在 **Spring 测试上下文**里不注册（诊断确认 `webEndpointDiscoverer -> [health, info]`、无 `PrometheusMeterRegistry` bean），但真实进程正常——所以改成用 `scripts/smoke-deployment.ps1` 对真实例验，**不写 mock 假测试**，原因未查明已记入断言 #112；② 本机没装 Docker，compose 只做了 YAML 结构校验 + CI config 校验，**没做过实际 `up`**，这点写在 docs/design/deployment.md §7。
 
 验证：后端 232 用例（system 164 / web 42，ActuatorEndpointsTest 2 条：探针、health 不泄露详情）、前端 116 单测、E2E 13/13、`smoke-deployment.ps1` 对本地实例全绿（prometheus 40.6 KB）、compose YAML 解析通过、spec-lint error 0 / warning 49。
+
+## 权限矩阵回归（2026-11-13，CR-20261114-045，D 档）
+
+把「权限码 × 角色」做成可执行回归：`tools/permission-matrix/cli.mjs` 扫 Controller 的 `@PreAuthorize` 与 `@*Mapping`，抽「权限码 → 代表性接口」，再解析 `docs/design/permission-matrix.md` 的角色列，生成 71 条用例到 `server/web/src/test/resources/permission-matrix.json`；`PermissionMatrixTest` 分两层跑——授权数据层（角色实际权限码 vs 矩阵，497 组合，精确无副作用）与执行层（GET/无请求体 DELETE 要求拒绝方正好 403，280 组严格断言）。
+
+生成器兼做漂移检测：矩阵有码无接口、代码有码无矩阵、无法解析的写法都会报警，CI 的 `--check` 直接红。
+
+三个踩坑（都写进断言 #114/#115）：
+1. **写操作允许侧不能打真实 id**：第一版把 `{id}` 换成 1，`DELETE /roles/1`、`DELETE /users/1` 真把 SUPER_ADMIN 和 admin 软删了，测试库被自己改坏。现在统一用哨兵值 999999，跑完复查种子完好（79 条授权、9 用户）。
+2. **参数校验先于方法级鉴权**：带 `@Valid` 请求体的 POST/PUT 空体只得到 422，`hasAnyAuthority` 接口与缺必填参数的接口同理，这些组合只能弱断言，授权正确性交给数据层。
+3. 本地测试库此前被我手工冒烟误删过 admin/SUPER_ADMIN（时间戳 12:23），已用幂等 SQL 恢复；开发库未受影响。
+
+验证：后端 237 用例（common 26 / system 164 / web 47）BUILD SUCCESS、生成器 `--check` 通过、spec-lint error 0 / warning 49、CI 新增一致性门禁。
