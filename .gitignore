@@ -45,3 +45,6 @@ apps/pc/coverage/
 # 设计过程产物（登录页 mockup 打包，非源码，体积 20MB+）
 .trae-html-share-packages/
 .screenshots/
+
+# 部署环境变量（含口令，禁止入库）
+.env

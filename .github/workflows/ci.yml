@@ -117,7 +117,20 @@ jobs:
       # apps/pc 的 build = vue-tsc -b && vite build
       - name: Build
         run: pnpm build
-      # 业务 chunk 体积门禁：第三方依赖按 vendor-* 分包后（见 apps/pc/vite.config.ts），
+  # 部署产物校验（P1-1）：compose 与 Dockerfile 的静态问题不该等到上线才发现。
+  # 这里只做 “能不能解析” 级别的校验——真正的容器起停留给部署环境。
+  compose-config:
+    name: 部署产物校验
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: docker compose config
+        # 用 .env.example 提供必填变量；-q 只校验不输出
+        run: docker compose --env-file .env.example config -q
+      - name: 校验前端镜像可构建（不推送）
+        run: docker build -f deploy/Dockerfile.web --target build -t admin-starter-web:ci .
+
+      - name: 业务 chunk 体积门禁：第三方依赖按 vendor-* 分包后（见 apps/pc/vite.config.ts），
       # 业务入口应保持很小；它反弹意味着又把大依赖静态引入了主包，构建期发现比线上慢一截更好。
       - name: 业务 chunk 体积门禁（≤ 400KB）
         run: |

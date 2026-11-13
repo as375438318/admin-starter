@@ -5,6 +5,10 @@ server:
 spring:
   application:
     name: admin-starter
+  # 优雅停机：等在途请求处理完再关（与 server.shutdown: graceful 配合）。
+  # 容器编排里 SIGTERM 先到这里，超时后强制退出——太长会让滚动发布卡住，30s 是折中。
+  lifecycle:
+    timeout-per-shutdown-phase: 30s
   profiles:
     default: dev
     group:
@@ -98,4 +102,19 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info
+        # prometheus 供 Prometheus 抓取（P1-1）。**它不带鉴权**，因此部署时必须保证
+        # 管理端点只在内网可达（compose 里后端端口不对外发布，只走 nginx 反代 /api）。
+        include: health,info,prometheus
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      show-details: when-authorized
+  health:
+    livenessstate:
+      enabled: true
+    readinessstate:
+      enabled: true
+  metrics:
+    tags:
+      application: admin-starter
