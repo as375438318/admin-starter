@@ -11,7 +11,7 @@ import { loginAsAdmin } from './helpers';
  *
  * <p>前置：后端在 8080 运行；前端由 playwright.config 的 webServer 启动。</p>
  */
-const API = process.env.E2E_API_URL ?? 'http://127.0.0.1:8080/api/v1';
+const API = process.env.E2E_API_URL ?? 'http://127.0.0.1:8082/api/v1';
 
 async function login(page: Page): Promise<void> {
   await loginAsAdmin(page);
