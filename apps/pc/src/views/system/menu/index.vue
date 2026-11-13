@@ -8,6 +8,7 @@ import { formatDateTime } from '@/utils/datetime';
 import { scrollToFirstError } from '@/utils/form';
 import { useDelayedSkeleton } from '@/utils/skeleton';
 import TableSkeleton from '@/components/TableSkeleton.vue';
+import IconPicker from '@/components/IconPicker.vue';
 import { useAuthStore } from '@/stores/auth';
 import { useTableColumns, type ColumnDefinition } from '@/composables/use-table-columns';
 import ColumnSettings from '@/components/ColumnSettings.vue';
@@ -444,7 +445,7 @@ onMounted(() => {
           <el-input v-model="form.permissionCode" placeholder="如 system:user:create" />
         </el-form-item>
         <el-form-item v-if="form.menuType !== 'F'" label="图标">
-          <el-input v-model="form.icon" placeholder="Element Plus 图标名，如 User" />
+          <IconPicker v-model="form.icon" />
         </el-form-item>
         <el-form-item label="排序">
           <el-input-number v-model="form.sort" :min="1" :max="9999" controls-position="right" />
