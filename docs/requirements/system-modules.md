@@ -5,6 +5,7 @@
 | 版本 | v1.8（2026-11-12，新增「工作台统计」：`GET /api/v1/dashboard/overview` + 权限码 `system:dashboard:view`，Flyway V18）；v1.7（2026-11-11，补回填：新增「岗位·导入导出」与「示例业务·导入导出」两个接入点，缓存命名空间 7→8 补 `import-dedup`）；v1.6（2026-11-09，新增缓存管理：命名空间白名单/SCAN 分页/清理审计） |
 | 客户档案（生成器样例） | 单表 CRUD（列表/新增/修改/删除）＋列设置＋表头排序 | `demo:customer:` |
 | 变更审计 | 配置面变更留痕与查询（参数/字典/菜单/角色授权；before/after；敏感打码；只读） | `system:audit:` |
+| 通用导出中心 | 一个入口服务所有已注册模块：按模块鉴权、导出列白名单、同步/异步自动切换 | 各模块自己的 `*:export` |
 | 读者 | AI 编码助手、后端、前端 |
 | 定位 | **as-is 能力清单**，不是需求文档 |
 | 依赖 | `docs/baseline/modules.md`、`docs/design/permission-matrix.md`、`docs/api/openapi.generated.yaml`、`docs/audit/impl-notes.md`、`docs/audit/final-report.md`、`docs/baseline/assertions.md` |

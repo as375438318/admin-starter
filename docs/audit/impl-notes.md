@@ -1595,3 +1595,20 @@ E2E 新增 `e2e/helpers.ts`：首次跑真的走一遍"被强制改密 → 改�
 顺带修掉上一轮我造成的真问题：PR #41 把 `V21/V22__demo_customer.sql` 两份重复迁移合进了 main，Flyway 报 "Found more than one migration with version 21"，后端整体起不来。根因是生成器每次用"最大版本+1"命名迁移，`--force` 重跑就多产一份；已改为同表复用版本号（幂等），并清了本地 test/dev 库被误记录的 21/22 历史行。另一个坑：删了源文件但 `target/classes/db/migration` 里的陈旧副本仍在 classpath 上，必须 `mvn clean`（断言 #110）。
 
 验证：后端 229 用例 BUILD SUCCESS（system 164 / web 39，含 3 条审计集成用例）、前端 116 单测、E2E 13/13、运行时冒烟改参数后审计 total=1 且 before/after 正确、契约 1.4.0 并重新导出 as-is、spec-lint error 0 / warning 49。
+## 更正：模块生成器"重复迁移导致 main 起不来"的判断是错的（2026-11-13，D 档）
+
+上一轮我报告"PR #41 把重复迁移合进 main 导致后端起不来"，**这个结论不成立**：
+
+- `V20/V21/V22__demo_customer.sql` 版本号是 20/21/22，**互不相同**，Flyway 接受；PR #41 的 CI 日志里 web 模块 `Tests run: 36`、Spring 上下文正常启动，就是反证。
+- 真正撞号是随后我加 `V21__change_audit.sql` 时：目录出现**两个 V21**，才报 `Found more than one migration with version 21`。属本地临时冲突，不是主干缺陷。
+
+仍保留的改动：删掉两份内容重复的迁移、生成器迁移幂等化（断言 #110）、记录 `target/classes` 陈旧副本需 `mvn clean`。教训是"启动失败的归因必须先核对版本号是否真的重复"。
+## 通用导出中心（2026-11-13，CR-20261114-043，B 档）
+
+把"导出"从"每个模块各写一套入口"收成一个 SPI：`ExportModule`（键/中文名/权限码/plan）+ 注册表 + 一个统一入口 `GET /api/v1/exports/{moduleKey}`。公共流程（计数 → 同步/异步规划 → 列裁剪 → 任务记录）仍走既有 `ExcelExportPlanner`，入口本身很薄。已注册三个模块：customer（新写 schema）、demo-task 与 post（委托既有服务）。
+
+鉴权是这轮的关键点：通用入口的权限码按模块不同，用 `@PreAuthorize("@exportGuard.allowed(#moduleKey)")` 查表校验，**没有**退化成"登录即可导出"；未知模块返回 403（不给探测面）。
+
+生成器模板同步支持导出：生成的页面直接带「导出」按钮，走通用入口并透传列白名单与排序。踩的坑：模板里嵌套模板字符串（`ElMessage.success(\`…\`)`）时必须转义反引号与 `${}`，否则 cli.mjs 自己先语法错；另外 `sort/order` 是 `usePagedList` 的顶层 ref，不在 `page` 对象里。
+
+验证：后端 233 用例（新增 ExportCenterTest 4 条：模块清单、xlsx 文件流、按模块鉴权 403、未知列 400）、前端 116 单测 + 构建、E2E 13/13、运行时冒烟三个模块可导出且无权限角色 403、契约 1.4.0 → 1.5.0。
