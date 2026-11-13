@@ -1,4 +1,4 @@
-# 系统基线 · 设计断言（as-built v1.53）
+# 系统基线 · 设计断言（as-built v1.54）
 
 | 项目 | 内容 |
 |---|---|
@@ -129,3 +129,4 @@
 | 103 | 后端排序白名单用 `Map.of(...)`（不可变 Map）实现时，**`get(null)` 会抛 NPE**：而「不传 `sort`」是最常见请求 → 列表直接 500。必须写成 `sort == null ? null : SORTS.get(sort)` | `FileRepositoryImpl`、`ExportTaskRepositoryImpl`；`CR-20261113-039` | 新增白名单的仓储照抄「直接 get」就会在默认列表页 500，且日志里只有空指针 | 2026-11-13 |
 | 104 | 导出列裁剪（`fields`）的三条不变式：① **只能减少列**（未知 key → 400 + 10001）；② **顺序以 schema 为准**，不按参数顺序；③ **不能绕过字段级脱敏**（裁剪发生在 `visibleColumns` 脱敏过滤**之后**）。异步导出把 `fields` 存进 `sys_export_task.query_params` 快照 | `ExcelExportWriter.resolveColumns`；`ExportFieldsTest`；`CR-20261113-038` | 把裁剪放到脱敏之前，等于给了一个"用 fields 把敏感列要回来"的提权入口 | 2026-11-13 |
 | 105 | 菜单 `icon` 字段必须是 **`@element-plus/icons-vue` 里已注册的图标名**（`main.ts` 全局注册的同一集合）：拼错时 `&lt;component :is="…"&gt;` **不报错、只渲染空白**，表现为"侧边栏图标没了"。编辑入口已改为可视化选择器 `IconPicker`（`apps/pc/src/components/IconPicker.vue`），直接改库或接口传值时仍须守住这条 | `IconPicker.vue`；`apps/pc/src/layout/SideMenu.vue`；`main.ts` | 手输图标名拼错后要花很久才发现是"名字不存在"而不是"样式或权限问题" | 2026-11-13 |
+| 106 | 「固定路由页面」的权限码要靠**隐藏的页面级菜单**承载，禁止挂到目录（M）下：工作台是固定路由 `/dashboard`，其 `system:dashboard:view` 由隐藏 C 菜单「工作台」（`is_visible=0`、**`permission_code` 必须 NULL**）承载；给容器菜单配权限码会让普通用户打开首页直接 403。前端动态路由除按 name 去重外**必须再按 path 去重**（固定路由优先），否则菜单路由会覆盖固定路由 | `V19__fix_dashboard_menu_hierarchy.sql`；`apps/pc/src/router/index.ts`；`CR-20261113-040` | 挂目录下会出现"按钮挂在目录"的孤儿节点（菜单管理与授权树同时畸形）；漏 path 去重会出现两条 `/dashboard` 且后注册者胜出 | 2026-11-13 |

@@ -91,6 +91,12 @@ export function registerDynamicRoutes(): void {
   };
   walk(auth.menuRoutes);
 
+  // 固定路由优先：同 path 的菜单路由**不注册**。
+  // 原因（断言 #106）：工作台等页面是固定路由（不在菜单树里驱动导航），但它的按钮权限需要一个
+  // 页面级菜单节点来承载。若把该节点也注册成路由，就会出现两条 /dashboard 记录，
+  // 后注册的菜单路由会覆盖固定路由——而菜单路由带 meta.permission，
+  // 一旦给容器菜单配了权限码，普通用户点首页就直接 403。
+  const fixedPaths = new Set(router.getRoutes().map((record) => record.path));
   for (const item of flat) {
     const key = `../views/${item.component}.vue`;
     const loader = viewModules[key];
@@ -98,7 +104,7 @@ export function registerDynamicRoutes(): void {
       console.warn(`[router] 视图文件不存在：src/views/${item.component}.vue`);
       continue;
     }
-    if (router.hasRoute(item.name)) {
+    if (router.hasRoute(item.name) || fixedPaths.has(item.path)) {
       continue;
     }
     router.addRoute('Root', {
