@@ -21,7 +21,9 @@ public interface FileRepository {
 
     FileRecord findDeletedById(Long id);
 
-    PageResult<FileRecord> page(String keyword, int page, int pageSize);
+    /** 文件列表（不含回收站）。sort 走白名单，白名单外的值由实现回落默认排序（CR-20261112-032 口径）。 */
+    PageResult<FileRecord> page(String keyword, int page, int pageSize, String sort, String order);
+
 
     PageResult<FileRecord> pageDeleted(String keyword, int page, int pageSize);
 

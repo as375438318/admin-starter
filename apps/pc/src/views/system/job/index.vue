@@ -22,6 +22,8 @@ import { createOptionReporter } from '@/utils/option-load';
 import TableSkeleton from '@/components/TableSkeleton.vue';
 import { confirmDelete, usePagedList } from '@/composables/use-paged-list';
 import { useCrudDrawer } from '@/composables/use-crud-drawer';
+import { useTableColumns, type ColumnDefinition } from '@/composables/use-table-columns';
+import ColumnSettings from '@/components/ColumnSettings.vue';
 
 const STATUS_LABELS: Record<JobStatus, string> = { ENABLED: '启用', DISABLED: '停用' };
 const STATUS_TAG: Record<JobStatus, 'success' | 'info'> = { ENABLED: 'success', DISABLED: 'info' };
@@ -81,6 +83,7 @@ const {
   search,
   resetFilters,
   onPageSizeChange,
+  onSortChange,
 } = usePagedList<JobItem, JobFilters>({
   initialFilters: { keyword: '', status: undefined },
   fetcher: (params) =>
@@ -89,7 +92,49 @@ const {
       pageSize: params.pageSize,
       keyword: params.keyword || undefined,
       status: params.status,
+      // 排序参数必须显式转发：fetcher 是逐字段映射的，漏一行就等于「点了表头没反应」
+      sort: params.sort,
+      order: params.order,
     }),
+});
+
+/**
+ * 任务表列定义（`sortKey` 只能取 sort-whitelist 的 job 白名单）。
+ * 执行日志抽屉里的表是另一个独立实例（`system-job-log`），只接列设置、不接排序。
+ */
+const JOB_COLUMNS: ColumnDefinition[] = [
+  { key: 'name', label: '任务名称', sortKey: 'name', alwaysVisible: true },
+  { key: 'groupName', label: '分组' },
+  { key: 'jobKey', label: '任务标识' },
+  { key: 'cronExpression', label: 'cron' },
+  // 状态/结果列用标签字典渲染，原文不可直接导出
+  { key: 'status', label: '状态', exportable: false },
+  { key: 'nextRunAt', label: '下次执行', sortKey: 'nextRunAt' },
+  { key: 'lastRunResult', label: '最近结果', exportable: false },
+  { key: 'ops', label: '操作', alwaysVisible: true, exportable: false },
+];
+
+const table = useTableColumns({
+  storageKey: 'system-job',
+  columns: JOB_COLUMNS,
+  onSort: (sort, order) => onSortChange(sort, order),
+});
+
+/** 执行日志表：日志接口不分页排序，只接列显隐 */
+const JOB_LOG_COLUMNS: ColumnDefinition[] = [
+  { key: 'triggerType', label: '触发', exportable: false },
+  { key: 'result', label: '结果', exportable: false },
+  { key: 'startedAt', label: '开始时间' },
+  { key: 'elapsedMs', label: '耗时', exportable: false },
+  { key: 'attemptCount', label: '执行次数' },
+  { key: 'affectedRows', label: '影响条数', exportable: false },
+  { key: 'errorSummary', label: '异常摘要' },
+  { key: 'ops', label: '操作', alwaysVisible: true, exportable: false },
+];
+
+const logTable = useTableColumns({
+  storageKey: 'system-job-log',
+  columns: JOB_LOG_COLUMNS,
 });
 
 const jobKeys = ref<JobKeyOption[]>([]);
@@ -359,6 +404,15 @@ onMounted(() => {
         <el-button @click="resetFilters">重置</el-button>
       </div>
       <div class="toolbar-actions">
+        <ColumnSettings
+          :columns="JOB_COLUMNS"
+          :is-visible="table.isVisible"
+          :hidden-count="table.hiddenCount.value"
+          @toggle="table.toggleColumn"
+          @show-all="table.showAllColumns"
+          @invert="table.invertColumns"
+          @reset="table.resetColumns"
+        />
         <el-button v-permission="'system:job:create'" type="primary" @click="openCreate">新增任务</el-button>
       </div>
     </div>
@@ -369,7 +423,12 @@ onMounted(() => {
         <el-button class="error-retry" size="small" @click="load">重试</el-button>
       </el-alert>
 
-      <el-table :data="skeletonVisible ? [] : rows" row-key="id" style="width: 100%">
+      <el-table
+        :data="skeletonVisible ? [] : rows"
+        row-key="id"
+        style="width: 100%"
+        @sort-change="table.onSortChange"
+      >
         <template #empty>
           <TableSkeleton v-if="skeletonVisible" :rows="6" />
           <div v-else-if="!loading" class="table-empty">
@@ -378,35 +437,66 @@ onMounted(() => {
             <el-button v-if="hasFilter" size="small" @click="resetFilters">清空筛选</el-button>
           </div>
         </template>
-        <el-table-column prop="name" label="任务名称" min-width="180" show-overflow-tooltip>
+        <el-table-column
+          v-if="table.isVisible('name')"
+          prop="name"
+          label="任务名称"
+          min-width="180"
+          show-overflow-tooltip
+          :sortable="table.sortableOf('name')"
+        >
           <template #default="{ row }">
             <el-link type="primary" :underline="false" @click="openEdit(row)">{{ row.name }}</el-link>
             <el-tag v-if="row.running" size="small" type="warning" class="running-tag">执行中</el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="groupName" label="分组" width="110" show-overflow-tooltip />
-        <el-table-column prop="jobKey" label="任务标识" min-width="150" show-overflow-tooltip>
+        <el-table-column
+          v-if="table.isVisible('groupName')"
+          prop="groupName"
+          label="分组"
+          width="110"
+          show-overflow-tooltip
+        />
+        <el-table-column
+          v-if="table.isVisible('jobKey')"
+          prop="jobKey"
+          label="任务标识"
+          min-width="150"
+          show-overflow-tooltip
+        >
           <template #default="{ row }">
             <span class="mono">{{ row.jobKey }}</span>
             <el-tag v-if="!row.registered" size="small" type="danger">未注册</el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="cronExpression" label="cron" min-width="130" show-overflow-tooltip>
+        <el-table-column
+          v-if="table.isVisible('cronExpression')"
+          prop="cronExpression"
+          label="cron"
+          min-width="130"
+          show-overflow-tooltip
+        >
           <template #default="{ row }"><span class="mono">{{ row.cronExpression }}</span></template>
         </el-table-column>
-        <el-table-column label="状态" width="80">
+        <el-table-column v-if="table.isVisible('status')" prop="status" label="状态" width="80">
           <template #default="{ row }">
             <el-tag :type="STATUS_TAG[row.status as JobStatus]" size="small">
               {{ STATUS_LABELS[row.status as JobStatus] }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="下次执行" width="160">
+        <el-table-column
+          v-if="table.isVisible('nextRunAt')"
+          prop="nextRunAt"
+          label="下次执行"
+          width="160"
+          :sortable="table.sortableOf('nextRunAt')"
+        >
           <template #default="{ row }">
             {{ row.nextRunAt ? formatDateTime(row.nextRunAt) : '—' }}
           </template>
         </el-table-column>
-        <el-table-column label="最近结果" width="110">
+        <el-table-column v-if="table.isVisible('lastRunResult')" prop="lastRunResult" label="最近结果" width="110">
           <template #default="{ row }">
             <el-tag v-if="row.lastRunResult" :type="RESULT_TAG[row.lastRunResult as JobRunResult]" size="small">
               {{ RESULT_LABELS[row.lastRunResult as JobRunResult] }}
@@ -414,7 +504,7 @@ onMounted(() => {
             <span v-else>—</span>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="260" fixed="right">
+        <el-table-column v-if="table.isVisible('ops')" prop="ops" label="操作" width="260" fixed="right">
           <template #default="{ row }">
             <div class="row-actions">
               <el-button v-permission="'system:job:update'" link type="primary" @click="openEdit(row)">编辑</el-button>
@@ -538,30 +628,51 @@ onMounted(() => {
         <el-select v-model="logsFilters.triggerType" class="filter-select" placeholder="触发方式" clearable @change="searchLogs">
           <el-option v-for="(label, value) in TRIGGER_LABELS" :key="value" :label="label" :value="value" />
         </el-select>
+        <ColumnSettings
+          :columns="JOB_LOG_COLUMNS"
+          :is-visible="logTable.isVisible"
+          :hidden-count="logTable.hiddenCount.value"
+          @toggle="logTable.toggleColumn"
+          @show-all="logTable.showAllColumns"
+          @invert="logTable.invertColumns"
+          @reset="logTable.resetColumns"
+        />
       </div>
       <el-table v-loading="logsLoading" :data="logs" row-key="id" height="480px">
-        <el-table-column label="触发" width="70">
+        <el-table-column v-if="logTable.isVisible('triggerType')" prop="triggerType" label="触发" width="70">
           <template #default="{ row }">{{ TRIGGER_LABELS[row.triggerType as JobTriggerType] }}</template>
         </el-table-column>
-        <el-table-column label="结果" width="80">
+        <el-table-column v-if="logTable.isVisible('result')" prop="result" label="结果" width="80">
           <template #default="{ row }">
             <el-tag :type="RESULT_TAG[row.result as JobRunResult]" size="small">
               {{ RESULT_LABELS[row.result as JobRunResult] }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="开始时间" width="160">
+        <el-table-column v-if="logTable.isVisible('startedAt')" prop="startedAt" label="开始时间" width="160">
           <template #default="{ row }">{{ formatDateTime(row.startedAt) }}</template>
         </el-table-column>
-        <el-table-column label="耗时" width="90" align="right">
+        <el-table-column v-if="logTable.isVisible('elapsedMs')" prop="elapsedMs" label="耗时" width="90" align="right">
           <template #default="{ row }">{{ row.elapsedMs }} ms</template>
         </el-table-column>
-        <el-table-column prop="attemptCount" label="执行次数" width="90" align="right" />
-        <el-table-column label="影响条数" width="90" align="right">
+        <el-table-column
+          v-if="logTable.isVisible('attemptCount')"
+          prop="attemptCount"
+          label="执行次数"
+          width="90"
+          align="right"
+        />
+        <el-table-column v-if="logTable.isVisible('affectedRows')" prop="affectedRows" label="影响条数" width="90" align="right">
           <template #default="{ row }">{{ row.affectedRows ?? '—' }}</template>
         </el-table-column>
-        <el-table-column prop="errorSummary" label="异常摘要" min-width="200" show-overflow-tooltip />
-        <el-table-column label="操作" width="80" fixed="right">
+        <el-table-column
+          v-if="logTable.isVisible('errorSummary')"
+          prop="errorSummary"
+          label="异常摘要"
+          min-width="200"
+          show-overflow-tooltip
+        />
+        <el-table-column v-if="logTable.isVisible('ops')" prop="ops" label="操作" width="80" fixed="right">
           <template #default="{ row }">
             <el-button link type="primary" @click="openLogDetail(row)">详情</el-button>
           </template>

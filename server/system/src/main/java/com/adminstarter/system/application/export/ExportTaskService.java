@@ -77,8 +77,8 @@ public class ExportTaskService {
         return toItem(requireOwned(userId, taskId));
     }
 
-    public PageResult<ExportTaskItem> page(Long userId, int page, int pageSize) {
-        PageResult<ExportTask> result = exportTaskRepository.pageByUser(userId, page, pageSize);
+    public PageResult<ExportTaskItem> page(Long userId, int page, int pageSize, String sort, String order) {
+        PageResult<ExportTask> result = exportTaskRepository.pageByUser(userId, page, pageSize, sort, order);
         List<ExportTaskItem> items = result.getList().stream().map(this::toItem).toList();
         return PageResult.of(items, result.getTotal());
     }

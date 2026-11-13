@@ -14,6 +14,8 @@ import TableSkeleton from '@/components/TableSkeleton.vue';
 import { useAuthStore } from '@/stores/auth';
 import { confirmDelete, usePagedList } from '@/composables/use-paged-list';
 import { useCrudDrawer } from '@/composables/use-crud-drawer';
+import { useTableColumns, type ColumnDefinition } from '@/composables/use-table-columns';
+import ColumnSettings from '@/components/ColumnSettings.vue';
 
 const auth = useAuthStore();
 
@@ -57,6 +59,7 @@ const {
   search,
   resetFilters,
   onPageSizeChange,
+  onSortChange,
 } = usePagedList<RoleItem, RoleFilters>({
   initialFilters: { keyword: '', isEnabled: undefined },
   fetcher: (params) =>
@@ -65,7 +68,32 @@ const {
       pageSize: params.pageSize,
       keyword: params.keyword || undefined,
       isEnabled: params.isEnabled,
+      // 排序参数必须显式转发：fetcher 是逐字段映射的，漏一行就等于「点了表头没反应」
+      sort: params.sort,
+      order: params.order,
     }),
+});
+
+/**
+ * 列定义（唯一定义处）：同时驱动表格渲染、列勾选、点表头排序、导出字段。
+ * `sortKey` 只能取 `constants/sort-whitelist.ts` 的 role 白名单（后端对白名单外字段静默回落）。
+ */
+const ROLE_COLUMNS: ColumnDefinition[] = [
+  { key: 'name', label: '角色名称', sortKey: 'name', alwaysVisible: true },
+  { key: 'code', label: '角色编码', sortKey: 'code' },
+  // 派生列（由 dataScope 翻译成文案），不可导出
+  { key: 'dataScope', label: '组织范围', exportable: false },
+  { key: 'ownFilter', label: '归属过滤', exportable: false },
+  { key: 'remark', label: '备注' },
+  { key: 'isEnabled', label: '状态' },
+  { key: 'createdAt', label: '创建时间', sortKey: 'createdAt' },
+  { key: 'ops', label: '操作', alwaysVisible: true, exportable: false },
+];
+
+const table = useTableColumns({
+  storageKey: 'system-role',
+  columns: ROLE_COLUMNS,
+  onSort: (sort, order) => onSortChange(sort, order),
 });
 
 const statusOptions = ref<StatusOption[]>([]);
@@ -311,6 +339,15 @@ onMounted(() => {
         <el-button @click="resetFilters">重置</el-button>
       </div>
       <div class="toolbar-actions">
+        <ColumnSettings
+          :columns="ROLE_COLUMNS"
+          :is-visible="table.isVisible"
+          :hidden-count="table.hiddenCount.value"
+          @toggle="table.toggleColumn"
+          @show-all="table.showAllColumns"
+          @invert="table.invertColumns"
+          @reset="table.resetColumns"
+        />
         <el-button v-permission="'system:role:create'" type="primary" @click="openCreate">新增角色</el-button>
       </div>
     </div>
@@ -321,29 +358,61 @@ onMounted(() => {
         <el-button class="error-retry" size="small" @click="load">重试</el-button>
       </el-alert>
 
-      <el-table :data="skeletonVisible ? [] : rows" row-key="id" style="width: 100%">
-        <el-table-column prop="name" label="角色名称" width="190" fixed="left" show-overflow-tooltip />
-        <el-table-column prop="code" label="角色编码" width="160" show-overflow-tooltip />
-        <el-table-column label="组织范围" width="140">
+      <el-table
+        :data="skeletonVisible ? [] : rows"
+        row-key="id"
+        style="width: 100%"
+        @sort-change="table.onSortChange"
+      >
+        <el-table-column
+          v-if="table.isVisible('name')"
+          prop="name"
+          label="角色名称"
+          width="190"
+          fixed="left"
+          show-overflow-tooltip
+          :sortable="table.sortableOf('name')"
+        />
+        <el-table-column
+          v-if="table.isVisible('code')"
+          prop="code"
+          label="角色编码"
+          width="160"
+          show-overflow-tooltip
+          :sortable="table.sortableOf('code')"
+        />
+        <el-table-column v-if="table.isVisible('dataScope')" prop="dataScope" label="组织范围" width="140">
           <template #default="{ row }">
             <el-tag disable-transitions>{{ scopeLabels[row.dataScope as DataScope] }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="归属过滤" width="130">
+        <el-table-column v-if="table.isVisible('ownFilter')" prop="ownFilter" label="归属过滤" width="130">
           <template #default="{ row }">{{ ownLabels[row.ownFilter as OwnFilter] }}</template>
         </el-table-column>
-        <el-table-column prop="remark" label="备注" min-width="180" show-overflow-tooltip />
-        <el-table-column label="状态" width="90">
+        <el-table-column
+          v-if="table.isVisible('remark')"
+          prop="remark"
+          label="备注"
+          min-width="180"
+          show-overflow-tooltip
+        />
+        <el-table-column v-if="table.isVisible('isEnabled')" prop="isEnabled" label="状态" width="90">
           <template #default="{ row }">
             <el-tag :type="row.isEnabled ? 'success' : 'info'" disable-transitions>
               {{ row.isEnabled ? '启用' : '停用' }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="创建时间" width="170">
+        <el-table-column
+          v-if="table.isVisible('createdAt')"
+          prop="createdAt"
+          label="创建时间"
+          width="170"
+          :sortable="table.sortableOf('createdAt')"
+        >
           <template #default="{ row }">{{ formatDateTime(row.createdAt) }}</template>
         </el-table-column>
-        <el-table-column label="操作" width="200" fixed="right">
+        <el-table-column v-if="table.isVisible('ops')" prop="ops" label="操作" width="200" fixed="right">
           <template #default="{ row }">
             <div class="row-actions">
               <el-button v-permission="'system:role:menu'" link type="primary" @click="openMenus(row)">

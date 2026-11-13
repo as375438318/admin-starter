@@ -1,5 +1,8 @@
 package com.adminstarter.system.application.excel;
 
+import com.adminstarter.common.error.BizException;
+import com.adminstarter.common.error.ErrorCode;
+
 import com.adminstarter.common.masking.MaskResolver;
 import com.adminstarter.system.application.excel.ReferenceDirectoryService.ReferenceContext;
 import lombok.RequiredArgsConstructor;
@@ -45,7 +48,21 @@ public class ExcelExportWriter {
     }
 
     public <T> void writeSync(ExcelSchema<T> schema, List<T> rows, OutputStream output) throws IOException {
-        List<ExcelField<T>> columns = visibleColumns(schema);
+        writeSync(schema, rows, output, null);
+    }
+
+    /**
+     * 同步导出，支持按列白名单裁剪（P3「导出按勾选列」）。
+     *
+     * <p>{@code fieldKeys} 为空 = 现状（schema 定义的全部可导出列）。裁剪规则与顺序：
+     * 先按字段级脱敏过滤（{@link #visibleColumns}），再按白名单取交集，<b>顺序以 schema 为准</b>。
+     * 因此 {@code fields} 只能<b>减少</b>列，无法绕过脱敏、也无法改变列序。</p>
+     *
+     * @throws BizException 白名单里出现 schema 未定义的列 key（400，提示未知列名）
+     */
+    public <T> void writeSync(ExcelSchema<T> schema, List<T> rows, OutputStream output,
+                              List<String> fieldKeys) throws IOException {
+        List<ExcelField<T>> columns = resolveColumns(schema, fieldKeys);
         ReferenceContext refs = referenceDirectoryService.context(columns);
         try (XSSFWorkbook workbook = new XSSFWorkbook()) {
             Sheet sheet = workbook.createSheet(schema.dataSheetName());
@@ -61,7 +78,13 @@ public class ExcelExportWriter {
 
     public <T> long writeStreaming(ExcelSchema<T> schema, RowSource<T> source, OutputStream output,
                                    ProgressListener listener) throws IOException {
-        List<ExcelField<T>> columns = visibleColumns(schema);
+        return writeStreaming(schema, source, output, listener, null);
+    }
+
+    /** 流式导出（异步任务），列裁剪规则同 {@link #writeSync(ExcelSchema, List, OutputStream, List)}。 */
+    public <T> long writeStreaming(ExcelSchema<T> schema, RowSource<T> source, OutputStream output,
+                                   ProgressListener listener, List<String> fieldKeys) throws IOException {
+        List<ExcelField<T>> columns = resolveColumns(schema, fieldKeys);
         ReferenceContext refs = referenceDirectoryService.context(columns);
         SXSSFWorkbook workbook = new SXSSFWorkbook(SXSSF_WINDOW);
         try {
@@ -86,6 +109,24 @@ public class ExcelExportWriter {
             workbook.dispose();
             workbook.close();
         }
+    }
+
+    /**
+     * 列裁剪：脱敏可见性 → 字段白名单交集；白名单含未知 key 时报 400。
+     * <p>先脱敏后裁剪，保证 {@code fields} 无法把敏感列"要回来"（见断言 #103）。</p>
+     */
+    private <T> List<ExcelField<T>> resolveColumns(ExcelSchema<T> schema, List<String> fieldKeys) {
+        List<ExcelField<T>> columns = visibleColumns(schema);
+        if (fieldKeys == null || fieldKeys.isEmpty()) {
+            return columns;
+        }
+        java.util.Set<String> requested = new java.util.LinkedHashSet<>(fieldKeys);
+        List<String> known = schema.exportFields().stream().map(ExcelField::getKey).toList();
+        List<String> unknown = requested.stream().filter(key -> !known.contains(key)).toList();
+        if (!unknown.isEmpty()) {
+            throw new BizException(ErrorCode.INVALID_PARAMETER, "未知的导出列: " + String.join(",", unknown));
+        }
+        return columns.stream().filter(column -> requested.contains(column.getKey())).toList();
     }
 
     private <T> List<ExcelField<T>> visibleColumns(ExcelSchema<T> schema) {

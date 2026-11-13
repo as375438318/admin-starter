@@ -3,6 +3,7 @@ package com.adminstarter.system.infrastructure.persistence.repository;
 import com.adminstarter.common.api.PageResult;
 import com.adminstarter.system.domain.model.FileRecord;
 import com.adminstarter.system.domain.repository.FileRepository;
+import com.adminstarter.system.infrastructure.persistence.SortSupport;
 import com.adminstarter.system.infrastructure.persistence.converter.FileConverter;
 import com.adminstarter.system.infrastructure.persistence.entity.FileDO;
 import com.adminstarter.system.infrastructure.persistence.mapper.FileMapper;
@@ -16,6 +17,12 @@ import java.util.List;
 @Repository
 @RequiredArgsConstructor
 public class FileRepositoryImpl implements FileRepository {
+    /** 可排序字段白名单（camelCase → 列名）：file 列表用 */
+    private static final java.util.Map<String, String> SORTS = java.util.Map.of(
+            "createdAt", "created_at",
+            "originalName", "original_name",
+            "size", "size",
+            "id", "id");
 
     private final FileMapper fileMapper;
     private final FileConverter converter;
@@ -54,12 +61,20 @@ public class FileRepositoryImpl implements FileRepository {
     }
 
     @Override
-    public PageResult<FileRecord> page(String keyword, int page, int pageSize) {
+    public PageResult<FileRecord> page(String keyword, int page, int pageSize, String sort, String order) {
         QueryWrapper<FileDO> wrapper = new QueryWrapper<>();
         if (keyword != null && !keyword.isBlank()) {
             wrapper.like("original_name", keyword);
         }
-        wrapper.orderByDesc("created_at", "id");
+        // 可排序字段白名单：前端 sortKey 必须取这里的值（见 sort-whitelist.ts 的 file 段）。
+        // 白名单外一律回落默认排序（created_at desc），不报错——与其它列表口径一致。
+        // 注意：Map.of 是可变 Map 的不可变实现，**get(null) 会抛 NPE**，必须先判空（见断言 #103）
+        String column = sort == null ? null : SORTS.get(sort);
+        if (column == null) {
+            wrapper.orderByDesc("created_at", "id");
+        } else {
+            SortSupport.applyOrder(wrapper, column, SortSupport.isAsc(order, SortSupport.NEWEST_FIRST));
+        }
         Page<FileDO> result = fileMapper.selectPage(new Page<>(page, pageSize), wrapper);
         return PageResult.of(result.getRecords().stream().map(converter::toDomain).toList(), result.getTotal());
     }

@@ -39,6 +39,7 @@ public class NoticeRepositoryImpl implements NoticeRepository {
     private static final Map<String, String> SORTS = Map.of(
             "createdAt", "created_at",
             "title", "title",
+            "publishedAt", "published_at",
             "id", "id"
     );
 

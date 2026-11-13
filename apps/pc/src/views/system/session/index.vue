@@ -6,7 +6,9 @@ import type { SessionDeviceType, SessionInvalidateReason, SessionItem } from '@/
 import { PAGE_SIZES } from '@/constants/pagination';
 import { formatDateTime } from '@/utils/datetime';
 import TableSkeleton from '@/components/TableSkeleton.vue';
+import ColumnSettings from '@/components/ColumnSettings.vue';
 import { confirmDelete, usePagedList } from '@/composables/use-paged-list';
+import { useTableColumns, type ColumnDefinition } from '@/composables/use-table-columns';
 
 interface SessionFilters {
   keyword: string;
@@ -52,6 +54,30 @@ const {
       keyword: params.keyword || undefined,
       online: params.online,
     }),
+});
+
+/**
+ * 会话列表列定义（唯一定义处）：只驱动表格渲染与列勾选。
+ * 列表语义就是「最近活跃优先」，后端未提供排序白名单，因此**不接排序**（不写 sortKey）。
+ */
+const SESSION_COLUMNS: ColumnDefinition[] = [
+  // 派生列（昵称 + 账号拼接），不可导出
+  { key: 'userLabel', label: '用户', exportable: false },
+  // 派生列（设备类型 + 浏览器 + 操作系统拼接），不可导出
+  { key: 'device', label: '设备 / 浏览器', exportable: false },
+  { key: 'ip', label: 'IP' },
+  { key: 'loginAt', label: '登录时间' },
+  { key: 'lastActiveAt', label: '最近活跃' },
+  // 派生列（由 invalidatedAt / online 计算出状态文案），不可导出
+  { key: 'status', label: '状态', exportable: false },
+  // 派生列（失效原因标签 + 失效时间），不可导出
+  { key: 'invalidReason', label: '失效原因', exportable: false },
+  { key: 'ops', label: '操作', alwaysVisible: true, exportable: false },
+];
+
+const table = useTableColumns({
+  storageKey: 'system-session',
+  columns: SESSION_COLUMNS,
 });
 
 async function kick(row: SessionItem): Promise<void> {
@@ -139,6 +165,15 @@ onMounted(() => {
         <el-button @click="resetFilters">重置</el-button>
       </div>
       <div class="toolbar-actions">
+        <ColumnSettings
+          :columns="SESSION_COLUMNS"
+          :is-visible="table.isVisible"
+          :hidden-count="table.hiddenCount.value"
+          @toggle="table.toggleColumn"
+          @show-all="table.showAllColumns"
+          @invert="table.invertColumns"
+          @reset="table.resetColumns"
+        />
         <el-button v-permission="'system:session:clean'" @click="cleanInvalidated">清理失效记录</el-button>
       </div>
     </div>
@@ -158,30 +193,36 @@ onMounted(() => {
             <el-button v-if="hasFilter" size="small" @click="resetFilters">清空筛选</el-button>
           </div>
         </template>
-        <el-table-column label="用户" min-width="140" show-overflow-tooltip>
+        <el-table-column v-if="table.isVisible('userLabel')" prop="userLabel" label="用户" min-width="140" show-overflow-tooltip>
           <template #default="{ row }">
             <span>{{ row.nickname || row.username }}</span>
             <span class="mono muted">（{{ row.username }}）</span>
           </template>
         </el-table-column>
-        <el-table-column label="设备 / 浏览器" min-width="220" show-overflow-tooltip>
+        <el-table-column
+          v-if="table.isVisible('device')"
+          prop="device"
+          label="设备 / 浏览器"
+          min-width="220"
+          show-overflow-tooltip
+        >
           <template #default="{ row }">{{ deviceText(row) }}</template>
         </el-table-column>
-        <el-table-column label="IP" width="140" show-overflow-tooltip>
+        <el-table-column v-if="table.isVisible('ip')" prop="ip" label="IP" width="140" show-overflow-tooltip>
           <template #default="{ row }"><span class="mono">{{ row.ip || '—' }}</span></template>
         </el-table-column>
-        <el-table-column label="登录时间" width="170">
+        <el-table-column v-if="table.isVisible('loginAt')" prop="loginAt" label="登录时间" width="170">
           <template #default="{ row }">{{ formatDateTime(row.loginAt) }}</template>
         </el-table-column>
-        <el-table-column label="最近活跃" width="170">
+        <el-table-column v-if="table.isVisible('lastActiveAt')" prop="lastActiveAt" label="最近活跃" width="170">
           <template #default="{ row }">{{ formatDateTime(row.lastActiveAt) }}</template>
         </el-table-column>
-        <el-table-column label="状态" width="100">
+        <el-table-column v-if="table.isVisible('status')" prop="status" label="状态" width="100">
           <template #default="{ row }">
             <el-tag :type="statusTagType(row)" size="small">{{ statusText(row) }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="失效原因" min-width="150">
+        <el-table-column v-if="table.isVisible('invalidReason')" prop="invalidReason" label="失效原因" min-width="150">
           <template #default="{ row }">
             <template v-if="row.invalidatedAt">
               <el-tag type="info" size="small">
@@ -192,7 +233,7 @@ onMounted(() => {
             <span v-else>—</span>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="200" fixed="right">
+        <el-table-column v-if="table.isVisible('ops')" prop="ops" label="操作" width="200" fixed="right">
           <template #default="{ row }">
             <div class="row-actions">
               <el-button

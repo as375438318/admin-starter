@@ -8,6 +8,8 @@ import { useNoticeStore } from '@/stores/notice';
 import { formatDateTime } from '@/utils/datetime';
 import TableSkeleton from '@/components/TableSkeleton.vue';
 import { usePagedList } from '@/composables/use-paged-list';
+import { useTableColumns, type ColumnDefinition } from '@/composables/use-table-columns';
+import ColumnSettings from '@/components/ColumnSettings.vue';
 
 interface MessageFilters {
   readStatus: 'ALL' | 'UNREAD' | 'READ';
@@ -50,6 +52,25 @@ const {
       readStatus: params.readStatus,
     }),
   errorMessage: '消息加载失败',
+});
+
+/**
+ * 列定义（唯一定义处）：驱动表格渲染与列勾选。
+ * 收件箱不接排序（按发布时间倒序由后端固定），因此不写 `sortKey`、不传 `onSort`。
+ */
+const INBOX_COLUMNS: ColumnDefinition[] = [
+  // 标题是唯一的详情入口，隐藏后整行不可点，故常显
+  { key: 'title', label: '标题', alwaysVisible: true },
+  { key: 'level', label: '级别' },
+  { key: 'type', label: '类型' },
+  { key: 'publisherName', label: '发布人' },
+  { key: 'publishedAt', label: '发布时间' },
+  { key: 'read', label: '状态' },
+];
+
+const inboxTable = useTableColumns({
+  storageKey: 'message-inbox',
+  columns: INBOX_COLUMNS,
 });
 
 const detailVisible = ref(false);
@@ -110,6 +131,15 @@ onMounted(() => {
         <span class="unread-text">{{ unreadText }}</span>
       </div>
       <div class="toolbar-actions">
+        <ColumnSettings
+          :columns="INBOX_COLUMNS"
+          :is-visible="inboxTable.isVisible"
+          :hidden-count="inboxTable.hiddenCount.value"
+          @toggle="inboxTable.toggleColumn"
+          @show-all="inboxTable.showAllColumns"
+          @invert="inboxTable.invertColumns"
+          @reset="inboxTable.resetColumns"
+        />
         <el-button :disabled="noticeStore.unreadCount === 0" @click="readAll">全部已读</el-button>
       </div>
     </div>
@@ -130,7 +160,7 @@ onMounted(() => {
             </p>
           </div>
         </template>
-        <el-table-column label="标题" min-width="260" show-overflow-tooltip>
+        <el-table-column v-if="inboxTable.isVisible('title')" prop="title" label="标题" min-width="260" show-overflow-tooltip>
           <template #default="{ row }">
             <span class="title-cell" :class="{ 'is-unread': !row.read }">
               <i v-if="!row.read" class="unread-dot" />
@@ -138,21 +168,27 @@ onMounted(() => {
             </span>
           </template>
         </el-table-column>
-        <el-table-column label="级别" width="90">
+        <el-table-column v-if="inboxTable.isVisible('level')" prop="level" label="级别" width="90">
           <template #default="{ row }">
             <el-tag :type="LEVEL_TAG[row.level as NoticeLevel]" size="small">
               {{ LEVEL_LABELS[row.level as NoticeLevel] }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="类型" width="90">
+        <el-table-column v-if="inboxTable.isVisible('type')" prop="type" label="类型" width="90">
           <template #default="{ row }">{{ TYPE_LABELS[row.type as NoticeType] }}</template>
         </el-table-column>
-        <el-table-column prop="publisherName" label="发布人" width="130" show-overflow-tooltip />
-        <el-table-column label="发布时间" width="170">
+        <el-table-column
+          v-if="inboxTable.isVisible('publisherName')"
+          prop="publisherName"
+          label="发布人"
+          width="130"
+          show-overflow-tooltip
+        />
+        <el-table-column v-if="inboxTable.isVisible('publishedAt')" prop="publishedAt" label="发布时间" width="170">
           <template #default="{ row }">{{ formatDateTime(row.publishedAt) }}</template>
         </el-table-column>
-        <el-table-column label="状态" width="100">
+        <el-table-column v-if="inboxTable.isVisible('read')" prop="read" label="状态" width="100">
           <template #default="{ row }">
             <el-tag :type="row.read ? 'info' : 'warning'" size="small">{{ row.read ? '已读' : '未读' }}</el-tag>
           </template>

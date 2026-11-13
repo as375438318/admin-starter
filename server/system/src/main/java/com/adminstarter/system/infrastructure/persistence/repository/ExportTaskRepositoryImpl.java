@@ -4,6 +4,7 @@ import com.adminstarter.common.api.PageResult;
 import com.adminstarter.system.domain.model.ExportTask;
 import com.adminstarter.system.domain.model.ExportTaskStatus;
 import com.adminstarter.system.domain.repository.ExportTaskRepository;
+import com.adminstarter.system.infrastructure.persistence.SortSupport;
 import com.adminstarter.system.infrastructure.persistence.converter.ExportTaskConverter;
 import com.adminstarter.system.infrastructure.persistence.entity.ExportTaskDO;
 import com.adminstarter.system.infrastructure.persistence.mapper.ExportTaskMapper;
@@ -21,6 +22,11 @@ import java.util.List;
 @Repository
 @RequiredArgsConstructor
 public class ExportTaskRepositoryImpl implements ExportTaskRepository {
+    /** 可排序字段白名单（camelCase → 列名）：我的导出任务 */
+    private static final java.util.Map<String, String> SORTS = java.util.Map.of(
+            "createdAt", "created_at",
+            "status", "status",
+            "id", "id");
 
     private final ExportTaskMapper exportTaskMapper;
     private final ExportTaskConverter converter;
@@ -81,9 +87,17 @@ public class ExportTaskRepositoryImpl implements ExportTaskRepository {
     }
 
     @Override
-    public PageResult<ExportTask> pageByUser(Long userId, int page, int pageSize) {
-        Page<ExportTaskDO> result = exportTaskMapper.selectPage(new Page<>(page, pageSize),
-                new QueryWrapper<ExportTaskDO>().eq("user_id", userId).orderByDesc("created_at"));
+    public PageResult<ExportTask> pageByUser(Long userId, int page, int pageSize, String sort, String order) {
+        QueryWrapper<ExportTaskDO> wrapper = new QueryWrapper<ExportTaskDO>().eq("user_id", userId);
+        // 可排序字段白名单（见 sort-whitelist.ts 的 exportTask 段）；白名单外回落默认排序
+        // 注意：Map.of 是可变 Map 的不可变实现，**get(null) 会抛 NPE**，必须先判空（见断言 #103）
+        String column = sort == null ? null : SORTS.get(sort);
+        if (column == null) {
+            wrapper.orderByDesc("created_at", "id");
+        } else {
+            SortSupport.applyOrder(wrapper, column, SortSupport.isAsc(order, SortSupport.NEWEST_FIRST));
+        }
+        Page<ExportTaskDO> result = exportTaskMapper.selectPage(new Page<>(page, pageSize), wrapper);
         return PageResult.of(result.getRecords().stream().map(converter::toDomain).toList(), result.getTotal());
     }
 

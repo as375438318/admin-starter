@@ -8,6 +8,8 @@ import { formatDateTime } from '@/utils/datetime';
 import TableSkeleton from '@/components/TableSkeleton.vue';
 import { confirmDelete, usePagedList } from '@/composables/use-paged-list';
 import { useCrudDrawer } from '@/composables/use-crud-drawer';
+import { useTableColumns, type ColumnDefinition } from '@/composables/use-table-columns';
+import ColumnSettings from '@/components/ColumnSettings.vue';
 
 interface ConfigFilters {
   keyword: string;
@@ -36,6 +38,7 @@ const {
   search,
   resetFilters,
   onPageSizeChange,
+  onSortChange,
 } = usePagedList<ConfigItem, ConfigFilters>({
   initialFilters: { keyword: '', isSensitive: undefined },
   fetcher: (params) =>
@@ -44,7 +47,34 @@ const {
       pageSize: params.pageSize,
       keyword: params.keyword || undefined,
       isSensitive: params.isSensitive,
+      // 排序参数必须显式转发：fetcher 是逐字段映射的，漏一行就等于「点了表头没反应」
+      sort: params.sort,
+      order: params.order,
     }),
+});
+
+/**
+ * 列定义（唯一定义处）：同时驱动表格渲染、列勾选、点表头排序、导出字段。
+ * `sortKey` 只能取 `constants/sort-whitelist.ts` 的 config 白名单（后端对白名单外字段静默回落）。
+ */
+const CONFIG_COLUMNS: ColumnDefinition[] = [
+  { key: 'name', label: '参数名称', sortKey: 'name', alwaysVisible: true },
+  { key: 'configKey', label: '参数键', sortKey: 'configKey' },
+  // 敏感参数的列表值打码，导出同样不允许明文：参数值列不参与导出
+  { key: 'configValue', label: '参数值', exportable: false },
+  { key: 'isSensitive', label: '敏感性' },
+  { key: 'remark', label: '备注' },
+  // 派生列：由 hotReloadable 翻译成「立即生效 / 需重启」
+  { key: 'hotReloadable', label: '生效方式', exportable: false },
+  { key: 'isEnabled', label: '状态' },
+  { key: 'createdAt', label: '创建时间', sortKey: 'createdAt' },
+  { key: 'ops', label: '操作', alwaysVisible: true, exportable: false },
+];
+
+const table = useTableColumns({
+  storageKey: 'system-config',
+  columns: CONFIG_COLUMNS,
+  onSort: (sort, order) => onSortChange(sort, order),
 });
 
 const {
@@ -161,6 +191,15 @@ onMounted(() => {
         <el-button @click="resetFilters">重置</el-button>
       </div>
       <div class="toolbar-actions">
+        <ColumnSettings
+          :columns="CONFIG_COLUMNS"
+          :is-visible="table.isVisible"
+          :hidden-count="table.hiddenCount.value"
+          @toggle="table.toggleColumn"
+          @show-all="table.showAllColumns"
+          @invert="table.invertColumns"
+          @reset="table.resetColumns"
+        />
         <el-button v-permission="'system:config:create'" type="primary" @click="openCreate">新增参数</el-button>
       </div>
     </div>
@@ -171,7 +210,12 @@ onMounted(() => {
         <el-button class="error-retry" size="small" @click="load">重试</el-button>
       </el-alert>
 
-      <el-table :data="skeletonVisible ? [] : rows" row-key="id" style="width: 100%">
+      <el-table
+        :data="skeletonVisible ? [] : rows"
+        row-key="id"
+        style="width: 100%"
+        @sort-change="table.onSortChange"
+      >
         <template #empty>
           <TableSkeleton v-if="skeletonVisible" :rows="6" />
           <div v-else-if="!loading" class="table-empty">
@@ -185,23 +229,38 @@ onMounted(() => {
             </el-button>
           </div>
         </template>
-        <el-table-column prop="name" label="参数名称" width="200" fixed="left" show-overflow-tooltip />
-        <el-table-column prop="configKey" label="参数键" width="220" show-overflow-tooltip />
-        <el-table-column label="参数值" width="220" show-overflow-tooltip>
+        <el-table-column
+          v-if="table.isVisible('name')"
+          prop="name"
+          label="参数名称"
+          width="200"
+          fixed="left"
+          show-overflow-tooltip
+          :sortable="table.sortableOf('name')"
+        />
+        <el-table-column
+          v-if="table.isVisible('configKey')"
+          prop="configKey"
+          label="参数键"
+          width="220"
+          show-overflow-tooltip
+          :sortable="table.sortableOf('configKey')"
+        />
+        <el-table-column v-if="table.isVisible('configValue')" prop="configValue" label="参数值" width="220" show-overflow-tooltip>
           <template #default="{ row }">
             <span :class="{ 'sensitive-value': row.isSensitive }">{{ displayValue(row) }}</span>
           </template>
         </el-table-column>
-        <el-table-column label="敏感性" width="100">
+        <el-table-column v-if="table.isVisible('isSensitive')" prop="isSensitive" label="敏感性" width="100">
           <template #default="{ row }">
             <el-tag v-if="row.isSensitive" type="warning" size="small">敏感</el-tag>
             <el-tag v-else type="info" size="small">普通</el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="remark" label="备注" width="180" show-overflow-tooltip>
+        <el-table-column v-if="table.isVisible('remark')" prop="remark" label="备注" width="180" show-overflow-tooltip>
           <template #default="{ row }">{{ row.remark || '—' }}</template>
         </el-table-column>
-        <el-table-column label="生效方式" width="110">
+        <el-table-column v-if="table.isVisible('hotReloadable')" prop="hotReloadable" label="生效方式" width="110">
           <template #default="{ row }">
             <!-- 这是本轮「字典参数热更新」的可见结果：改完是立即生效还是要重启，一眼能看到 -->
             <el-tooltip
@@ -220,17 +279,23 @@ onMounted(() => {
             </el-tooltip>
           </template>
         </el-table-column>
-        <el-table-column label="状态" width="90">
+        <el-table-column v-if="table.isVisible('isEnabled')" prop="isEnabled" label="状态" width="90">
           <template #default="{ row }">
             <el-tag :type="row.isEnabled ? 'success' : 'info'" size="small">
               {{ row.isEnabled ? '启用' : '停用' }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="创建时间" width="160">
+        <el-table-column
+          v-if="table.isVisible('createdAt')"
+          prop="createdAt"
+          label="创建时间"
+          width="160"
+          :sortable="table.sortableOf('createdAt')"
+        >
           <template #default="{ row }">{{ formatDateTime(row.createdAt) }}</template>
         </el-table-column>
-        <el-table-column label="操作" width="200" fixed="right">
+        <el-table-column v-if="table.isVisible('ops')" prop="ops" label="操作" width="200" fixed="right">
           <template #default="{ row }">
             <div class="row-actions">
               <el-button v-permission="'system:config:update'" link type="primary" @click="openEdit(row)">编辑</el-button>

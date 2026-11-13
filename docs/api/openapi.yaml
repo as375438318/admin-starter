@@ -10,7 +10,7 @@
 openapi: 3.0.3
 info:
   title: 项目基础框架 · 后台管理接口契约
-  version: 1.1.2
+  version: 1.2.0
   description: |
     本项目接口契约（手写维护，版本随接口演进递增，见 CT-VER）。
     统一响应信封见 CT-RESP-001（data 必须存在，无值时为 null）；禁止 204/空 body 见 CT-RESP-009；
@@ -1876,6 +1876,15 @@ paths:
           schema:
             type: integer
             format: int64
+        - name: fields
+          in: query
+          required: false
+          schema:
+            type: string
+          description: |
+            导出列白名单，逗号分隔的列 key（如 `title,status`）；缺省 = 全部可导出列。
+            **只能减少列**：最终列 = schema 定义 ∩ `fields` ∩ 字段级脱敏可见性，顺序以 schema 为准；
+            含 schema 未定义的 key 时返回 `400` + 10001。权限码同接口。
       responses:
         '200':
           description: |
@@ -2170,6 +2179,15 @@ paths:
           schema:
             type: string
             enum: [asc, desc]
+        - name: fields
+          in: query
+          required: false
+          schema:
+            type: string
+          description: |
+            导出列白名单，逗号分隔的列 key（如 `title,status`）；缺省 = 全部可导出列。
+            **只能减少列**：最终列 = schema 定义 ∩ `fields` ∩ 字段级脱敏可见性，顺序以 schema 为准；
+            含 schema 未定义的 key 时返回 `400` + 10001。权限码同接口。
       responses:
         '200':
           description: ≤2000 行返回 xlsx；>2000 行返回异步任务信息
@@ -3812,6 +3830,9 @@ components:
 # TODO(API): 补齐本项目其余接口；每新增接口必须回写错误码与字段约定，并把 x-status 从 DRAFT 推进到 APPROVED
 
 # 变更记录（CT-VER-005：版本号 / 日期 / 影响面 / 迁移方式）
+# 1.2.0 | 2026-11-13 | 两个导出接口（`/demo-tasks/export`、`/posts/export`）新增可选查询参数 `fields`
+#         （逗号分隔列 key）：支持「导出按勾选列」。纯新增、向后兼容（缺省行为不变）；只减少列、
+#         不改变顺序、不能绕过字段级脱敏；未知 key 返回 400 + 10001。实现见 CR-20261113-038。
 # 1.1.2 | 2026-11-13 | `servers` 基址 8080 → 8082（本机 8080 已被其他程序占用）。仅元数据，路径/字段/
 #         状态码/校验规则均未变，契约测试行为不受影响。
 # 1.1.1 | 2026-11-12 | `ChunkSessionResponse.data.file` 语义明确为"仅秒传命中时出现，未命中时字段缺省"

@@ -1,5 +1,7 @@
 package com.adminstarter.system.application.excel.post;
 
+import com.adminstarter.system.application.export.ExportFieldKeys;
+
 import com.adminstarter.system.application.excel.ExcelExportWriter;
 import com.adminstarter.system.application.export.ExportCanceledException;
 import com.adminstarter.system.application.export.ExportFileWriter;
@@ -64,7 +66,7 @@ public class PostExportFileWriter implements ExportFileWriter {
                 if (reporter != null) {
                     reporter.onProgress(written, totalRows);
                 }
-            });
+            }, ExportFieldKeys.parse(query.getFields()));
         }
     }
 }

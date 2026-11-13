@@ -329,7 +329,7 @@ public class FileAppService {
         int page = pageQuery.resolvePage();
         int pageSize = pageQuery.resolvePageSize();
         PageResult<FileRecord> result = DataPermissionContext.controlled(
-                () -> fileRepository.page(keyword, page, pageSize));
+                () -> fileRepository.page(keyword, page, pageSize, pageQuery.getSort(), pageQuery.getOrder()));
         return PageResponse.of(page, pageSize, result.getList().stream().map(this::toResponse).toList(),
                 result.getTotal());
     }

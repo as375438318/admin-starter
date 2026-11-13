@@ -11,6 +11,8 @@ import { scrollToFirstError } from '@/utils/form';
 import { useDelayedSkeleton } from '@/utils/skeleton';
 import TableSkeleton from '@/components/TableSkeleton.vue';
 import { useAuthStore } from '@/stores/auth';
+import { useTableColumns, type ColumnDefinition } from '@/composables/use-table-columns';
+import ColumnSettings from '@/components/ColumnSettings.vue';
 
 const auth = useAuthStore();
 const mustChangePassword = computed(() => auth.mustChangePassword);
@@ -37,6 +39,37 @@ const sessions = ref<SessionItem[]>([]);
 const sessionsLoading = ref(false);
 const sessionsSkeletonVisible = useDelayedSkeleton(sessionsLoading);
 const sessionsError = ref('');
+
+/**
+ * 两张表各自一份列定义与实例（storageKey 不同）：本页不接排序，
+ * 因此不写 `sortKey`、不传 `onSort`。
+ */
+const SESSION_COLUMNS: ColumnDefinition[] = [
+  // 设备 / 浏览器是 deviceType + browser + os 的拼接文案，不参与导出
+  { key: 'device', label: '设备 / 浏览器', exportable: false },
+  { key: 'ip', label: 'IP' },
+  { key: 'loginAt', label: '登录时间' },
+  { key: 'lastActiveAt', label: '最近活跃' },
+  { key: 'ops', label: '操作', alwaysVisible: true, exportable: false },
+];
+
+const sessionTable = useTableColumns({
+  storageKey: 'profile-session',
+  columns: SESSION_COLUMNS,
+});
+
+const LOGIN_LOG_COLUMNS: ColumnDefinition[] = [
+  { key: 'createdAt', label: '时间' },
+  { key: 'ip', label: 'IP' },
+  { key: 'userAgent', label: '设备' },
+  { key: 'isSuccess', label: '结果' },
+  { key: 'message', label: '说明' },
+];
+
+const loginLogTable = useTableColumns({
+  storageKey: 'profile-login-log',
+  columns: LOGIN_LOG_COLUMNS,
+});
 
 const editVisible = ref(false);
 const editSubmitting = ref(false);
@@ -312,7 +345,18 @@ onMounted(() => {
           <h3 class="card-title">登录设备</h3>
           <p class="card-subtitle">当前账号的活跃会话；最近 5 分钟内有请求才算在线</p>
         </div>
-        <el-button @click="loadSessions">刷新</el-button>
+        <div class="card-header-actions">
+          <ColumnSettings
+            :columns="SESSION_COLUMNS"
+            :is-visible="sessionTable.isVisible"
+            :hidden-count="sessionTable.hiddenCount.value"
+            @toggle="sessionTable.toggleColumn"
+            @show-all="sessionTable.showAllColumns"
+            @invert="sessionTable.invertColumns"
+            @reset="sessionTable.resetColumns"
+          />
+          <el-button @click="loadSessions">刷新</el-button>
+        </div>
       </div>
 
       <el-alert v-if="sessionsError" class="table-error" type="error" :closable="false" show-icon>
@@ -328,22 +372,28 @@ onMounted(() => {
             <p class="empty-desc">重新登录后，设备会出现在这里。</p>
           </div>
         </template>
-        <el-table-column label="设备 / 浏览器" min-width="220" show-overflow-tooltip>
+        <el-table-column
+          v-if="sessionTable.isVisible('device')"
+          prop="device"
+          label="设备 / 浏览器"
+          min-width="220"
+          show-overflow-tooltip
+        >
           <template #default="{ row }">
             {{ deviceText(row) }}
             <el-tag v-if="row.current" class="current-tag" size="small" type="success">当前设备</el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="IP" width="150" show-overflow-tooltip>
+        <el-table-column v-if="sessionTable.isVisible('ip')" prop="ip" label="IP" width="150" show-overflow-tooltip>
           <template #default="{ row }">{{ row.ip || '—' }}</template>
         </el-table-column>
-        <el-table-column label="登录时间" width="170">
+        <el-table-column v-if="sessionTable.isVisible('loginAt')" prop="loginAt" label="登录时间" width="170">
           <template #default="{ row }">{{ formatDateTime(row.loginAt) }}</template>
         </el-table-column>
-        <el-table-column label="最近活跃" width="170">
+        <el-table-column v-if="sessionTable.isVisible('lastActiveAt')" prop="lastActiveAt" label="最近活跃" width="170">
           <template #default="{ row }">{{ formatDateTime(row.lastActiveAt) }}</template>
         </el-table-column>
-        <el-table-column label="操作" width="120" fixed="right">
+        <el-table-column v-if="sessionTable.isVisible('ops')" prop="ops" label="操作" width="120" fixed="right">
           <template #default="{ row }">
             <el-button
               v-if="!row.current"
@@ -365,7 +415,18 @@ onMounted(() => {
           <h3 class="card-title">登录日志</h3>
           <p class="card-subtitle">最近 20 条登录记录，用于核对异常登录</p>
         </div>
-        <el-button @click="loadLogs">刷新</el-button>
+        <div class="card-header-actions">
+          <ColumnSettings
+            :columns="LOGIN_LOG_COLUMNS"
+            :is-visible="loginLogTable.isVisible"
+            :hidden-count="loginLogTable.hiddenCount.value"
+            @toggle="loginLogTable.toggleColumn"
+            @show-all="loginLogTable.showAllColumns"
+            @invert="loginLogTable.invertColumns"
+            @reset="loginLogTable.resetColumns"
+          />
+          <el-button @click="loadLogs">刷新</el-button>
+        </div>
       </div>
 
       <el-alert v-if="logsError" class="table-error" type="error" :closable="false" show-icon>
@@ -381,23 +442,28 @@ onMounted(() => {
             <p class="empty-desc">下次登录成功后，这里会显示设备、IP 与结果。</p>
           </div>
         </template>
-        <el-table-column label="时间" width="170">
+        <el-table-column v-if="loginLogTable.isVisible('createdAt')" prop="createdAt" label="时间" width="170">
           <template #default="{ row }">{{ formatDateTime(row.createdAt) }}</template>
         </el-table-column>
-        <el-table-column prop="ip" label="IP" width="150" show-overflow-tooltip>
+        <el-table-column v-if="loginLogTable.isVisible('ip')" prop="ip" label="IP" width="150" show-overflow-tooltip>
           <template #default="{ row }">{{ row.ip || '—' }}</template>
         </el-table-column>
-        <el-table-column prop="userAgent" label="设备" show-overflow-tooltip>
+        <el-table-column
+          v-if="loginLogTable.isVisible('userAgent')"
+          prop="userAgent"
+          label="设备"
+          show-overflow-tooltip
+        >
           <template #default="{ row }">{{ row.userAgent || '—' }}</template>
         </el-table-column>
-        <el-table-column label="结果" width="110">
+        <el-table-column v-if="loginLogTable.isVisible('isSuccess')" prop="isSuccess" label="结果" width="110">
           <template #default="{ row }">
             <el-tag :type="row.isSuccess ? 'success' : 'danger'" size="small">
               {{ row.isSuccess ? '成功' : '失败' }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="message" label="说明" width="180" show-overflow-tooltip>
+        <el-table-column v-if="loginLogTable.isVisible('message')" prop="message" label="说明" width="180" show-overflow-tooltip>
           <template #default="{ row }">{{ row.message || '—' }}</template>
         </el-table-column>
       </el-table>
@@ -563,6 +629,13 @@ onMounted(() => {
   margin: var(--space-1) 0 0;
   font-size: var(--font-size-sm);
   color: var(--color-text-tertiary);
+}
+
+.card-header-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex: 0 0 auto;
 }
 
 .table-error {

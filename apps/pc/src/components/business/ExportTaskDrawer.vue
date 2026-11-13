@@ -2,8 +2,10 @@
 import { onBeforeUnmount, ref, watch } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { ApiError, saveBlob, type FileDownload } from '@/api/http';
-import type { ExportTaskItem, ExportTaskStatus, PageData } from '@/api/types';
+import type { ExportTaskItem, ExportTaskStatus, PageData, PageParams } from '@/api/types';
 import { formatDateTime } from '@/utils/datetime';
+import ColumnSettings from '@/components/ColumnSettings.vue';
+import { useTableColumns, type ColumnDefinition, type SortOrder } from '@/composables/use-table-columns';
 
 /**
  * 通用导出任务抽屉：列表、进度、取消、下载与 2 秒轮询。
@@ -11,7 +13,7 @@ import { formatDateTime } from '@/utils/datetime';
  */
 const props = defineProps<{
   modelValue: boolean;
-  pageTasks: (params: { page: number; pageSize: number }) => Promise<PageData<ExportTaskItem>>;
+  pageTasks: (params: PageParams) => Promise<PageData<ExportTaskItem>>;
   cancelTask: (id: number) => Promise<unknown>;
   downloadTask: (id: number) => Promise<FileDownload>;
 }>();
@@ -43,6 +45,35 @@ const tasks = ref<ExportTaskItem[]>([]);
 const pager = ref({ page: 1, pageSize: 10, total: 0 });
 let pollTimer: number | null = null;
 
+/**
+ * 我的导出任务列定义（唯一定义处）：同时驱动表格渲染、列勾选、点表头排序与导出字段。
+ * `sortKey` 只能取 `constants/sort-whitelist.ts` 的 exportTask 白名单（后端对白名单外字段静默回落）。
+ */
+const EXPORT_TASK_COLUMNS: ColumnDefinition[] = [
+  { key: 'fileName', label: '文件名', alwaysVisible: true },
+  { key: 'status', label: '状态', sortKey: 'status' },
+  { key: 'progress', label: '进度' },
+  { key: 'totalRows', label: '行数' },
+  { key: 'fileSize', label: '大小' },
+  { key: 'createdAt', label: '创建时间', sortKey: 'createdAt' },
+  { key: 'ops', label: '操作', alwaysVisible: true, exportable: false },
+];
+
+const sort = ref<string | undefined>(undefined);
+const order = ref<SortOrder>(undefined);
+
+const table = useTableColumns({
+  storageKey: 'demo-task-export',
+  columns: EXPORT_TASK_COLUMNS,
+  // 抽屉内没有 usePagedList，排序变化在这里自己「回第一页 + 重载」
+  onSort: (nextSort, nextOrder) => {
+    sort.value = nextSort;
+    order.value = nextOrder;
+    pager.value.page = 1;
+    void load();
+  },
+});
+
 function count(value: number): string {
   return value.toLocaleString('zh-CN');
 }
@@ -63,7 +94,13 @@ function formatSize(bytes: number | null): string {
 async function load(): Promise<void> {
   loading.value = true;
   try {
-    const data = await props.pageTasks({ page: pager.value.page, pageSize: pager.value.pageSize });
+    const data = await props.pageTasks({
+      page: pager.value.page,
+      pageSize: pager.value.pageSize,
+      // 排序参数必须显式转发，否则点了表头没反应
+      sort: sort.value,
+      order: order.value,
+    });
     tasks.value = data.list;
     pager.value.total = data.total;
   } catch {
@@ -149,31 +186,60 @@ async function download(task: ExportTaskItem): Promise<void> {
     size="760px"
     @update:model-value="emit('update:modelValue', $event)"
   >
-    <el-table v-loading="loading" :data="tasks" row-key="id">
-      <el-table-column prop="fileName" label="文件名" min-width="200" show-overflow-tooltip />
-      <el-table-column label="状态" width="100">
+    <div class="task-toolbar">
+      <ColumnSettings
+        :columns="EXPORT_TASK_COLUMNS"
+        :is-visible="table.isVisible"
+        :hidden-count="table.hiddenCount.value"
+        @toggle="table.toggleColumn"
+        @show-all="table.showAllColumns"
+        @invert="table.invertColumns"
+        @reset="table.resetColumns"
+      />
+    </div>
+    <el-table v-loading="loading" :data="tasks" row-key="id" @sort-change="table.onSortChange">
+      <el-table-column
+        v-if="table.isVisible('fileName')"
+        prop="fileName"
+        label="文件名"
+        min-width="200"
+        show-overflow-tooltip
+      />
+      <el-table-column
+        v-if="table.isVisible('status')"
+        prop="status"
+        label="状态"
+        width="100"
+        :sortable="table.sortableOf('status')"
+      >
         <template #default="{ row }">
           <el-tag :type="STATUS_TYPES[row.status as ExportTaskStatus]" size="small">
             {{ STATUS_LABELS[row.status as ExportTaskStatus] }}
           </el-tag>
         </template>
       </el-table-column>
-      <el-table-column label="进度" width="140">
+      <el-table-column v-if="table.isVisible('progress')" prop="progress" label="进度" width="140">
         <template #default="{ row }">
           <el-progress v-if="row.status === 'RUNNING'" :percentage="row.progress" :stroke-width="6" />
           <span v-else class="task-muted">—</span>
         </template>
       </el-table-column>
-      <el-table-column label="行数" width="90">
+      <el-table-column v-if="table.isVisible('totalRows')" prop="totalRows" label="行数" width="90">
         <template #default="{ row }">{{ count(row.totalRows) }}</template>
       </el-table-column>
-      <el-table-column label="大小" width="100">
+      <el-table-column v-if="table.isVisible('fileSize')" prop="fileSize" label="大小" width="100">
         <template #default="{ row }">{{ formatSize(row.fileSize) }}</template>
       </el-table-column>
-      <el-table-column label="创建时间" width="170">
+      <el-table-column
+        v-if="table.isVisible('createdAt')"
+        prop="createdAt"
+        label="创建时间"
+        width="170"
+        :sortable="table.sortableOf('createdAt')"
+      >
         <template #default="{ row }">{{ formatDateTime(row.createdAt) }}</template>
       </el-table-column>
-      <el-table-column label="操作" width="140" fixed="right">
+      <el-table-column v-if="table.isVisible('ops')" prop="ops" label="操作" width="140" fixed="right">
         <template #default="{ row }">
           <el-button v-if="row.status === 'SUCCESS'" link type="primary" @click="download(row)">下载</el-button>
           <el-button
@@ -205,6 +271,12 @@ async function download(task: ExportTaskItem): Promise<void> {
 </template>
 
 <style scoped>
+.task-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: var(--space-3);
+}
+
 .table-pagination {
   padding: var(--space-4) var(--space-5);
 }

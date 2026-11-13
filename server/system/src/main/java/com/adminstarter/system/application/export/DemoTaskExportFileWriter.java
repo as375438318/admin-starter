@@ -70,7 +70,7 @@ public class DemoTaskExportFileWriter implements ExportFileWriter {
                 if (reporter != null) {
                     reporter.onProgress(written, totalRows);
                 }
-            });
+            }, ExportFieldKeys.parse(query.getFields()));
         }
     }
 }

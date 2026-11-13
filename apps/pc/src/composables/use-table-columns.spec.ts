@@ -121,4 +121,18 @@ describe('useTableColumns（列模型）', () => {
       expect(SORT_WHITELIST.user).toContain(key);
     }
   });
+  it('exportKey：展示字段与后端导出字段不一致时按 exportKey 输出，并去重', () => {
+    const table = useTableColumns({
+      storageKey: 'export-key-list',
+      columns: [
+        { key: 'title', label: '标题' },
+        // 页面展示 deptName，后端导出 schema 的列 key 是 deptId
+        { key: 'deptName', label: '部门', exportKey: 'deptId' },
+        { key: 'deptNameCopy', label: '部门（重复展示）', exportKey: 'deptId' },
+        { key: 'ops', label: '操作', alwaysVisible: true, exportable: false },
+      ],
+    });
+    // 去重：deptId 只出现一次
+    expect(table.exportFields.value).toEqual(['title', 'deptId']);
+  });
 });

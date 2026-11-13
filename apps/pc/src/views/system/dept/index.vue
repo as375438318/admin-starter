@@ -9,11 +9,33 @@ import { scrollToFirstError } from '@/utils/form';
 import { createOptionReporter } from '@/utils/option-load';
 import { useDelayedSkeleton } from '@/utils/skeleton';
 import TableSkeleton from '@/components/TableSkeleton.vue';
+import { useTableColumns, type ColumnDefinition } from '@/composables/use-table-columns';
+import ColumnSettings from '@/components/ColumnSettings.vue';
 
 const rows = ref<DeptItem[]>([]);
 const loading = ref(false);
 const skeletonVisible = useDelayedSkeleton(loading);
 const loadError = ref('');
+
+/**
+ * 列定义（唯一定义处）：驱动表格渲染与列勾选。
+ * 树表不接排序（层级顺序即语义），因此不写 `sortKey`、不传 `onSort`。
+ */
+const DEPT_COLUMNS: ColumnDefinition[] = [
+  { key: 'name', label: '部门名称', alwaysVisible: true },
+  { key: 'leader', label: '负责人' },
+  { key: 'phone', label: '联系电话' },
+  { key: 'sort', label: '排序' },
+  { key: 'isEnabled', label: '状态' },
+  { key: 'createdAt', label: '创建时间' },
+  { key: 'ops', label: '操作', alwaysVisible: true, exportable: false },
+];
+
+const deptTable = useTableColumns({
+  storageKey: 'system-dept',
+  columns: DEPT_COLUMNS,
+});
+
 const keyword = ref('');
 const statusFilter = ref<boolean | undefined>(undefined);
 const reportOptionFailure = createOptionReporter();
@@ -259,6 +281,15 @@ onMounted(() => {
         <el-button @click="resetFilters">重置</el-button>
       </div>
       <div class="toolbar-actions">
+        <ColumnSettings
+          :columns="DEPT_COLUMNS"
+          :is-visible="deptTable.isVisible"
+          :hidden-count="deptTable.hiddenCount.value"
+          @toggle="deptTable.toggleColumn"
+          @show-all="deptTable.showAllColumns"
+          @invert="deptTable.invertColumns"
+          @reset="deptTable.resetColumns"
+        />
         <el-button v-permission="'system:dept:create'" type="primary" @click="openCreate(0)">
           新增部门
         </el-button>
@@ -297,25 +328,39 @@ onMounted(() => {
             </el-button>
           </div>
         </template>
-        <el-table-column prop="name" label="部门名称" width="260" fixed="left" show-overflow-tooltip />
-        <el-table-column prop="leader" label="负责人" width="140" show-overflow-tooltip>
+        <el-table-column
+          v-if="deptTable.isVisible('name')"
+          prop="name"
+          label="部门名称"
+          width="260"
+          fixed="left"
+          show-overflow-tooltip
+        />
+        <el-table-column v-if="deptTable.isVisible('leader')" prop="leader" label="负责人" width="140" show-overflow-tooltip>
           <template #default="{ row }">{{ row.leader || '—' }}</template>
         </el-table-column>
-        <el-table-column prop="phone" label="联系电话" width="160">
+        <el-table-column v-if="deptTable.isVisible('phone')" prop="phone" label="联系电话" width="160">
           <template #default="{ row }">{{ row.phone || '—' }}</template>
         </el-table-column>
-        <el-table-column prop="sort" label="排序" width="80" align="right" class-name="tabular-nums" />
-        <el-table-column label="状态" width="90">
+        <el-table-column
+          v-if="deptTable.isVisible('sort')"
+          prop="sort"
+          label="排序"
+          width="80"
+          align="right"
+          class-name="tabular-nums"
+        />
+        <el-table-column v-if="deptTable.isVisible('isEnabled')" prop="isEnabled" label="状态" width="90">
           <template #default="{ row }">
             <el-tag :type="row.isEnabled ? 'success' : 'info'" size="small">
               {{ row.isEnabled ? '启用' : '停用' }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="创建时间" width="160">
+        <el-table-column v-if="deptTable.isVisible('createdAt')" prop="createdAt" label="创建时间" width="160">
           <template #default="{ row }">{{ formatDateTime(row.createdAt) }}</template>
         </el-table-column>
-        <el-table-column label="操作" width="200" fixed="right">
+        <el-table-column v-if="deptTable.isVisible('ops')" prop="ops" label="操作" width="200" fixed="right">
           <template #default="{ row }">
             <div class="row-actions">
               <el-button v-permission="'system:dept:create'" link type="primary" @click="openCreate(row.id)">

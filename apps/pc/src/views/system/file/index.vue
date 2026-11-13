@@ -9,7 +9,9 @@ import { formatDateTime } from '@/utils/datetime';
 import { confirmDelete, usePagedList } from '@/composables/use-paged-list';
 import { useBlobPreview } from '@/composables/use-blob-preview';
 import { useChunkUpload } from '@/composables/use-chunk-upload';
+import { useTableColumns, type ColumnDefinition } from '@/composables/use-table-columns';
 import TableSkeleton from '@/components/TableSkeleton.vue';
+import ColumnSettings from '@/components/ColumnSettings.vue';
 import { useAppConfigStore } from '@/stores/appConfig';
 
 const appConfig = useAppConfigStore();
@@ -26,6 +28,7 @@ const {
   search,
   resetFilters,
   onPageSizeChange,
+  onSortChange,
 } = usePagedList<FileItem, { keyword: string }>({
   initialFilters: { keyword: '' },
   fetcher: (params) =>
@@ -33,6 +36,9 @@ const {
       page: params.page,
       pageSize: params.pageSize,
       keyword: params.keyword || undefined,
+      // 排序参数必须显式转发：fetcher 是逐字段映射的，漏一行就等于「点了表头没反应」
+      sort: params.sort,
+      order: params.order,
     }),
 });
 
@@ -56,6 +62,41 @@ const {
       keyword: params.keyword || undefined,
     }),
 });
+/**
+ * 文件列表列定义（唯一定义处）：同时驱动表格渲染、列勾选、点表头排序、导出字段。
+ * `sortKey` 只能取 `constants/sort-whitelist.ts` 的 file 白名单（后端对白名单外字段静默回落）。
+ */
+const FILE_COLUMNS: ColumnDefinition[] = [
+  { key: 'originalName', label: '文件名', sortKey: 'originalName', alwaysVisible: true },
+  { key: 'contentType', label: '类型' },
+  { key: 'size', label: '大小', sortKey: 'size' },
+  // 派生列（由 uploaderId 渲染），不可导出
+  { key: 'uploaderName', label: '上传人', exportable: false },
+  { key: 'createdAt', label: '上传时间', sortKey: 'createdAt' },
+  { key: 'ops', label: '操作', alwaysVisible: true, exportable: false },
+];
+
+const fileTable = useTableColumns({
+  storageKey: 'system-file',
+  columns: FILE_COLUMNS,
+  onSort: (sort, order) => onSortChange(sort, order),
+});
+
+/**
+ * 回收站表列定义：后端只给文件主列表加了排序白名单，回收站**不接排序**，只接列设置。
+ */
+const FILE_RECYCLE_COLUMNS: ColumnDefinition[] = [
+  { key: 'originalName', label: '文件名', alwaysVisible: true },
+  { key: 'size', label: '大小' },
+  { key: 'deletedAt', label: '删除时间' },
+  { key: 'ops', label: '操作', alwaysVisible: true, exportable: false },
+];
+
+const recycleTable = useTableColumns({
+  storageKey: 'system-file-recycle',
+  columns: FILE_RECYCLE_COLUMNS,
+});
+
 const recycleKeyword = computed({
   get: () => recycleFilters.keyword,
   set: (value: string) => {
@@ -211,6 +252,15 @@ onBeforeUnmount(() => {
         <el-button @click="resetFilters">重置</el-button>
       </div>
       <div class="toolbar-actions">
+        <ColumnSettings
+          :columns="FILE_COLUMNS"
+          :is-visible="fileTable.isVisible"
+          :hidden-count="fileTable.hiddenCount.value"
+          @toggle="fileTable.toggleColumn"
+          @show-all="fileTable.showAllColumns"
+          @invert="fileTable.invertColumns"
+          @reset="fileTable.resetColumns"
+        />
         <el-button v-permission="'system:file:list'" @click="openRecycle">回收站</el-button>
       </div>
     </div>
@@ -253,7 +303,12 @@ onBeforeUnmount(() => {
         <el-button class="error-retry" size="small" @click="load">重试</el-button>
       </el-alert>
 
-      <el-table :data="skeletonVisible ? [] : rows" row-key="id" style="width: 100%">
+      <el-table
+        :data="skeletonVisible ? [] : rows"
+        row-key="id"
+        style="width: 100%"
+        @sort-change="fileTable.onSortChange"
+      >
         <template #empty>
           <TableSkeleton v-if="skeletonVisible" :rows="6" />
           <div v-else-if="!loading" class="table-empty">
@@ -264,20 +319,48 @@ onBeforeUnmount(() => {
             <el-button v-if="hasFilter" size="small" @click="resetFilters">清空筛选</el-button>
           </div>
         </template>
-        <el-table-column prop="originalName" label="文件名" width="300" fixed="left" show-overflow-tooltip />
-        <el-table-column prop="contentType" label="类型" width="170" show-overflow-tooltip>
+        <el-table-column
+          v-if="fileTable.isVisible('originalName')"
+          prop="originalName"
+          label="文件名"
+          width="300"
+          fixed="left"
+          show-overflow-tooltip
+          :sortable="fileTable.sortableOf('originalName')"
+        />
+        <el-table-column
+          v-if="fileTable.isVisible('contentType')"
+          prop="contentType"
+          label="类型"
+          width="170"
+          show-overflow-tooltip
+        >
           <template #default="{ row }">{{ row.contentType || '—' }}</template>
         </el-table-column>
-        <el-table-column label="大小" width="100" align="right" class-name="tabular-nums">
+        <el-table-column
+          v-if="fileTable.isVisible('size')"
+          prop="size"
+          label="大小"
+          width="100"
+          align="right"
+          class-name="tabular-nums"
+          :sortable="fileTable.sortableOf('size')"
+        >
           <template #default="{ row }">{{ formatSize(row.size) }}</template>
         </el-table-column>
-        <el-table-column label="上传人" width="100">
+        <el-table-column v-if="fileTable.isVisible('uploaderName')" prop="uploaderName" label="上传人" width="100">
           <template #default="{ row }">{{ row.uploaderId ? `#${row.uploaderId}` : '—' }}</template>
         </el-table-column>
-        <el-table-column label="上传时间" width="170">
+        <el-table-column
+          v-if="fileTable.isVisible('createdAt')"
+          prop="createdAt"
+          label="上传时间"
+          width="170"
+          :sortable="fileTable.sortableOf('createdAt')"
+        >
           <template #default="{ row }">{{ formatDateTime(row.createdAt) }}</template>
         </el-table-column>
-        <el-table-column label="操作" width="220" fixed="right">
+        <el-table-column v-if="fileTable.isVisible('ops')" prop="ops" label="操作" width="220" fixed="right">
           <template #default="{ row }">
             <div class="row-actions">
               <el-button link type="primary" @click="download(row)">下载</el-button>
@@ -315,16 +398,38 @@ onBeforeUnmount(() => {
           @clear="loadRecycle"
         />
         <el-button type="primary" @click="loadRecycle">查询</el-button>
+        <ColumnSettings
+          :columns="FILE_RECYCLE_COLUMNS"
+          :is-visible="recycleTable.isVisible"
+          :hidden-count="recycleTable.hiddenCount.value"
+          @toggle="recycleTable.toggleColumn"
+          @show-all="recycleTable.showAllColumns"
+          @invert="recycleTable.invertColumns"
+          @reset="recycleTable.resetColumns"
+        />
       </div>
       <el-table :data="recycleRows" v-loading="recycleLoading" row-key="id" style="width: 100%">
-        <el-table-column prop="originalName" label="文件名" min-width="240" show-overflow-tooltip />
-        <el-table-column label="大小" width="100" align="right" class-name="tabular-nums">
+        <el-table-column
+          v-if="recycleTable.isVisible('originalName')"
+          prop="originalName"
+          label="文件名"
+          min-width="240"
+          show-overflow-tooltip
+        />
+        <el-table-column
+          v-if="recycleTable.isVisible('size')"
+          prop="size"
+          label="大小"
+          width="100"
+          align="right"
+          class-name="tabular-nums"
+        >
           <template #default="{ row }">{{ formatSize(row.size) }}</template>
         </el-table-column>
-        <el-table-column label="删除时间" width="170">
+        <el-table-column v-if="recycleTable.isVisible('deletedAt')" prop="deletedAt" label="删除时间" width="170">
           <template #default="{ row }">{{ row.deletedAt ? formatDateTime(row.deletedAt) : '—' }}</template>
         </el-table-column>
-        <el-table-column label="操作" width="180" fixed="right">
+        <el-table-column v-if="recycleTable.isVisible('ops')" prop="ops" label="操作" width="180" fixed="right">
           <template #default="{ row }">
             <div class="row-actions">
               <el-button v-permission="'system:file:restore'" link type="primary" @click="restoreFile(row)">
