@@ -12,6 +12,18 @@ import { loginAsAdmin } from './helpers';
  */
 const API = process.env.E2E_API_URL ?? 'http://127.0.0.1:8082/api/v1';
 
+/** 兜底清理：按名称删掉用例造的数据（失败路径也要执行） */
+async function cleanupByName(page: import('@playwright/test').Page, name: string): Promise<void> {
+  const response = await page.request.get(`${API}/demo/customers?page=1&pageSize=100&keyword=${encodeURIComponent(name)}`);
+  if (!response.ok()) {
+    return;
+  }
+  const body = await response.json();
+  for (const item of (body.data?.list ?? []) as Array<{ id: number }>) {
+    await page.request.delete(`${API}/demo/customers/${item.id}`, { headers: { Origin: 'http://127.0.0.1:5173' } });
+  }
+}
+
 test.describe('生成器产出 · 客户档案模块', () => {
   test('菜单可见、列表可开、新增与删除走通', async ({ page }) => {
     const health = await page.request.get(`${API}/health`).catch(() => null);
@@ -34,18 +46,23 @@ test.describe('生成器产出 · 客户档案模块', () => {
     await drawer.getByRole('button', { name: '保存' }).click();
     await expect(page.locator('.el-message--success').first()).toBeVisible({ timeout: 15_000 });
 
-    // 列表里能查到（关键词搜索走的是生成的关键词字段）
-    await page.locator('.filter-keyword input').fill(unique);
-    await page.getByRole('button', { name: '查询' }).click();
-    const row = page.locator('.el-table__row', { hasText: unique });
-    await expect(row).toBeVisible({ timeout: 15_000 });
+    try {
+      // 列表里能查到（关键词搜索走的是生成的关键词字段）
+      await page.locator('.filter-keyword input').fill(unique);
+      await page.getByRole('button', { name: '查询' }).click();
+      const row = page.locator('.el-table__row', { hasText: unique });
+      await expect(row).toBeVisible({ timeout: 15_000 });
 
-    // 删除（清理数据）：删除确认框的确认键文案是「删除」（confirmDelete 的默认值），不是「确定」
-    await row.getByRole('button', { name: '删除' }).click();
-    const box = page.locator('.el-message-box');
-    await expect(box).toBeVisible();
-    await box.getByRole('button', { name: '删除' }).click();
-    await expect(page.locator('.el-message--success').first()).toBeVisible({ timeout: 15_000 });
-    await expect(page.locator('.el-table__row', { hasText: unique })).toHaveCount(0);
+      // 删除（清理数据）：删除确认框的确认键文案是「删除」（confirmDelete 的默认值），不是「确定」
+      await row.getByRole('button', { name: '删除' }).click();
+      const box = page.locator('.el-message-box');
+      await expect(box).toBeVisible();
+      await box.getByRole('button', { name: '删除' }).click();
+      await expect(page.locator('.el-message--success').first()).toBeVisible({ timeout: 15_000 });
+      await expect(page.locator('.el-table__row', { hasText: unique })).toHaveCount(0);
+    } finally {
+      // 断言失败时也要把数据删掉：否则下次跑会看到上轮的脏数据（本轮就踩过，页面上挂了条"生成器验收-…"）
+      await cleanupByName(page, unique);
+    }
   });
 });
