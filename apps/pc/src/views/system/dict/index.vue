@@ -9,6 +9,8 @@ import { useDelayedSkeleton } from '@/utils/skeleton';
 import TableSkeleton from '@/components/TableSkeleton.vue';
 import { confirmDelete, usePagedList } from '@/composables/use-paged-list';
 import { useCrudDrawer } from '@/composables/use-crud-drawer';
+import { useTableColumns, type ColumnDefinition } from '@/composables/use-table-columns';
+import ColumnSettings from '@/components/ColumnSettings.vue';
 
 interface DictFilters {
   keyword: string;
@@ -44,6 +46,7 @@ const {
   search,
   resetFilters,
   onPageSizeChange,
+  onSortChange,
 } = usePagedList<DictTypeItem, DictFilters>({
   initialFilters: { keyword: '', isEnabled: undefined },
   fetcher: async (params) => {
@@ -52,6 +55,9 @@ const {
       pageSize: params.pageSize,
       keyword: params.keyword || undefined,
       isEnabled: params.isEnabled,
+      // 排序参数必须显式转发：fetcher 是逐字段映射的，漏一行就等于「点了表头没反应」
+      sort: params.sort,
+      order: params.order,
     });
     // 选中项优先保持，不存在时回落到首行
     const stillExists = selectedType.value
@@ -60,6 +66,37 @@ const {
     selectedType.value = stillExists ?? data.list[0] ?? null;
     return data;
   },
+});
+
+/**
+ * 字典类型表列定义（`sortKey` 只能取 sort-whitelist 的 dict 白名单）。
+ * 字典项子表是另一个独立实例（`system-dict-item`），只接列设置、不接排序。
+ */
+const DICT_TYPE_COLUMNS: ColumnDefinition[] = [
+  { key: 'name', label: '字典名称', sortKey: 'name', alwaysVisible: true },
+  { key: 'type', label: '字典类型', sortKey: 'type' },
+  { key: 'isEnabled', label: '状态' },
+  { key: 'ops', label: '操作', alwaysVisible: true, exportable: false },
+];
+
+const typeTable = useTableColumns({
+  storageKey: 'system-dict-type',
+  columns: DICT_TYPE_COLUMNS,
+  onSort: (sort, order) => onSortChange(sort, order),
+});
+
+/** 字典项子表：字典项接口不分页也不支持排序，只接列显隐 */
+const DICT_ITEM_COLUMNS: ColumnDefinition[] = [
+  { key: 'label', label: '标签', alwaysVisible: true },
+  { key: 'value', label: '值' },
+  { key: 'sort', label: '排序' },
+  { key: 'isEnabled', label: '状态' },
+  { key: 'ops', label: '操作', alwaysVisible: true, exportable: false },
+];
+
+const itemTable = useTableColumns({
+  storageKey: 'system-dict-item',
+  columns: DICT_ITEM_COLUMNS,
 });
 
 const items = ref<DictItemRecord[]>([]);
@@ -278,6 +315,15 @@ onMounted(() => {
             <el-button @click="resetFilters">重置</el-button>
           </div>
           <div class="toolbar-actions">
+            <ColumnSettings
+              :columns="DICT_TYPE_COLUMNS"
+              :is-visible="typeTable.isVisible"
+              :hidden-count="typeTable.hiddenCount.value"
+              @toggle="typeTable.toggleColumn"
+              @show-all="typeTable.showAllColumns"
+              @invert="typeTable.invertColumns"
+              @reset="typeTable.resetColumns"
+            />
             <el-button v-permission="'system:dict:create'" type="primary" @click="openCreateType">新增类型</el-button>
           </div>
         </div>
@@ -295,6 +341,7 @@ onMounted(() => {
             :row-class-name="rowClassName"
             style="width: 100%"
             @row-click="selectType"
+            @sort-change="typeTable.onSortChange"
           >
             <template #empty>
               <TableSkeleton v-if="typesSkeletonVisible" :rows="6" />
@@ -309,16 +356,31 @@ onMounted(() => {
                 </el-button>
               </div>
             </template>
-            <el-table-column prop="name" label="字典名称" width="150" fixed="left" show-overflow-tooltip />
-            <el-table-column prop="type" label="字典类型" width="150" show-overflow-tooltip />
-            <el-table-column label="状态" width="80">
+            <el-table-column
+              v-if="typeTable.isVisible('name')"
+              prop="name"
+              label="字典名称"
+              width="150"
+              fixed="left"
+              show-overflow-tooltip
+              :sortable="typeTable.sortableOf('name')"
+            />
+            <el-table-column
+              v-if="typeTable.isVisible('type')"
+              prop="type"
+              label="字典类型"
+              width="150"
+              show-overflow-tooltip
+              :sortable="typeTable.sortableOf('type')"
+            />
+            <el-table-column v-if="typeTable.isVisible('isEnabled')" prop="isEnabled" label="状态" width="80">
               <template #default="{ row }">
                 <el-tag :type="row.isEnabled ? 'success' : 'info'" size="small">
                   {{ row.isEnabled ? '启用' : '停用' }}
                 </el-tag>
               </template>
             </el-table-column>
-            <el-table-column label="操作" width="200" fixed="right">
+            <el-table-column v-if="typeTable.isVisible('ops')" prop="ops" label="操作" width="200" fixed="right">
               <template #default="{ row }">
                 <div class="row-actions" @click.stop>
                   <el-button v-permission="'system:dict:update'" link type="primary" @click="openEditType(row)">编辑</el-button>
@@ -360,14 +422,25 @@ onMounted(() => {
                 {{ selectedType ? `${selectedType.name} · ${selectedType.type}` : '请从左侧选择字典类型' }}
               </p>
             </div>
-            <el-button
-              v-permission="'system:dict:create'"
-              type="primary"
-              :disabled="!selectedType"
-              @click="openCreateItem"
-            >
-              新增字典项
-            </el-button>
+            <div class="items-actions">
+              <ColumnSettings
+                :columns="DICT_ITEM_COLUMNS"
+                :is-visible="itemTable.isVisible"
+                :hidden-count="itemTable.hiddenCount.value"
+                @toggle="itemTable.toggleColumn"
+                @show-all="itemTable.showAllColumns"
+                @invert="itemTable.invertColumns"
+                @reset="itemTable.resetColumns"
+              />
+              <el-button
+                v-permission="'system:dict:create'"
+                type="primary"
+                :disabled="!selectedType"
+                @click="openCreateItem"
+              >
+                新增字典项
+              </el-button>
+            </div>
           </div>
 
           <el-alert v-if="itemsError" class="table-error" type="error" :closable="false" show-icon>
@@ -386,17 +459,31 @@ onMounted(() => {
                 </el-button>
               </div>
             </template>
-            <el-table-column prop="label" label="标签" width="120" fixed="left" show-overflow-tooltip />
-            <el-table-column prop="value" label="值" width="120" show-overflow-tooltip />
-            <el-table-column prop="sort" label="排序" width="70" align="right" class-name="tabular-nums" />
-            <el-table-column label="状态" width="80">
+            <el-table-column
+              v-if="itemTable.isVisible('label')"
+              prop="label"
+              label="标签"
+              width="120"
+              fixed="left"
+              show-overflow-tooltip
+            />
+            <el-table-column v-if="itemTable.isVisible('value')" prop="value" label="值" width="120" show-overflow-tooltip />
+            <el-table-column
+              v-if="itemTable.isVisible('sort')"
+              prop="sort"
+              label="排序"
+              width="70"
+              align="right"
+              class-name="tabular-nums"
+            />
+            <el-table-column v-if="itemTable.isVisible('isEnabled')" prop="isEnabled" label="状态" width="80">
               <template #default="{ row }">
                 <el-tag :type="row.isEnabled ? 'success' : 'info'" size="small">
                   {{ row.isEnabled ? '启用' : '停用' }}
                 </el-tag>
               </template>
             </el-table-column>
-            <el-table-column label="操作" width="200" fixed="right">
+            <el-table-column v-if="itemTable.isVisible('ops')" prop="ops" label="操作" width="200" fixed="right">
               <template #default="{ row }">
                 <div class="row-actions">
                   <el-button v-permission="'system:dict:update'" link type="primary" @click="openEditItem(row)">编辑</el-button>
@@ -537,6 +624,13 @@ onMounted(() => {
   margin: var(--space-1) 0 0;
   font-size: var(--font-size-sm);
   color: var(--color-text-tertiary);
+}
+
+.items-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex: 0 0 auto;
 }
 
 .items-placeholder {

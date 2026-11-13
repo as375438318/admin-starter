@@ -22,6 +22,8 @@ import { createOptionReporter } from '@/utils/option-load';
 import TableSkeleton from '@/components/TableSkeleton.vue';
 import { confirmDelete, usePagedList } from '@/composables/use-paged-list';
 import { useCrudDrawer } from '@/composables/use-crud-drawer';
+import { useTableColumns, type ColumnDefinition } from '@/composables/use-table-columns';
+import ColumnSettings from '@/components/ColumnSettings.vue';
 
 const LEVEL_LABELS: Record<NoticeLevel, string> = {
   NORMAL: '普通',
@@ -75,11 +77,13 @@ const {
   resetFilters,
   onPageChange,
   onPageSizeChange,
+  onSortChange,
 } = usePagedList<NoticeItem, NoticeFilters>({
   initialFilters: { keyword: '', level: undefined, type: undefined, status: undefined },
   // 显式指定排序：后端默认按 SortSupport 的语义是**升序**（未传 order 时 isAsc 返回 true），
   // 对"通知公告"来说体验是反的 —— 管理员要看刚发的，而不是翻到最后一页。
   // 这里显式传 createdAt + desc，不动全局默认（改全局默认会把十几个列表的顺序一起翻过来）。
+  // 用户点表头排序后由 onSortChange 写入 params.sort/order，取消排序则回落到下面的默认值。
   fetcher: (params) =>
     noticeApi.page({
       page: params.page,
@@ -88,9 +92,48 @@ const {
       level: params.level,
       type: params.type,
       status: params.status,
-      sort: 'createdAt',
-      order: 'desc',
+      sort: params.sort ?? 'createdAt',
+      order: params.order ?? 'desc',
     }),
+});
+
+/**
+ * 通知列表列定义（`sortKey` 只能取 sort-whitelist 的 notice 白名单）。
+ * 「已读统计」弹窗里的已读人表是另一个独立实例（`system-notice-reader`），只接列设置、不接排序。
+ */
+const NOTICE_COLUMNS: ColumnDefinition[] = [
+  { key: 'title', label: '标题', sortKey: 'title', alwaysVisible: true },
+  // 级别/类型/状态用标签字典渲染，原文不可直接导出
+  { key: 'level', label: '级别', exportable: false },
+  { key: 'type', label: '类型', exportable: false },
+  // 拼接列：多条接收范围合并展示
+  { key: 'scopes', label: '接收范围', exportable: false },
+  // 派生列：已读 / 应读两数拼接
+  { key: 'readStats', label: '已读 / 应读', exportable: false },
+  { key: 'publisherName', label: '发布人' },
+  { key: 'publishedAt', label: '发布时间', sortKey: 'publishedAt' },
+  { key: 'revoked', label: '状态', exportable: false },
+  { key: 'ops', label: '操作', alwaysVisible: true, exportable: false },
+];
+
+const table = useTableColumns({
+  storageKey: 'system-notice',
+  columns: NOTICE_COLUMNS,
+  onSort: (sort, order) => onSortChange(sort, order),
+});
+
+/** 已读人表：只读统计用途，接口不支持排序，仅接列显隐 */
+const NOTICE_READER_COLUMNS: ColumnDefinition[] = [
+  { key: 'username', label: '用户名' },
+  { key: 'nickname', label: '昵称' },
+  { key: 'deptName', label: '部门' },
+  { key: 'read', label: '状态', exportable: false },
+  { key: 'readAt', label: '阅读时间' },
+];
+
+const readerTable = useTableColumns({
+  storageKey: 'system-notice-reader',
+  columns: NOTICE_READER_COLUMNS,
 });
 
 const detailVisible = ref(false);
@@ -317,6 +360,15 @@ onMounted(() => {
         <el-button @click="resetFilters">重置</el-button>
       </div>
       <div class="toolbar-actions">
+        <ColumnSettings
+          :columns="NOTICE_COLUMNS"
+          :is-visible="table.isVisible"
+          :hidden-count="table.hiddenCount.value"
+          @toggle="table.toggleColumn"
+          @show-all="table.showAllColumns"
+          @invert="table.invertColumns"
+          @reset="table.resetColumns"
+        />
         <el-button v-permission="'system:notice:create'" type="primary" @click="openPublish">发布通知</el-button>
       </div>
     </div>
@@ -327,7 +379,12 @@ onMounted(() => {
         <el-button class="error-retry" size="small" @click="load">重试</el-button>
       </el-alert>
 
-      <el-table :data="skeletonVisible ? [] : rows" row-key="id" style="width: 100%">
+      <el-table
+        :data="skeletonVisible ? [] : rows"
+        row-key="id"
+        style="width: 100%"
+        @sort-change="table.onSortChange"
+      >
         <template #empty>
           <TableSkeleton v-if="skeletonVisible" :rows="6" />
           <div v-else-if="!loading" class="table-empty">
@@ -336,22 +393,29 @@ onMounted(() => {
             <el-button v-if="hasFilter" size="small" @click="resetFilters">清空筛选</el-button>
           </div>
         </template>
-        <el-table-column prop="title" label="标题" min-width="220" show-overflow-tooltip>
+        <el-table-column
+          v-if="table.isVisible('title')"
+          prop="title"
+          label="标题"
+          min-width="220"
+          show-overflow-tooltip
+          :sortable="table.sortableOf('title')"
+        >
           <template #default="{ row }">
             <el-link type="primary" :underline="false" @click="openDetail(row)">{{ row.title }}</el-link>
           </template>
         </el-table-column>
-        <el-table-column label="级别" width="90">
+        <el-table-column v-if="table.isVisible('level')" prop="level" label="级别" width="90">
           <template #default="{ row }">
             <el-tag :type="LEVEL_TAG[row.level as NoticeLevel]" size="small">
               {{ LEVEL_LABELS[row.level as NoticeLevel] }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="类型" width="90">
+        <el-table-column v-if="table.isVisible('type')" prop="type" label="类型" width="90">
           <template #default="{ row }">{{ TYPE_LABELS[row.type as NoticeType] }}</template>
         </el-table-column>
-        <el-table-column label="接收范围" min-width="180" show-overflow-tooltip>
+        <el-table-column v-if="table.isVisible('scopes')" prop="scopes" label="接收范围" min-width="180" show-overflow-tooltip>
           <template #default="{ row }">
             <span v-for="(scope, index) in row.scopes" :key="index">
               {{ scope.scopeType === 'ALL' ? '全员' : scope.targetName }}
@@ -359,21 +423,40 @@ onMounted(() => {
             </span>
           </template>
         </el-table-column>
-        <el-table-column label="已读 / 应读" width="120" align="right" class-name="tabular-nums">
+        <el-table-column
+          v-if="table.isVisible('readStats')"
+          prop="readStats"
+          label="已读 / 应读"
+          width="120"
+          align="right"
+          class-name="tabular-nums"
+        >
           <template #default="{ row }">{{ row.stats.readCount }} / {{ row.stats.totalRecipients }}</template>
         </el-table-column>
-        <el-table-column prop="publisherName" label="发布人" width="120" show-overflow-tooltip />
-        <el-table-column label="发布时间" width="160">
+        <el-table-column
+          v-if="table.isVisible('publisherName')"
+          prop="publisherName"
+          label="发布人"
+          width="120"
+          show-overflow-tooltip
+        />
+        <el-table-column
+          v-if="table.isVisible('publishedAt')"
+          prop="publishedAt"
+          label="发布时间"
+          width="160"
+          :sortable="table.sortableOf('publishedAt')"
+        >
           <template #default="{ row }">{{ formatDateTime(row.publishedAt) }}</template>
         </el-table-column>
-        <el-table-column label="状态" width="90">
+        <el-table-column v-if="table.isVisible('revoked')" prop="revoked" label="状态" width="90">
           <template #default="{ row }">
             <el-tag :type="row.revoked ? 'info' : 'success'" size="small">
               {{ row.revoked ? '已撤回' : '已发布' }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="220" fixed="right">
+        <el-table-column v-if="table.isVisible('ops')" prop="ops" label="操作" width="220" fixed="right">
           <template #default="{ row }">
             <div class="row-actions">
               <el-button link type="primary" @click="openDetail(row)">详情</el-button>
@@ -515,19 +598,30 @@ onMounted(() => {
           <el-radio-button value="READ">已读</el-radio-button>
           <el-radio-button value="ALL">全部</el-radio-button>
         </el-radio-group>
-        <el-input v-model="readersFilters.keyword" class="readers-keyword" placeholder="搜索用户名或昵称" clearable
-                  @keyup.enter="searchReaders" @clear="searchReaders" />
+        <div class="readers-actions">
+          <el-input v-model="readersFilters.keyword" class="readers-keyword" placeholder="搜索用户名或昵称" clearable
+                    @keyup.enter="searchReaders" @clear="searchReaders" />
+          <ColumnSettings
+            :columns="NOTICE_READER_COLUMNS"
+            :is-visible="readerTable.isVisible"
+            :hidden-count="readerTable.hiddenCount.value"
+            @toggle="readerTable.toggleColumn"
+            @show-all="readerTable.showAllColumns"
+            @invert="readerTable.invertColumns"
+            @reset="readerTable.resetColumns"
+          />
+        </div>
       </div>
       <el-table v-loading="readersLoading" :data="readers" row-key="userId" height="360px">
-        <el-table-column prop="username" label="用户名" width="140" />
-        <el-table-column prop="nickname" label="昵称" width="140" />
-        <el-table-column prop="deptName" label="部门" min-width="160" />
-        <el-table-column label="状态" width="90">
+        <el-table-column v-if="readerTable.isVisible('username')" prop="username" label="用户名" width="140" />
+        <el-table-column v-if="readerTable.isVisible('nickname')" prop="nickname" label="昵称" width="140" />
+        <el-table-column v-if="readerTable.isVisible('deptName')" prop="deptName" label="部门" min-width="160" />
+        <el-table-column v-if="readerTable.isVisible('read')" prop="read" label="状态" width="90">
           <template #default="{ row }">
             <el-tag :type="row.read ? 'success' : 'warning'" size="small">{{ row.read ? '已读' : '未读' }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="阅读时间" width="160">
+        <el-table-column v-if="readerTable.isVisible('readAt')" prop="readAt" label="阅读时间" width="160">
           <template #default="{ row }">{{ row.readAt ? formatDateTime(row.readAt) : '—' }}</template>
         </el-table-column>
       </el-table>
@@ -704,5 +798,11 @@ onMounted(() => {
 
 .readers-keyword {
   width: 220px;
+}
+
+.readers-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
 }
 </style>

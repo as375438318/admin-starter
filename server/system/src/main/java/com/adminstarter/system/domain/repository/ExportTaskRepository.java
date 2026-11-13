@@ -23,7 +23,9 @@ public interface ExportTaskRepository {
 
     void markCancelRequested(Long id);
 
-    PageResult<ExportTask> pageByUser(Long userId, int page, int pageSize);
+    /** 我的导出任务。sort 走白名单，白名单外回落默认排序（created_at desc）。 */
+    PageResult<ExportTask> pageByUser(Long userId, int page, int pageSize, String sort, String order);
+
 
     List<ExportTask> findExpiredSuccess(Instant now, int limit);
 

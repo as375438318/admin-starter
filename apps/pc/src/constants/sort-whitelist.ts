@@ -20,11 +20,15 @@ export const SORT_WHITELIST = {
   /** JobRepositoryImpl：createdAt / name / nextRunAt / id */
   job: ['createdAt', 'name', 'nextRunAt', 'id'],
   /** NoticeRepositoryImpl：createdAt / title / id */
-  notice: ['createdAt', 'title', 'id'],
+  notice: ['createdAt', 'title', 'publishedAt', 'id'],
   /** OperLogRepositoryImpl：createdAt / elapsedMs / id */
   operLog: ['createdAt', 'elapsedMs', 'id'],
   /** DemoTaskRepositoryImpl：createdAt / title / status / id */
   demoTask: ['createdAt', 'title', 'status', 'id'],
+  /** FileRepositoryImpl（文件列表，回收站不支持排序）：createdAt / originalName / size / id */
+  file: ['createdAt', 'originalName', 'size', 'id'],
+  /** ExportTaskRepositoryImpl（我的导出任务）：createdAt / status / id */
+  exportTask: ['createdAt', 'status', 'id'],
 } as const;
 
 export type SortScope = keyof typeof SORT_WHITELIST;

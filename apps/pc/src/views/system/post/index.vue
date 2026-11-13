@@ -13,6 +13,8 @@ import ImportDialog from '@/components/business/ImportDialog.vue';
 import ExportTaskDrawer from '@/components/business/ExportTaskDrawer.vue';
 import { confirmDelete, usePagedList } from '@/composables/use-paged-list';
 import { useCrudDrawer } from '@/composables/use-crud-drawer';
+import { useTableColumns, type ColumnDefinition } from '@/composables/use-table-columns';
+import ColumnSettings from '@/components/ColumnSettings.vue';
 
 interface PostFilters {
   keyword: string;
@@ -44,6 +46,7 @@ const {
   search,
   resetFilters,
   onPageSizeChange,
+  onSortChange,
 } = usePagedList<PostItem, PostFilters>({
   initialFilters: { keyword: '', deptId: undefined, isEnabled: undefined },
   fetcher: (params) =>
@@ -53,7 +56,31 @@ const {
       keyword: params.keyword || undefined,
       deptId: params.deptId,
       isEnabled: params.isEnabled,
+      // 排序参数必须显式转发：fetcher 是逐字段映射的，漏一行就等于「点了表头没反应」
+      sort: params.sort,
+      order: params.order,
     }),
+});
+
+/**
+ * 列定义（唯一定义处）：同时驱动表格渲染、列勾选、点表头排序、导出字段。
+ * `sortKey` 只能取 `constants/sort-whitelist.ts` 的 post 白名单（后端对白名单外字段静默回落）。
+ */
+const POST_COLUMNS: ColumnDefinition[] = [
+  { key: 'name', label: '岗位名称', sortKey: 'name', alwaysVisible: true },
+  { key: 'code', label: '岗位编码', sortKey: 'code' },
+  // 展示 deptName，后端导出 schema 的列 key 是 deptId
+  { key: 'deptName', label: '所属部门', exportKey: 'deptId' },
+  { key: 'sort', label: '排序', sortKey: 'sort' },
+  { key: 'isEnabled', label: '状态' },
+  { key: 'createdAt', label: '创建时间', sortKey: 'createdAt' },
+  { key: 'ops', label: '操作', alwaysVisible: true, exportable: false },
+];
+
+const table = useTableColumns({
+  storageKey: 'system-post',
+  columns: POST_COLUMNS,
+  onSort: (sort, order) => onSortChange(sort, order),
 });
 
 const deptOptions = ref<DeptOption[]>([]);
@@ -173,10 +200,16 @@ async function startExport(): Promise<void> {
   }
   exporting.value = true;
   try {
+    // 至少保留一列：全关时前端拦截，比让后端报 400 更容易理解（设计 D6）
+    if (table.exportFields.value.length === 0) {
+      ElMessage.warning('至少保留一列可导出字段（在「列设置」里勾选）');
+      return;
+    }
     const result = await postApi.startExport({
       keyword: filters.keyword || undefined,
       deptId: filters.deptId,
       isEnabled: filters.isEnabled,
+      fields: table.exportFields.value.join(','),
     });
     if (result.kind === 'file') {
       saveBlob(result.blob, result.fileName ?? '岗位.xlsx');
@@ -240,6 +273,15 @@ onMounted(() => {
         <el-button @click="resetFilters">重置</el-button>
       </div>
       <div class="toolbar-actions">
+        <ColumnSettings
+          :columns="POST_COLUMNS"
+          :is-visible="table.isVisible"
+          :hidden-count="table.hiddenCount.value"
+          @toggle="table.toggleColumn"
+          @show-all="table.showAllColumns"
+          @invert="table.invertColumns"
+          @reset="table.resetColumns"
+        />
         <el-button
           v-permission="'system:post:import'"
           :loading="importDialogRef?.templateLoading"
@@ -268,7 +310,12 @@ onMounted(() => {
         <el-button class="error-retry" size="small" @click="load">重试</el-button>
       </el-alert>
 
-      <el-table :data="skeletonVisible ? [] : rows" row-key="id" style="width: 100%">
+      <el-table
+        :data="skeletonVisible ? [] : rows"
+        row-key="id"
+        style="width: 100%"
+        @sort-change="table.onSortChange"
+      >
         <template #empty>
           <TableSkeleton v-if="skeletonVisible" :rows="6" />
           <div v-else-if="!loading" class="table-empty">
@@ -282,23 +329,58 @@ onMounted(() => {
             </el-button>
           </div>
         </template>
-        <el-table-column prop="name" label="岗位名称" width="200" fixed="left" show-overflow-tooltip />
-        <el-table-column prop="code" label="岗位编码" width="150" show-overflow-tooltip />
-        <el-table-column prop="deptName" label="所属部门" width="180" show-overflow-tooltip>
+        <el-table-column
+          v-if="table.isVisible('name')"
+          prop="name"
+          label="岗位名称"
+          width="200"
+          fixed="left"
+          show-overflow-tooltip
+          :sortable="table.sortableOf('name')"
+        />
+        <el-table-column
+          v-if="table.isVisible('code')"
+          prop="code"
+          label="岗位编码"
+          width="150"
+          show-overflow-tooltip
+          :sortable="table.sortableOf('code')"
+        />
+        <el-table-column
+          v-if="table.isVisible('deptName')"
+          prop="deptName"
+          label="所属部门"
+          width="180"
+          show-overflow-tooltip
+        >
           <template #default="{ row }">{{ row.deptName || '—' }}</template>
         </el-table-column>
-        <el-table-column prop="sort" label="排序" width="80" align="right" class-name="tabular-nums" />
-        <el-table-column label="状态" width="90">
+        <el-table-column
+          v-if="table.isVisible('sort')"
+          prop="sort"
+          label="排序"
+          width="80"
+          align="right"
+          class-name="tabular-nums"
+          :sortable="table.sortableOf('sort')"
+        />
+        <el-table-column v-if="table.isVisible('isEnabled')" prop="isEnabled" label="状态" width="90">
           <template #default="{ row }">
             <el-tag :type="row.isEnabled ? 'success' : 'info'" size="small">
               {{ row.isEnabled ? '启用' : '停用' }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="创建时间" width="160">
+        <el-table-column
+          v-if="table.isVisible('createdAt')"
+          prop="createdAt"
+          label="创建时间"
+          width="160"
+          :sortable="table.sortableOf('createdAt')"
+        >
           <template #default="{ row }">{{ formatDateTime(row.createdAt) }}</template>
         </el-table-column>
-        <el-table-column label="操作" width="200" fixed="right">
+        <el-table-column v-if="table.isVisible('ops')" prop="ops" label="操作" width="200" fixed="right">
           <template #default="{ row }">
             <div class="row-actions">
               <el-button v-permission="'system:post:update'" link type="primary" @click="openEdit(row)">

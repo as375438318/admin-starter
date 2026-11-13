@@ -119,8 +119,9 @@ public class PostController {
                                     @RequestParam(required = false) Long deptId,
                                     @RequestParam(required = false) Boolean isEnabled,
                                     @RequestParam(required = false) String sort,
-                                    @RequestParam(required = false) String order) {
-        ExcelExportPlanner.ExportPlan plan = exportAppService.plan(keyword, deptId, isEnabled, sort, order);
+                                    @RequestParam(required = false) String order,
+                                    @RequestParam(required = false) String fields) {
+        ExcelExportPlanner.ExportPlan plan = exportAppService.plan(keyword, deptId, isEnabled, sort, order, fields);
         if (plan.sync()) {
             return xlsx(plan.fileName(), plan.content());
         }
@@ -135,7 +136,8 @@ public class PostController {
     public ApiResponse<PageResponse<ExportTaskItem>> exportTasks(PageQuery pageQuery) {
         CurrentUser current = currentUser();
         PageResult<ExportTaskItem> result = exportTaskService.page(
-                current.getUserId(), pageQuery.resolvePage(), pageQuery.resolvePageSize());
+                current.getUserId(), pageQuery.resolvePage(), pageQuery.resolvePageSize(),
+                pageQuery.getSort(), pageQuery.getOrder());
         return ApiResponse.ok(PageResponse.of(pageQuery.resolvePage(), pageQuery.resolvePageSize(),
                 result.getList(), result.getTotal()));
     }

@@ -3,6 +3,7 @@ package com.adminstarter.system.application.excel.post;
 import com.adminstarter.common.error.BizException;
 import com.adminstarter.common.error.ErrorCode;
 import com.adminstarter.system.application.export.ExcelExportPlanner;
+import com.adminstarter.system.application.export.ExportFieldKeys;
 import com.adminstarter.system.domain.model.Post;
 import com.adminstarter.system.domain.query.PostQuery;
 import com.adminstarter.system.domain.repository.PostRepository;
@@ -29,13 +30,15 @@ public class PostExportAppService {
     private final ObjectMapper objectMapper;
 
     public ExcelExportPlanner.ExportPlan plan(String keyword, Long deptId, Boolean isEnabled,
-                                              String sort, String order) {
+                                              String sort, String order, String fields) {
         PostQuery query = new PostQuery();
         query.setKeyword(keyword);
         query.setDeptId(deptId);
         query.setIsEnabled(isEnabled);
         query.setSort(sort);
         query.setOrder(order);
+        // 列白名单随任务快照一起落库：异步 worker 从 query_params 读回并裁剪列
+        query.setFields(fields);
         query.setPage(1);
         query.setPageSize(ExcelExportPlanner.SYNC_MAX_ROWS);
 
@@ -47,7 +50,7 @@ public class PostExportAppService {
             throw new BizException(ErrorCode.SYSTEM_ERROR, "导出条件序列化失败");
         }
         return exportPlanner.plan(schema, "岗位", totalRows, queryParams,
-                () -> assembleSyncRows(query));
+                () -> assembleSyncRows(query), ExportFieldKeys.parse(fields));
     }
 
     private List<PostExportRow> assembleSyncRows(PostQuery query) {

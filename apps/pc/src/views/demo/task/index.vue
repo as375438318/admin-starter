@@ -217,8 +217,9 @@ function openImport(): void {
 const DEMO_TASK_COLUMNS: ColumnDefinition[] = [
   { key: 'title', label: '任务标题', sortKey: 'title', alwaysVisible: true },
   { key: 'status', label: '状态', sortKey: 'status' },
-  { key: 'deptName', label: '归属部门' },
-  { key: 'ownerName', label: '负责人' },
+  // 展示 deptName，但后端导出 schema 的列 key 是 deptId（导出时由 exporter 解析成部门名）
+  { key: 'deptName', label: '归属部门', exportKey: 'deptId' },
+  { key: 'ownerName', label: '负责人', exportKey: 'ownerId' },
   { key: 'createdAt', label: '创建时间', sortKey: 'createdAt' },
   { key: 'ops', label: '操作', alwaysVisible: true, exportable: false },
 ];
@@ -239,10 +240,16 @@ async function startExport(): Promise<void> {
   }
   exporting.value = true;
   try {
+    // 至少保留一列：全关时前端拦截，比让后端报 400 更容易理解（设计 D6）
+    if (table.exportFields.value.length === 0) {
+      ElMessage.warning('至少保留一列可导出字段（在「列设置」里勾选）');
+      return;
+    }
     const result = await demoTaskApi.startExport({
       keyword: filters.keyword || undefined,
       status: filters.status,
       deptId: filters.deptId,
+      fields: table.exportFields.value.join(','),
     });
     if (result.kind === 'file') {
       saveBlob(result.blob, result.fileName ?? '示例任务.xlsx');

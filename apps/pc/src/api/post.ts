@@ -20,6 +20,8 @@ export interface PostExportQuery {
   isEnabled?: boolean;
   sort?: string;
   order?: 'asc' | 'desc';
+  /** 导出列白名单（逗号分隔，来自列设置的勾选结果；空=后端导出全部可导出列） */
+  fields?: string;
 }
 
 export interface PostSavePayload {

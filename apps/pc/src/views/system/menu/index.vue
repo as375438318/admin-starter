@@ -9,6 +9,8 @@ import { scrollToFirstError } from '@/utils/form';
 import { useDelayedSkeleton } from '@/utils/skeleton';
 import TableSkeleton from '@/components/TableSkeleton.vue';
 import { useAuthStore } from '@/stores/auth';
+import { useTableColumns, type ColumnDefinition } from '@/composables/use-table-columns';
+import ColumnSettings from '@/components/ColumnSettings.vue';
 
 const auth = useAuthStore();
 
@@ -22,6 +24,28 @@ const rows = ref<MenuItem[]>([]);
 const loading = ref(false);
 const skeletonVisible = useDelayedSkeleton(loading);
 const loadError = ref('');
+
+/**
+ * 列定义（唯一定义处）：驱动表格渲染与列勾选。
+ * 树表不接排序（层级顺序即语义），因此不写 `sortKey`、不传 `onSort`。
+ */
+const MENU_COLUMNS: ColumnDefinition[] = [
+  { key: 'name', label: '菜单名称', alwaysVisible: true },
+  { key: 'menuType', label: '类型' },
+  { key: 'path', label: '路由地址' },
+  { key: 'component', label: '组件路径' },
+  { key: 'permissionCode', label: '权限码' },
+  { key: 'sort', label: '排序' },
+  { key: 'isVisible', label: '显示' },
+  { key: 'isEnabled', label: '状态' },
+  { key: 'createdAt', label: '创建时间' },
+  { key: 'ops', label: '操作', alwaysVisible: true, exportable: false },
+];
+
+const menuTable = useTableColumns({
+  storageKey: 'system-menu',
+  columns: MENU_COLUMNS,
+});
 
 const drawerVisible = ref(false);
 const isEdit = ref(false);
@@ -259,6 +283,15 @@ onMounted(() => {
         <span class="page-hint">目录 / 菜单 / 按钮三级结构，按钮节点只承载权限码。</span>
       </div>
       <div class="toolbar-actions">
+        <ColumnSettings
+          :columns="MENU_COLUMNS"
+          :is-visible="menuTable.isVisible"
+          :hidden-count="menuTable.hiddenCount.value"
+          @toggle="menuTable.toggleColumn"
+          @show-all="menuTable.showAllColumns"
+          @invert="menuTable.invertColumns"
+          @reset="menuTable.resetColumns"
+        />
         <el-button @click="load">刷新</el-button>
         <el-button v-permission="'system:menu:create'" type="primary" @click="openCreate()">新增目录</el-button>
       </div>
@@ -277,32 +310,58 @@ onMounted(() => {
         :tree-props="{ children: 'children' }"
         style="width: 100%"
       >
-        <el-table-column prop="name" label="菜单名称" width="230" fixed="left" show-overflow-tooltip />
-        <el-table-column label="类型" width="80">
+        <el-table-column
+          v-if="menuTable.isVisible('name')"
+          prop="name"
+          label="菜单名称"
+          width="230"
+          fixed="left"
+          show-overflow-tooltip
+        />
+        <el-table-column v-if="menuTable.isVisible('menuType')" prop="menuType" label="类型" width="80">
           <template #default="{ row }">
             <el-tag :type="row.menuType === 'M' ? 'info' : row.menuType === 'C' ? 'primary' : 'warning'" disable-transitions>
               {{ menuTypeLabels[row.menuType as MenuItem['menuType']] }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="path" label="路由地址" width="170" show-overflow-tooltip />
-        <el-table-column prop="component" label="组件路径" width="200" show-overflow-tooltip />
-        <el-table-column prop="permissionCode" label="权限码" width="190" show-overflow-tooltip />
-        <el-table-column prop="sort" label="排序" width="70" align="right" class-name="tabular-nums" />
-        <el-table-column label="显示" width="80">
+        <el-table-column v-if="menuTable.isVisible('path')" prop="path" label="路由地址" width="170" show-overflow-tooltip />
+        <el-table-column
+          v-if="menuTable.isVisible('component')"
+          prop="component"
+          label="组件路径"
+          width="200"
+          show-overflow-tooltip
+        />
+        <el-table-column
+          v-if="menuTable.isVisible('permissionCode')"
+          prop="permissionCode"
+          label="权限码"
+          width="190"
+          show-overflow-tooltip
+        />
+        <el-table-column
+          v-if="menuTable.isVisible('sort')"
+          prop="sort"
+          label="排序"
+          width="70"
+          align="right"
+          class-name="tabular-nums"
+        />
+        <el-table-column v-if="menuTable.isVisible('isVisible')" prop="isVisible" label="显示" width="80">
           <template #default="{ row }">{{ row.isVisible ? '是' : '否' }}</template>
         </el-table-column>
-        <el-table-column label="状态" width="80">
+        <el-table-column v-if="menuTable.isVisible('isEnabled')" prop="isEnabled" label="状态" width="80">
           <template #default="{ row }">
             <el-tag :type="row.isEnabled ? 'success' : 'info'" disable-transitions>
               {{ row.isEnabled ? '启用' : '停用' }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="创建时间" width="170">
+        <el-table-column v-if="menuTable.isVisible('createdAt')" prop="createdAt" label="创建时间" width="170">
           <template #default="{ row }">{{ formatDateTime(row.createdAt) }}</template>
         </el-table-column>
-        <el-table-column label="操作" width="200" fixed="right">
+        <el-table-column v-if="menuTable.isVisible('ops')" prop="ops" label="操作" width="200" fixed="right">
           <template #default="{ row }">
             <div class="row-actions">
               <el-button

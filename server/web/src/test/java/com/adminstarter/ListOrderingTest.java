@@ -38,6 +38,20 @@ class ListOrderingTest extends AbstractIntegrationTest {
                 .orElseThrow(() -> new IllegalStateException("登录未返回 ACCESS_TOKEN"));
     }
 
+    private java.util.List<Long> ids(String path) throws Exception {
+        String body = mockMvc.perform(get(path)
+                .param("page", "1").param("pageSize", "10")
+                .cookie(adminCookie()))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);
+        java.util.regex.Matcher matcher = java.util.regex.Pattern.compile("\"id\":(\\d+)").matcher(body);
+        java.util.List<Long> ids = new java.util.ArrayList<>();
+        while (matcher.find()) {
+            ids.add(Long.parseLong(matcher.group(1)));
+        }
+        return ids;
+    }
+
     private long[] firstAndLastId(String path) throws Exception {
         String body = mockMvc.perform(get(path)
                         .param("page", "1").param("pageSize", "10")
@@ -87,5 +101,30 @@ class ListOrderingTest extends AbstractIntegrationTest {
         for (int i = 1; i < sorts.size(); i++) {
             assertTrue(sorts.get(i) >= sorts.get(i - 1), "角色默认应按 sort 升序，出现乱序：" + sorts);
         }
+    }
+    @Test
+    @DisplayName("文件列表：新增白名单后支持 sort/order，白名单外的 sort 静默回落默认")
+    void filesSupportExplicitSort() throws Exception {
+        long[] desc = firstAndLastId("/api/v1/files");
+        assertTrue(desc[0] > desc[1], "文件列表默认应最新在前，实际首条 id=" + desc[0] + " 末条 id=" + desc[1]);
+
+        long[] asc = firstAndLastId("/api/v1/files?sort=createdAt&order=asc");
+        assertTrue(asc[0] < asc[1], "sort=createdAt&order=asc 必须生效，实际首条 id=" + asc[0] + " 末条 id=" + asc[1]);
+
+        // 白名单外字段：不报错，按默认（最新在前）返回
+        long[] fallback = firstAndLastId("/api/v1/files?sort=notAWhitelistedField&order=asc");
+        assertTrue(fallback[0] > fallback[1],
+                "白名单外的 sort 必须静默回落默认排序，实际首条 id=" + fallback[0] + " 末条 id=" + fallback[1]);
+    }
+
+    @Test
+    @DisplayName("我的导出任务：接口接受 sort/order 且不因参数报错（数据不足时不做顺序断言）")
+    void exportTasksAcceptSortParameters() throws Exception {
+        // 导出任务只有在导出行数超过同步阈值（2000）时才落库，测试库里通常不足 2 条，
+        // 因此这里断言"参数被接受、不因排序参数 500"（null 键 NPE 就是这么暴露的），顺序断言交给文件列表那条。
+        java.util.List<Long> ids = ids("/api/v1/demo-tasks/export-tasks?sort=createdAt&order=asc");
+        org.junit.jupiter.api.Assumptions.assumeTrue(ids.size() >= 2,
+                "测试库导出任务不足 2 条，跳过顺序断言（接口已接受 sort/order 且未报错）");
+        assertTrue(ids.get(0) < ids.get(1), "sort=createdAt&order=asc 必须生效，实际首条 id=" + ids.get(0));
     }
 }

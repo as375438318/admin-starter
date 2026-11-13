@@ -1,6 +1,6 @@
 # 本文件由 scripts/export-openapi.ps1 从运行中的后端 /v3/api-docs.yaml 自动生成，禁止手工编辑。
 # 契约源（手写维护）：docs/api/openapi.yaml；本文件只是实现基线（as-built），用于契约差异比对。
-# 生成时间：2026-11-13 14:42:47
+# 生成时间：2026-11-13 15:05:38
 
 openapi: 3.0.1
 info:
@@ -1657,6 +1657,11 @@ paths:
         required: false
         schema:
           type: string
+      - name: fields
+        in: query
+        required: false
+        schema:
+          type: string
       responses:
         "200":
           description: OK
@@ -2161,6 +2166,11 @@ paths:
         schema:
           type: string
       - name: order
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: fields
         in: query
         required: false
         schema:

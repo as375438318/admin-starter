@@ -17,6 +17,7 @@ import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.List;
 import java.util.function.Supplier;
 
 /**
@@ -43,6 +44,17 @@ public class ExcelExportPlanner {
 
     public <T> ExportPlan plan(ExcelSchema<T> schema, String fileNamePrefix, long totalRows,
                                String queryParams, Supplier<List<T>> syncRows) {
+        return plan(schema, fileNamePrefix, totalRows, queryParams, syncRows, null);
+    }
+
+    /**
+     * 带导出列白名单的导出计划（P3）。
+     *
+     * @param fieldKeys 列 key 白名单；null/空 = 全部可导出列。同步通道直接裁剪；
+     *                  异步通道由 {@code queryParams} 快照携带（见各自 {@code *Query.fields}）。
+     */
+    public <T> ExportPlan plan(ExcelSchema<T> schema, String fileNamePrefix, long totalRows,
+                               String queryParams, Supplier<List<T>> syncRows, List<String> fieldKeys) {
         if (totalRows > MAX_EXPORT_ROWS) {
             throw new BizException(ErrorCode.INVALID_PARAMETER,
                     "导出数据超过 " + MAX_EXPORT_ROWS + " 行上限，请缩小筛选范围");
@@ -58,7 +70,7 @@ public class ExcelExportPlanner {
         if (totalRows <= SYNC_MAX_ROWS) {
             List<T> rows = syncRows.get();
             try (ByteArrayOutputStream output = new ByteArrayOutputStream()) {
-                exportWriter.writeSync(schema, rows, output);
+                exportWriter.writeSync(schema, rows, output, fieldKeys);
                 OperLogContext.put("mode", "SYNC");
                 return new ExportPlan(output.toByteArray(), fileName, null, totalRows);
             } catch (IOException exception) {

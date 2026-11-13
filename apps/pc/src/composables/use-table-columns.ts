@@ -22,8 +22,14 @@ export interface TableSortChangeEvent {
 }
 
 export interface ColumnDefinition {
-  /** 列标识；同时是导出字段名（必须与后端 `ExcelField.key` 对齐） */
+  /** 列标识（同时是 el-table-column 的 prop）；导出字段名默认同它 */
   key: string;
+  /**
+   * 导出字段名：**页面展示字段与后端导出字段不一致时必须显式写**。
+   * 例：列表展示 `deptName`（部门名），而后端导出 schema 的列 key 是 `deptId`（导出时由 exporter 解析成名称）。
+   * 不写则默认用 `key`——写成后端没有的 key 会被导出接口判 400「未知的导出列」（断言 #101 的导出侧补充）。
+   */
+  exportKey?: string;
   /** 表头文案 */
   label: string;
   /** 后端排序白名单字段名；缺省表示该列不可排序 */
@@ -73,11 +79,13 @@ export function useTableColumns(options: UseTableColumnsOptions) {
   const hiddenCount = computed(() => permittedColumns.value.length - visibleColumns.value.length);
 
   /** 导出字段：可见 + 可导出；顺序沿用列定义顺序（与后端 schema 顺序一致，避免不同人导出结构不同） */
-  const exportFields = computed(() =>
-    visibleColumns.value
+  const exportFields = computed(() => {
+    const keys = visibleColumns.value
       .filter((column) => column.exportable !== false)
-      .map((column) => column.key),
-  );
+      .map((column) => column.exportKey ?? column.key);
+    // 去重：同一后端字段可能被两列展示（如「部门」与「部门ID」），导出只应出现一次
+    return [...new Set(keys)];
+  });
 
   function isVisible(key: string): boolean {
     const column = permittedColumns.value.find((item) => item.key === key);
