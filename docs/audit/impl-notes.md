@@ -1586,3 +1586,12 @@ E2E 新增 `e2e/helpers.ts`：首次跑真的走一遍"被强制改密 → 改�
 过程中修掉 5 个自造问题：`keyword` 包装器生成了断链的 `w.like(a).or()\n like(b)`；DTO 用 `Instant` 而领域模型是 `LocalDateTime`，漏了 `TimeSupport.toInstant` 转换；契约片段插进 `openapi.yaml` 时丢换行把两行粘成一行（18 个契约测试同时红）；`CustomerPageResponse.list` 误引用 `CustomerSaveRequest`；E2E 删除确认框文案是「删除」不是「确定」。
 
 验证：后端 221 用例 BUILD SUCCESS（V20 同时应用到测试库）、前端 116 单测 + 构建通过、E2E 12/12、运行时 CRUD 冒烟全通（含白名单外 sort 静默回落）、spec-lint error 0 / warning 49。
+## 配置面变更审计（2026-11-13，CR-20261114-042，B 档）
+
+操作日志只有"请求级 + 新值"，配置改错时查不到"改前是多少"。新增泛化审计表 `sys_change_audit`（V21）+ 只读接口 + 审计页，覆盖参数、字典（类型/项）、菜单、角色授权四个写入点，写入口径三条：只记变化字段；敏感对象 before/after 两侧都打码；写失败吞异常但与业务同事务（业务回滚则不留痕）。审计**不开放 HTTP 写入口**，写入只能由业务事务内的 recorder 产生。
+
+页面是只读的：列设置 + 排序 + 差异展开（改前 → 改后），参数列表行加了「历史」按钮跳转并带对象键。
+
+顺带修掉上一轮我造成的真问题：PR #41 把 `V21/V22__demo_customer.sql` 两份重复迁移合进了 main，Flyway 报 "Found more than one migration with version 21"，后端整体起不来。根因是生成器每次用"最大版本+1"命名迁移，`--force` 重跑就多产一份；已改为同表复用版本号（幂等），并清了本地 test/dev 库被误记录的 21/22 历史行。另一个坑：删了源文件但 `target/classes/db/migration` 里的陈旧副本仍在 classpath 上，必须 `mvn clean`（断言 #110）。
+
+验证：后端 229 用例 BUILD SUCCESS（system 164 / web 39，含 3 条审计集成用例）、前端 116 单测、E2E 13/13、运行时冒烟改参数后审计 total=1 且 before/after 正确、契约 1.4.0 并重新导出 as-is、spec-lint error 0 / warning 49。

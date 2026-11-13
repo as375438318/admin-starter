@@ -6,6 +6,7 @@ import com.adminstarter.common.api.PageResult;
 import com.adminstarter.common.error.BizException;
 import com.adminstarter.common.error.ErrorCode;
 import com.adminstarter.common.util.TimeSupport;
+import com.adminstarter.system.application.audit.ChangeAuditRecorder;
 import com.adminstarter.system.application.dto.RoleDtos;
 import com.adminstarter.system.domain.enums.DataScope;
 import com.adminstarter.system.domain.enums.OwnFilter;
@@ -19,7 +20,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -28,6 +31,7 @@ public class RoleAppService {
     private final RoleRepository roleRepository;
     private final RoleScopeTargetRepository roleScopeTargetRepository;
     private final DataScopeProvider dataScopeProvider;
+    private final ChangeAuditRecorder changeAuditRecorder;
 
     public PageResponse<RoleDtos.Response> page(PageQuery pageQuery, String keyword, Boolean isEnabled) {
         int page = pageQuery.resolvePage();
@@ -100,9 +104,20 @@ public class RoleAppService {
 
     @Transactional
     public void assignMenus(Long id, List<Long> menuIds) {
-        requireRole(id);
+        Role role = requireRole(id);
+        // 授权是最该留痕的一类：它不改任何业务数据，却能让整块功能对某些人消失或出现
+        Map<String, Object> before = new LinkedHashMap<>();
+        before.put("menuIds", sortedIds(roleRepository.findMenuIdsByRoleId(id)));
         roleRepository.replaceRoleMenus(id, menuIds);
         evictRoleUsers(id);
+        Map<String, Object> after = new LinkedHashMap<>();
+        after.put("menuIds", sortedIds(menuIds));
+        changeAuditRecorder.recordGranted(ChangeAuditRecorder.TYPE_ROLE_GRANT, role.getCode(), role.getName(),
+                before, after);
+    }
+
+    private List<Long> sortedIds(java.util.Collection<Long> ids) {
+        return ids == null ? List.of() : ids.stream().sorted().toList();
     }
 
     @Transactional

@@ -9,6 +9,7 @@ import com.adminstarter.common.api.PageResult;
 import com.adminstarter.common.error.BizException;
 import com.adminstarter.common.error.ErrorCode;
 import com.adminstarter.common.util.TimeSupport;
+import com.adminstarter.system.application.audit.ChangeAuditRecorder;
 import com.adminstarter.system.application.dto.DictDtos;
 import com.adminstarter.system.domain.model.DictItem;
 import com.adminstarter.system.domain.model.DictType;
@@ -45,6 +46,7 @@ public class DictAppService {
 
     private final DictRepository dictRepository;
     private final CacheService cacheService;
+    private final ChangeAuditRecorder changeAuditRecorder;
 
     public PageResponse<DictDtos.TypeResponse> pageTypes(PageQuery pageQuery, String keyword, Boolean isEnabled) {
         int page = pageQuery.resolvePage();
@@ -132,6 +134,8 @@ public class DictAppService {
         applyType(dictType, request);
         dictRepository.insertType(dictType);
         evictDictCache();
+        changeAuditRecorder.recordCreated(ChangeAuditRecorder.TYPE_DICT_TYPE, dictType.getType(), dictType.getName(),
+                typeSnapshot(dictType), false);
         return toTypeResponse(dictType);
     }
 
@@ -142,20 +146,25 @@ public class DictAppService {
         if (sameCode != null && !sameCode.getId().equals(id)) {
             throw new BizException(ErrorCode.STATE_CONFLICT, "字典类型已存在");
         }
+        Map<String, Object> before = typeSnapshot(dictType);
         applyType(dictType, request);
         dictRepository.updateType(dictType);
         evictDictCache();
+        changeAuditRecorder.recordUpdated(ChangeAuditRecorder.TYPE_DICT_TYPE, dictType.getType(), dictType.getName(),
+                before, typeSnapshot(dictType), false);
         return toTypeResponse(dictType);
     }
 
     @Transactional
     public void deleteType(Long id) {
-        requireType(id);
+        DictType dictType = requireType(id);
         if (dictRepository.existsItems(id)) {
             throw new BizException(ErrorCode.STATE_CONFLICT, "字典下存在字典项，不能删除");
         }
         dictRepository.deleteType(id);
         evictDictCache();
+        changeAuditRecorder.recordDeleted(ChangeAuditRecorder.TYPE_DICT_TYPE, dictType.getType(), dictType.getName(),
+                typeSnapshot(dictType), false);
     }
 
     @Transactional
@@ -165,6 +174,8 @@ public class DictAppService {
         applyItem(item, request);
         dictRepository.insertItem(item);
         evictDictCache();
+        changeAuditRecorder.recordCreated(ChangeAuditRecorder.TYPE_DICT_ITEM, itemKey(item), item.getLabel(),
+                itemSnapshot(item), false);
         return toItemResponse(item);
     }
 
@@ -175,19 +186,48 @@ public class DictAppService {
             throw new BizException(ErrorCode.RESOURCE_NOT_FOUND, "字典项不存在");
         }
         requireType(request.getDictTypeId());
+        Map<String, Object> before = itemSnapshot(item);
         applyItem(item, request);
         dictRepository.updateItem(item);
         evictDictCache();
+        changeAuditRecorder.recordUpdated(ChangeAuditRecorder.TYPE_DICT_ITEM, itemKey(item), item.getLabel(),
+                before, itemSnapshot(item), false);
         return toItemResponse(item);
     }
 
     @Transactional
     public void deleteItem(Long id) {
-        if (dictRepository.findItemById(id) == null) {
+        DictItem item = dictRepository.findItemById(id);
+        if (item == null) {
             throw new BizException(ErrorCode.RESOURCE_NOT_FOUND, "字典项不存在");
         }
         dictRepository.deleteItem(id);
         evictDictCache();
+        changeAuditRecorder.recordDeleted(ChangeAuditRecorder.TYPE_DICT_ITEM, itemKey(item), item.getLabel(),
+                itemSnapshot(item), false);
+    }
+
+    /** 字典项业务键：类型编码:值，便于按对象检索轨迹 */
+    private String itemKey(DictItem item) {
+        DictType type = dictRepository.findTypeById(item.getDictTypeId());
+        return (type == null ? String.valueOf(item.getDictTypeId()) : type.getType()) + ":" + item.getValue();
+    }
+
+    private Map<String, Object> typeSnapshot(DictType type) {
+        Map<String, Object> snapshot = new LinkedHashMap<>();
+        snapshot.put("type", type.getType());
+        snapshot.put("name", type.getName());
+        snapshot.put("isEnabled", type.getIsEnabled());
+        return snapshot;
+    }
+
+    private Map<String, Object> itemSnapshot(DictItem item) {
+        Map<String, Object> snapshot = new LinkedHashMap<>();
+        snapshot.put("label", item.getLabel());
+        snapshot.put("value", item.getValue());
+        snapshot.put("sort", item.getSort());
+        snapshot.put("isEnabled", item.getIsEnabled());
+        return snapshot;
     }
 
     private DictType requireType(Long id) {

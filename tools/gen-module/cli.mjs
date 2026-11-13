@@ -659,8 +659,18 @@ function responseLines() {
 
 function nextMigrationVersion() {
   const dir = path.join(ROOT, migrationDir);
-  const versions = fs
-    .readdirSync(dir)
+  const names = fs.readdirSync(dir);
+  // 幂等：同一张表已经生成过迁移就复用它的版本号。
+  // 否则重复执行会产出 V20/V21/V22 三份同表迁移，Flyway 直接 "Found more than one migration with version N"
+  // 启动失败（断言 #110）。
+  const existing = names.find((name) => name.endsWith(`__${spec.table}.sql`));
+  if (existing) {
+    const matched = /^V(\d+)__/.exec(existing);
+    if (matched) {
+      return Number(matched[1]);
+    }
+  }
+  const versions = names
     .map((name) => /^V(\d+)__/.exec(name))
     .filter(Boolean)
     .map((match) => Number(match[1]));

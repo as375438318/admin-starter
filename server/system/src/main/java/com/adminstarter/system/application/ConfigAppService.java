@@ -7,6 +7,7 @@ import com.adminstarter.common.error.BizException;
 import com.adminstarter.common.error.ErrorCode;
 import com.adminstarter.common.util.MaskUtils;
 import com.adminstarter.common.util.TimeSupport;
+import com.adminstarter.system.application.audit.ChangeAuditRecorder;
 import com.adminstarter.system.application.dto.ConfigDtos;
 import com.adminstarter.system.domain.model.Config;
 import com.adminstarter.system.domain.query.ConfigQuery;
@@ -15,12 +16,16 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.LinkedHashMap;
+import java.util.Map;
+
 @Service
 @RequiredArgsConstructor
 public class ConfigAppService {
 
     private final ConfigRepository configRepository;
     private final PublicConfigAppService publicConfigAppService;
+    private final ChangeAuditRecorder changeAuditRecorder;
 
     public PageResponse<ConfigDtos.Response> page(PageQuery pageQuery, String keyword, Boolean isSensitive) {
         int page = pageQuery.resolvePage();
@@ -55,6 +60,8 @@ public class ConfigAppService {
         apply(config, request);
         configRepository.insert(config);
         publicConfigAppService.evict();
+        changeAuditRecorder.recordCreated(ChangeAuditRecorder.TYPE_CONFIG, config.getConfigKey(), config.getName(),
+                snapshot(config), Boolean.TRUE.equals(config.getIsSensitive()));
         return toResponse(config);
     }
 
@@ -71,22 +78,44 @@ public class ConfigAppService {
         boolean keepMaskedValue = Boolean.TRUE.equals(config.getIsSensitive())
                 && request.getConfigValue() != null && request.getConfigValue().equals(MaskUtils.MASK);
         String oldValue = config.getConfigValue();
+        Map<String, Object> before = snapshot(config);
         apply(config, request);
         if (keepMaskedValue) {
             config.setConfigValue(oldValue);
         }
         configRepository.update(config);
         publicConfigAppService.evict();
+        changeAuditRecorder.recordUpdated(ChangeAuditRecorder.TYPE_CONFIG, config.getConfigKey(), config.getName(),
+                before, snapshot(config), Boolean.TRUE.equals(config.getIsSensitive()));
         return toResponse(config);
     }
 
     @Transactional
     public void delete(Long id) {
-        if (configRepository.findById(id) == null) {
+        Config config = configRepository.findById(id);
+        if (config == null) {
             throw new BizException(ErrorCode.RESOURCE_NOT_FOUND, "参数不存在");
         }
         configRepository.deleteById(id);
         publicConfigAppService.evict();
+        changeAuditRecorder.recordDeleted(ChangeAuditRecorder.TYPE_CONFIG, config.getConfigKey(), config.getName(),
+                snapshot(config), Boolean.TRUE.equals(config.getIsSensitive()));
+    }
+
+    /**
+     * 审计快照：只放会改变行为的字段。
+     *
+     * <p>敏感参数（{@code is_sensitive}）的取值由 recorder 统一打码，这里照常放原值——
+     * 打码只在一处做，避免"某个调用点忘了掩"（断言 #109）。</p>
+     */
+    private Map<String, Object> snapshot(Config config) {
+        Map<String, Object> snapshot = new LinkedHashMap<>();
+        snapshot.put("configKey", config.getConfigKey());
+        snapshot.put("configValue", config.getConfigValue());
+        snapshot.put("name", config.getName());
+        snapshot.put("remark", config.getRemark());
+        snapshot.put("isEnabled", config.getIsEnabled());
+        return snapshot;
     }
 
     /** 已知参数的值域校验：避免“能保存但实际不可用”的配置 */

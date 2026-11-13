@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { onMounted } from 'vue';
+import { useRouter } from 'vue-router';
 import { ElMessage, type FormRules } from 'element-plus';
 import { configApi } from '@/api/config';
 import type { ConfigItem } from '@/api/types';
@@ -9,6 +10,13 @@ import TableSkeleton from '@/components/TableSkeleton.vue';
 import { confirmDelete, usePagedList } from '@/composables/use-paged-list';
 import { useCrudDrawer } from '@/composables/use-crud-drawer';
 import { useTableColumns, type ColumnDefinition } from '@/composables/use-table-columns';
+
+const router = useRouter();
+
+/** 跳到变更审计页并带上对象键：参数改错时，'这个键以前是什么值'要一眼能查（CR-20261114-042） */
+function openHistory(row: { configKey: string }): void {
+  void router.push({ path: '/system/audits', query: { targetType: 'CONFIG', targetKey: row.configKey } });
+}
 import ColumnSettings from '@/components/ColumnSettings.vue';
 
 interface ConfigFilters {
@@ -299,6 +307,7 @@ onMounted(() => {
           <template #default="{ row }">
             <div class="row-actions">
               <el-button v-permission="'system:config:update'" link type="primary" @click="openEdit(row)">编辑</el-button>
+              <el-button v-permission="'system:audit:list'" link @click="openHistory(row)">历史</el-button>
               <el-dropdown v-permission="'system:config:delete'" trigger="click">
                 <el-button link type="primary">更多</el-button>
                 <template #dropdown>
